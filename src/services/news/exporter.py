@@ -2,6 +2,7 @@
 # Экспорт в Google Sheets 
 
 import json
+import os
 import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
@@ -60,7 +61,7 @@ class GoogleSheetsExporter:
         
         # Получаем настройки Google
         self.settings = get_google_settings()
-        self.spreadsheet_id = spreadsheet_id or self.settings.GOOGLE_GSHEET_ID
+        self.spreadsheet_id = spreadsheet_id or self.settings.GOOGLE_SHEET_ID
         
         # Инициализируем клиент
         self._setup_client()
@@ -75,30 +76,26 @@ class GoogleSheetsExporter:
     def _setup_client(self):
         """Настройка Google Sheets клиента"""
         try:
-            # Парсим JSON ключ из настроек
-            if isinstance(self.settings.GOOGLE_ACCOUNT_KEY, str):
-                try:
-                    service_account_info = json.loads(self.settings.GOOGLE_ACCOUNT_KEY)
-                except json.JSONDecodeError as e:
-                    raise AuthenticationError(f"Invalid Google service account key JSON: {str(e)}")
-            else:
-                service_account_info = self.settings.GOOGLE_ACCOUNT_KEY
-            
-            # Создаем credentials
+            # Создаем credentials из файла
             scopes = [
                 "https://www.googleapis.com/auth/spreadsheets",
                 "https://www.googleapis.com/auth/drive"
             ]
             
-            credentials = Credentials.from_service_account_info(
-                service_account_info, 
+            # Проверяем наличие файла с service account
+            service_account_path = self.settings.GOOGLE_SERVICE_ACCOUNT_PATH
+            if not os.path.exists(service_account_path):
+                raise AuthenticationError(f"Google service account file not found: {service_account_path}")
+            
+            credentials = Credentials.from_service_account_file(
+                service_account_path, 
                 scopes=scopes
             )
             
             # Создаем клиент gspread
             self._client = gspread.authorize(credentials)
             
-            self.logger.info("Google Sheets client initialized successfully")
+            self.logger.info(f"Google Sheets client initialized successfully using {service_account_path}")
             
         except Exception as e:
             error_msg = f"Failed to initialize Google Sheets client: {str(e)}"
@@ -148,6 +145,9 @@ class GoogleSheetsExporter:
         except Exception as e:
             error_msg = f"Failed to get worksheet: {str(e)}"
             self.logger.error(error_msg)
+            self.logger.error(f"Spreadsheet ID: {self.spreadsheet_id}")
+            self.logger.error(f"Worksheet name: {self.worksheet_name}")
+            self.logger.error(f"Exception type: {type(e).__name__}")
             raise GoogleSheetsExportError(error_msg) from e
     
     def _setup_headers(self):

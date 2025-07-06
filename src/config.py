@@ -25,7 +25,8 @@ class AISettings(BaseModel):
 
 class GoogleSettings(BaseModel):
     """Настройки для Google сервисов"""
-    GOOGLE_GSHEET_ID: str = Field(..., description="ID Google Sheets документа")
+    GOOGLE_SHEET_ID: str = Field(..., description="ID Google Sheets документа")
+    GOOGLE_SERVICE_ACCOUNT_PATH: str = Field(..., description="Путь к файлу с Google service account JSON")
     GOOGLE_ACCOUNT_EMAIL: str = Field(..., description="Email Google аккаунта")
     GOOGLE_ACCOUNT_KEY: str = Field(..., description="Ключ Google аккаунта")
 
@@ -47,7 +48,8 @@ class Settings(BaseSettings):
     TEMPERATURE: float = Field(default=0.7, description="Температура для генерации")
     
     # Настройки Google
-    GOOGLE_GSHEET_ID: str = Field(..., description="ID Google Sheets документа")
+    GOOGLE_SHEET_ID: str = Field(..., description="ID Google Sheets документа")
+    GOOGLE_SERVICE_ACCOUNT_PATH: str = Field(..., description="Путь к файлу с Google service account JSON")
     GOOGLE_ACCOUNT_EMAIL: str = Field(..., description="Email Google аккаунта")
     GOOGLE_ACCOUNT_KEY: str = Field(..., description="Ключ Google аккаунта")
     
@@ -122,14 +124,16 @@ def get_google_settings() -> GoogleSettings:
         # Пытаемся получить из общих настроек
         settings = get_settings()
         return GoogleSettings(
-            GOOGLE_GSHEET_ID=settings.GOOGLE_GSHEET_ID,
+            GOOGLE_SHEET_ID=settings.GOOGLE_SHEET_ID,
+            GOOGLE_SERVICE_ACCOUNT_PATH=settings.GOOGLE_SERVICE_ACCOUNT_PATH,
             GOOGLE_ACCOUNT_EMAIL=settings.GOOGLE_ACCOUNT_EMAIL,
             GOOGLE_ACCOUNT_KEY=settings.GOOGLE_ACCOUNT_KEY,
         )
     except Exception:
         # Если не удается получить общие настройки, пытаемся получить только нужные
         return GoogleSettings(
-            GOOGLE_GSHEET_ID=os.getenv("GOOGLE_GSHEET_ID"),
+            GOOGLE_SHEET_ID=os.getenv("GOOGLE_SHEET_ID"),
+            GOOGLE_SERVICE_ACCOUNT_PATH=os.getenv("GOOGLE_SERVICE_ACCOUNT_PATH"),
             GOOGLE_ACCOUNT_EMAIL=os.getenv("GOOGLE_ACCOUNT_EMAIL"),
             GOOGLE_ACCOUNT_KEY=os.getenv("GOOGLE_ACCOUNT_KEY"),
         )

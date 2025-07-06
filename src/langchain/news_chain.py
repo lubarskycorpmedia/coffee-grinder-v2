@@ -49,7 +49,11 @@ class NewsItem:
                  published_at: datetime,
                  source: str,
                  category: Optional[str] = None,
-                 language: Optional[str] = None):
+                 language: Optional[str] = None,
+                 image_url: Optional[str] = None,
+                 uuid: Optional[str] = None,
+                 keywords: Optional[str] = None,
+                 snippet: Optional[str] = None):
         self.title = title
         self.description = description
         self.url = url
@@ -57,6 +61,10 @@ class NewsItem:
         self.source = source
         self.category = category
         self.language = language
+        self.image_url = image_url
+        self.uuid = uuid
+        self.keywords = keywords
+        self.snippet = snippet
         self.embedding: Optional[np.ndarray] = None
         self.similarity_score: float = 0.0
         self.relevance_score: float = 5.0
@@ -73,6 +81,10 @@ class NewsItem:
             "source": self.source,
             "category": self.category,
             "language": self.language,
+            "image_url": self.image_url,
+            "uuid": self.uuid,
+            "keywords": self.keywords,
+            "snippet": self.snippet,
             "similarity_score": self.similarity_score,
             "relevance_score": self.relevance_score,
             "is_duplicate": self.is_duplicate,

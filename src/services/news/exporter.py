@@ -157,10 +157,14 @@ class GoogleSheetsExporter:
             "Title", 
             "Description",
             "URL",
+            "Image URL",
             "Published At",
             "Source",
             "Category",
             "Language",
+            "UUID",
+            "Keywords",
+            "Snippet",
             "Relevance Score",
             "Similarity Score",
             "Is Duplicate",
@@ -277,19 +281,25 @@ class GoogleSheetsExporter:
         Returns:
             Список строк для вставки в таблицу
         """
+        self.logger.info(f"Preparing export data for {len(news_items)} news items")
+        
         rows_data = []
         current_time = datetime.now(timezone.utc).isoformat()
         
-        for item in news_items:
+        for i, item in enumerate(news_items, 1):
             row = [
                 current_time,  # Timestamp
                 item.title or "",
                 item.description or "",
                 item.url or "",
+                item.image_url or "",  # Image URL
                 item.published_at.isoformat() if item.published_at else "",
                 item.source or "",
                 item.category or "",
                 item.language or "",
+                item.uuid or "",  # UUID
+                item.keywords or "",  # Keywords
+                item.snippet or "",  # Snippet
                 str(item.relevance_score) if item.relevance_score is not None else "",
                 str(item.similarity_score) if item.similarity_score is not None else "",
                 "Yes" if item.is_duplicate else "No",
@@ -297,16 +307,32 @@ class GoogleSheetsExporter:
                 datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
             ]
             rows_data.append(row)
+            self.logger.info(f"Prepared row {i}: {item.title[:50]}...")
         
+        self.logger.info(f"Prepared {len(rows_data)} rows for export")
         return rows_data
     
     def _append_rows(self, worksheet: gspread.Worksheet, rows_data: List[List[str]]):
         """Добавляет строки к существующим данным"""
         def _append():
-            return worksheet.append_rows(rows_data)
+            self.logger.info(f"Attempting to append {len(rows_data)} rows to worksheet")
+            self.logger.info(f"First row data: {rows_data[0][:3] if rows_data else 'No data'}")
+            self.logger.info(f"Last row data: {rows_data[-1][:3] if rows_data else 'No data'}")
+            
+            result = worksheet.append_rows(rows_data)
+            
+            self.logger.info(f"Google Sheets API response: {result}")
+            return result
         
-        self._retry_with_backoff(_append)
-        self.logger.info(f"Appended {len(rows_data)} rows to worksheet")
+        result = self._retry_with_backoff(_append)
+        self.logger.info(f"Appended {len(rows_data)} rows to worksheet, API result: {result}")
+        
+        # Проверяем сколько строк реально добавилось
+        try:
+            new_row_count = worksheet.row_count
+            self.logger.info(f"Worksheet row count after append: {new_row_count}")
+        except Exception as e:
+            self.logger.warning(f"Could not get updated row count: {e}")
     
     def _overwrite_data(self, worksheet: gspread.Worksheet, rows_data: List[List[str]]):
         """Перезаписывает данные (оставляя заголовки)"""

@@ -23,6 +23,56 @@ class AISettings(BaseModel):
     TEMPERATURE: float = Field(default=0.7, description="Температура для генерации")
 
 
+class FAISSSettings(BaseModel):
+    """Настройки для FAISS векторной базы данных"""
+    FAISS_SIMILARITY_THRESHOLD: float = Field(
+        default=0.85, 
+        description="Порог схожести для дедупликации новостей (0.0-1.0). "
+                   "Чем выше значение, тем строже фильтрация дублей. "
+                   "0.85 означает что статьи с схожестью >85% считаются дублями"
+    )
+    FAISS_INDEX_TYPE: str = Field(
+        default="IndexFlatIP", 
+        description="Тип FAISS индекса для поиска векторов. "
+                   "IndexFlatIP - точный поиск по скалярному произведению (рекомендуется). "
+                   "IndexFlatL2 - точный поиск по L2 расстоянию. "
+                   "IndexIVFFlat - приближенный поиск для больших объемов"
+    )
+    FAISS_NORMALIZE_VECTORS: bool = Field(
+        default=True,
+        description="Нормализовать векторы перед добавлением в FAISS индекс. "
+                   "True - рекомендуется для косинусного сходства. "
+                   "False - для использования сырых векторов"
+    )
+    MAX_NEWS_ITEMS_FOR_PROCESSING: int = Field(
+        default=100,
+        description="Максимальное количество новостей для обработки в одном batch. "
+                   "Ограничивает нагрузку на OpenAI API и память"
+    )
+
+
+class PipelineSettings(BaseModel):
+    """Настройки для pipeline обработки новостей"""
+    DEFAULT_LANGUAGE: str = Field(
+        default="en",
+        description="Язык по умолчанию для поиска новостей. "
+                   "Используется для API запросов к источникам новостей"
+    )
+    DEFAULT_LIMIT: int = Field(
+        default=100,
+        description="Количество новостей по умолчанию для получения из API"
+    )
+    PIPELINE_TIMEOUT: int = Field(
+        default=300,
+        description="Максимальное время выполнения pipeline в секундах (5 минут)"
+    )
+    ENABLE_PARTIAL_RESULTS: bool = Field(
+        default=True,
+        description="Возвращать частичные результаты при ошибках в pipeline. "
+                   "True - продолжать выполнение даже при ошибках на отдельных этапах"
+    )
+
+
 class GoogleSettings(BaseModel):
     """Настройки для Google сервисов"""
     GOOGLE_SHEET_ID: str = Field(..., description="ID Google Sheets документа")
@@ -32,30 +82,15 @@ class GoogleSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    """Общие настройки приложения"""
+    """Общие настройки приложения - только секретные переменные из .env"""
     
-    # Настройки новостей
-    NEWS_API_PROVIDER: str = Field(default="thenewsapi", description="Провайдер новостей")
+    # Секретные токены и ключи (только эти берутся из .env)
     THENEWSAPI_API_TOKEN: str = Field(..., description="API токен для TheNewsAPI")
-    MAX_RETRIES: int = Field(default=3, description="Максимальное количество попыток")
-    BACKOFF_FACTOR: float = Field(default=0.5, description="Коэффициент backoff для повторных попыток")
-    
-    # Настройки AI
     OPENAI_API_KEY: str = Field(..., description="API ключ OpenAI")
-    OPENAI_MODEL: str = Field(default="gpt-4o-mini", description="Модель OpenAI для обработки")
-    OPENAI_EMBEDDING_MODEL: str = Field(default="text-embedding-3-small", description="Модель для эмбеддингов")
-    MAX_TOKENS: int = Field(default=1000, description="Максимальное количество токенов")
-    TEMPERATURE: float = Field(default=0.7, description="Температура для генерации")
-    
-    # Настройки Google
     GOOGLE_SHEET_ID: str = Field(..., description="ID Google Sheets документа")
     GOOGLE_SERVICE_ACCOUNT_PATH: str = Field(..., description="Путь к файлу с Google service account JSON")
     GOOGLE_ACCOUNT_EMAIL: str = Field(..., description="Email Google аккаунта")
     GOOGLE_ACCOUNT_KEY: str = Field(..., description="Ключ Google аккаунта")
-    
-    # Общие настройки
-    LOG_LEVEL: str = Field(default="INFO", description="Уровень логирования")
-    DEBUG: bool = Field(default=False, description="Режим отладки")
     
     model_config = ConfigDict(
         env_file=".env",
@@ -75,21 +110,16 @@ def get_settings() -> Settings:
 def get_news_settings() -> NewsSettings:
     """Получить настройки для модуля новостей"""
     try:
-        # Пытаемся получить из общих настроек
+        # Получаем секретные данные из Settings, остальное берем из дефолтов класса
         settings = get_settings()
         return NewsSettings(
-            NEWS_API_PROVIDER=settings.NEWS_API_PROVIDER,
             THENEWSAPI_API_TOKEN=settings.THENEWSAPI_API_TOKEN,
-            MAX_RETRIES=settings.MAX_RETRIES,
-            BACKOFF_FACTOR=settings.BACKOFF_FACTOR,
+            # Остальные параметры используют дефолтные значения из класса NewsSettings
         )
     except Exception:
         # Если не удается получить общие настройки, пытаемся получить только нужные
         return NewsSettings(
-            NEWS_API_PROVIDER=os.getenv("NEWS_API_PROVIDER", "thenewsapi"),
             THENEWSAPI_API_TOKEN=os.getenv("THENEWSAPI_API_TOKEN"),
-            MAX_RETRIES=int(os.getenv("MAX_RETRIES", "3")),
-            BACKOFF_FACTOR=float(os.getenv("BACKOFF_FACTOR", "0.5")),
         )
 
 
@@ -97,23 +127,16 @@ def get_news_settings() -> NewsSettings:
 def get_ai_settings() -> AISettings:
     """Получить настройки для AI модулей"""
     try:
-        # Пытаемся получить из общих настроек
+        # Получаем секретные данные из Settings, остальное берем из дефолтов класса
         settings = get_settings()
         return AISettings(
             OPENAI_API_KEY=settings.OPENAI_API_KEY,
-            OPENAI_MODEL=settings.OPENAI_MODEL,
-            OPENAI_EMBEDDING_MODEL=settings.OPENAI_EMBEDDING_MODEL,
-            MAX_TOKENS=settings.MAX_TOKENS,
-            TEMPERATURE=settings.TEMPERATURE,
+            # Остальные параметры используют дефолтные значения из класса AISettings
         )
     except Exception:
         # Если не удается получить общие настройки, пытаемся получить только нужные
         return AISettings(
             OPENAI_API_KEY=os.getenv("OPENAI_API_KEY"),
-            OPENAI_MODEL=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-            OPENAI_EMBEDDING_MODEL=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
-            MAX_TOKENS=int(os.getenv("MAX_TOKENS", "1000")),
-            TEMPERATURE=float(os.getenv("TEMPERATURE", "0.7")),
         )
 
 
@@ -121,7 +144,7 @@ def get_ai_settings() -> AISettings:
 def get_google_settings() -> GoogleSettings:
     """Получить настройки для Google сервисов"""
     try:
-        # Пытаемся получить из общих настроек
+        # Получаем секретные данные из Settings
         settings = get_settings()
         return GoogleSettings(
             GOOGLE_SHEET_ID=settings.GOOGLE_SHEET_ID,
@@ -139,11 +162,25 @@ def get_google_settings() -> GoogleSettings:
         )
 
 
+@lru_cache()
+def get_faiss_settings() -> FAISSSettings:
+    """Получить настройки для FAISS векторной базы данных"""
+    # Все настройки используют дефолтные значения из класса FAISSSettings
+    return FAISSSettings()
+
+
+@lru_cache()
+def get_pipeline_settings() -> PipelineSettings:
+    """Получить настройки для pipeline обработки новостей"""
+    # Все настройки используют дефолтные значения из класса PipelineSettings
+    return PipelineSettings()
+
+
 def get_log_level() -> str:
     """Получить уровень логирования"""
-    return os.getenv("LOG_LEVEL", "INFO")
+    return "INFO"  # Дефолтное значение без переменной окружения
 
 
 def is_debug_mode() -> bool:
     """Проверить включен ли режим отладки"""
-    return os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
+    return False  # Дефолтное значение без переменной окружения

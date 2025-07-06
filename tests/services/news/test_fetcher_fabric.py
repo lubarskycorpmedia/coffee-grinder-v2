@@ -84,17 +84,20 @@ class TestFetcherFactory:
         class CustomFetcher(BaseFetcher):
             def __init__(self):
                 pass
-                
+
             def fetch_headlines(self, **kwargs):
                 return {"data": []}
-            
+
             def fetch_all_news(self, **kwargs):
                 return {"data": []}
-            
+
             def fetch_top_stories(self, **kwargs):
                 return {"data": []}
-            
+
             def get_sources(self, **kwargs):
+                return {"data": []}
+
+            def fetch_news(self, **kwargs):
                 return {"data": []}
         
         # Регистрируем новый fetcher

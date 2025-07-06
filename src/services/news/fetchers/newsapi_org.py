@@ -25,4 +25,8 @@ class NewsAPIFetcher(BaseFetcher):
     
     def get_sources(self, **kwargs) -> Dict[str, Any]:
         """Получает список доступных источников - не реализовано"""
+        return {"error": NewsAPIError("NewsAPI.org fetcher not implemented yet")}
+    
+    def fetch_news(self, **kwargs) -> Dict[str, Any]:
+        """Получает новости - не реализовано"""
         return {"error": NewsAPIError("NewsAPI.org fetcher not implemented yet")} 

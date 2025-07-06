@@ -421,8 +421,8 @@ class TheNewsAPIFetcher(BaseFetcher):
             Dict в стандартном формате с полем 'articles'
         """
         try:
-            # Вчерашняя дата для published_after
-            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+            # Используем более широкий временной диапазон - последние 7 дней
+            week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
             
             # Подготавливаем параметры для fetch_all_news с фиксированными значениями
             params = {
@@ -431,7 +431,7 @@ class TheNewsAPIFetcher(BaseFetcher):
                 "sort": "relevance_score",
                 "sort_order": "desc",
                 "categories": "general,politics,tech,business",
-                "published_after": yesterday
+                "published_after": week_ago
             }
             
             # Добавляем поисковый запрос если есть
@@ -467,7 +467,14 @@ class TheNewsAPIFetcher(BaseFetcher):
                     "published_at": article.get("published_at", ""),
                     "source": article.get("source", ""),
                     "category": self._extract_category(article, category),
-                    "language": article.get("language", language)
+                    "language": article.get("language", language),
+                    # Дополнительные поля из API
+                    "uuid": article.get("uuid", ""),
+                    "image_url": article.get("image_url", ""),
+                    "keywords": article.get("keywords", ""),
+                    "snippet": article.get("snippet", ""),
+                    "relevance_score": article.get("relevance_score"),
+                    "categories": article.get("categories", [])
                 }
                 articles.append(standardized_article)
             

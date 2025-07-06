@@ -80,6 +80,9 @@ class TestBaseFetcher:
             
             def get_sources(self, **kwargs):
                 return {"data": []}
+            
+            def fetch_news(self, **kwargs):
+                return {"data": []}
         
         # Не должно вызвать исключение
         fetcher = CompleteFetcher()

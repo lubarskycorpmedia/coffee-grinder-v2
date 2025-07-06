@@ -2,6 +2,7 @@
 # News LLM chain 
 
 import json
+import time
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 import numpy as np
@@ -16,6 +17,26 @@ import faiss
 from src.openai_client import OpenAIClient
 from src.config import get_ai_settings
 from src.logger import setup_logger
+
+
+class LLMProcessingError(Exception):
+    """Базовое исключение для ошибок обработки LLM"""
+    pass
+
+
+class EmbeddingError(LLMProcessingError):
+    """Ошибка создания embeddings"""
+    pass
+
+
+class RankingError(LLMProcessingError):
+    """Ошибка ранжирования новостей"""
+    pass
+
+
+class RateLimitError(LLMProcessingError):
+    """Ошибка превышения лимита запросов"""
+    pass
 
 
 class NewsItem:
@@ -81,7 +102,9 @@ class NewsProcessingChain:
                  embedding_model: str = "text-embedding-3-small",
                  llm_model: str = "gpt-4o-mini",
                  similarity_threshold: float = 0.85,
-                 max_news_items: int = 50):
+                 max_news_items: int = 50,
+                 max_retries: int = 3,
+                 retry_delay: float = 1.0):
         """
         Инициализация цепочки обработки новостей
         
@@ -91,12 +114,16 @@ class NewsProcessingChain:
             llm_model: Модель для LLM операций
             similarity_threshold: Порог схожести для дедупликации
             max_news_items: Максимальное количество новостей для обработки
+            max_retries: Максимальное количество повторных попыток при ошибках
+            retry_delay: Задержка между повторными попытками (секунды)
         """
         self.openai_client = openai_client or OpenAIClient()
         self.embedding_model = embedding_model
         self.llm_model = llm_model
         self.similarity_threshold = similarity_threshold
         self.max_news_items = max_news_items
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
         self._logger = None
         
         # Инициализируем LangChain компоненты
@@ -173,24 +200,97 @@ class NewsProcessingChain:
             | StrOutputParser()
         )
     
+    def _retry_with_backoff(self, func, *args, max_retries: int = None, **kwargs):
+        """
+        Выполняет функцию с повторными попытками и экспоненциальной задержкой
+        
+        Args:
+            func: Функция для выполнения
+            *args: Позиционные аргументы функции
+            max_retries: Максимальное количество попыток (если None, использует self.max_retries)
+            **kwargs: Именованные аргументы функции
+            
+        Returns:
+            Результат выполнения функции
+            
+        Raises:
+            LLMProcessingError: Если все попытки исчерпаны
+        """
+        retries = max_retries or self.max_retries
+        last_exception = None
+        
+        for attempt in range(retries + 1):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                last_exception = e
+                
+                # Проверяем тип ошибки
+                error_message = str(e).lower()
+                
+                if "rate limit" in error_message or "429" in error_message:
+                    if attempt < retries:
+                        delay = self.retry_delay * (2 ** attempt)  # Экспоненциальная задержка
+                        self.logger.warning(f"Rate limit hit, retrying in {delay}s (attempt {attempt + 1}/{retries + 1})")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        raise RateLimitError(f"Rate limit exceeded after {retries + 1} attempts: {str(e)}")
+                
+                elif "timeout" in error_message or "connection" in error_message:
+                    if attempt < retries:
+                        delay = self.retry_delay * (attempt + 1)  # Линейная задержка для сетевых ошибок
+                        self.logger.warning(f"Network error, retrying in {delay}s (attempt {attempt + 1}/{retries + 1}): {str(e)}")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        raise LLMProcessingError(f"Network error after {retries + 1} attempts: {str(e)}")
+                
+                elif "authentication" in error_message or "unauthorized" in error_message:
+                    # Не повторяем попытки при ошибках аутентификации
+                    raise LLMProcessingError(f"Authentication error: {str(e)}")
+                
+                else:
+                    # Для других ошибок делаем ограниченные повторы
+                    if attempt < min(2, retries):  # Максимум 2 попытки для неизвестных ошибок
+                        delay = self.retry_delay
+                        self.logger.warning(f"Unknown error, retrying in {delay}s (attempt {attempt + 1}/{retries + 1}): {str(e)}")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        raise LLMProcessingError(f"Unknown error after {attempt + 1} attempts: {str(e)}")
+        
+        # Если дошли сюда, значит все попытки исчерпаны
+        raise LLMProcessingError(f"All retry attempts failed. Last error: {str(last_exception)}")
+
     def create_embeddings(self, news_items: List[NewsItem]) -> List[NewsItem]:
         """
-        Создает embeddings для новостей
+        Создает embeddings для новостей с обработкой ошибок и повторными попытками
         
         Args:
             news_items: Список новостей
             
         Returns:
             Список новостей с embeddings
+            
+        Raises:
+            EmbeddingError: При критических ошибках создания embeddings
         """
         self.logger.info(f"Creating embeddings for {len(news_items)} news items")
+        
+        if not news_items:
+            return news_items
         
         # Получаем тексты для embedding
         texts = [item.get_content_for_embedding() for item in news_items]
         
+        def _create_embeddings_batch():
+            """Внутренняя функция для создания embeddings"""
+            return self.embeddings.embed_documents(texts)
+        
         try:
-            # Создаем embeddings через LangChain
-            embeddings = self.embeddings.embed_documents(texts)
+            # Создаем embeddings через LangChain с повторными попытками
+            embeddings = self._retry_with_backoff(_create_embeddings_batch)
             
             # Присваиваем embeddings новостям
             for item, embedding in zip(news_items, embeddings):
@@ -200,8 +300,9 @@ class NewsProcessingChain:
             return news_items
             
         except Exception as e:
-            self.logger.error(f"Failed to create embeddings: {str(e)}")
-            raise
+            error_msg = f"Failed to create embeddings after all retry attempts: {str(e)}"
+            self.logger.error(error_msg)
+            raise EmbeddingError(error_msg) from e
     
     def deduplicate_news(self, news_items: List[NewsItem]) -> List[NewsItem]:
         """
@@ -271,7 +372,7 @@ class NewsProcessingChain:
     
     def rank_news(self, news_items: List[NewsItem], criteria: str = None) -> List[NewsItem]:
         """
-        Ранжирование новостей по важности
+        Ранжирование новостей по важности с улучшенной обработкой ошибок
         
         Args:
             news_items: Список новостей
@@ -302,13 +403,45 @@ class NewsProcessingChain:
         
         news_text = "\n".join(news_for_ranking)
         
-        try:
-            # Вызываем LLM для ранжирования
-            result = self.ranking_chain.invoke({
+        def _rank_news_batch():
+            """Внутренняя функция для ранжирования"""
+            return self.ranking_chain.invoke({
                 "news_items": news_text,
                 "criteria": criteria
             })
+        
+        try:
+            # Вызываем LLM для ранжирования с повторными попытками
+            result = self._retry_with_backoff(_rank_news_batch)
             
+            # Обрабатываем результат
+            ranked_items = self._process_ranking_result(result, news_items)
+            
+            self.logger.info(f"Successfully ranked {len(ranked_items)} news items")
+            return ranked_items
+            
+        except Exception as e:
+            self.logger.error(f"Failed to rank news: {str(e)}")
+            # Возвращаем исходный список с дефолтными оценками
+            for item in news_items:
+                item.relevance_score = 5.0
+            return news_items
+    
+    def _process_ranking_result(self, result: str, news_items: List[NewsItem]) -> List[NewsItem]:
+        """
+        Обрабатывает результат ранжирования LLM
+        
+        Args:
+            result: Результат от LLM
+            news_items: Список новостей для ранжирования
+            
+        Returns:
+            Список ранжированных новостей
+            
+        Raises:
+            RankingError: При ошибках парсинга результата
+        """
+        try:
             # Очищаем результат от возможных префиксов/суффиксов
             result_text = result.strip()
             if "```json" in result_text:
@@ -336,7 +469,36 @@ class NewsProcessingChain:
             
             # Парсим результат
             rankings_data = json.loads(json_text)
-            url_to_score = {item["url"]: item["score"] for item in rankings_data["rankings"]}
+            
+            # Проверяем структуру данных
+            if "rankings" not in rankings_data:
+                raise ValueError("Missing 'rankings' key in response")
+            
+            if not isinstance(rankings_data["rankings"], list):
+                raise ValueError("'rankings' should be a list")
+            
+            # Создаем словарь URL -> оценка
+            url_to_score = {}
+            for ranking in rankings_data["rankings"]:
+                if not isinstance(ranking, dict):
+                    continue
+                if "url" not in ranking or "score" not in ranking:
+                    continue
+                
+                url = ranking["url"]
+                score = ranking["score"]
+                
+                # Валидируем оценку
+                try:
+                    score = float(score)
+                    if not (1.0 <= score <= 10.0):
+                        self.logger.warning(f"Score {score} for {url} is out of range [1-10], clamping")
+                        score = max(1.0, min(10.0, score))
+                except (ValueError, TypeError):
+                    self.logger.warning(f"Invalid score for {url}: {score}, using default")
+                    score = 5.0
+                
+                url_to_score[url] = score
             
             # Присваиваем оценки
             for item in news_items:
@@ -345,25 +507,24 @@ class NewsProcessingChain:
             # Сортируем по убыванию оценки
             ranked_items = sorted(news_items, key=lambda x: x.relevance_score, reverse=True)
             
-            self.logger.info(f"Successfully ranked {len(ranked_items)} news items")
             return ranked_items
             
+        except json.JSONDecodeError as e:
+            raise RankingError(f"Failed to parse JSON response: {str(e)}")
         except Exception as e:
-            self.logger.error(f"Failed to rank news: {str(e)}")
-            # Возвращаем исходный список с дефолтными оценками
-            for item in news_items:
-                item.relevance_score = 5.0
-            return news_items
-    
+            raise RankingError(f"Failed to process ranking result: {str(e)}")
+
     def process_news(self, 
                     news_items: List[NewsItem], 
-                    ranking_criteria: str = None) -> List[NewsItem]:
+                    ranking_criteria: str = None,
+                    fail_on_errors: bool = False) -> List[NewsItem]:
         """
         Полная обработка новостей: embeddings -> дедупликация -> ранжирование
         
         Args:
             news_items: Список новостей
             ranking_criteria: Критерии ранжирования
+            fail_on_errors: Если True, прерывает обработку при ошибках, иначе продолжает с частичными результатами
             
         Returns:
             Список обработанных и ранжированных новостей
@@ -378,14 +539,40 @@ class NewsProcessingChain:
             self.logger.warning(f"Too many items ({len(news_items)}), processing only {self.max_news_items}")
             news_items = news_items[:self.max_news_items]
         
-        # Шаг 1: Создание embeddings
-        news_items = self.create_embeddings(news_items)
+        processed_items = news_items.copy()
         
-        # Шаг 2: Дедупликация
-        unique_items = self.deduplicate_news(news_items)
+        try:
+            # Шаг 1: Создание embeddings
+            processed_items = self.create_embeddings(processed_items)
+        except EmbeddingError as e:
+            if fail_on_errors:
+                raise
+            self.logger.error(f"Embeddings failed, skipping deduplication: {str(e)}")
+            # Продолжаем без дедупликации
         
-        # Шаг 3: Ранжирование
-        ranked_items = self.rank_news(unique_items, ranking_criteria)
+        try:
+            # Шаг 2: Дедупликация (только если есть embeddings)
+            if processed_items and processed_items[0].embedding is not None:
+                unique_items = self.deduplicate_news(processed_items)
+            else:
+                unique_items = processed_items
+        except Exception as e:
+            if fail_on_errors:
+                raise LLMProcessingError(f"Deduplication failed: {str(e)}")
+            self.logger.error(f"Deduplication failed, using all items: {str(e)}")
+            unique_items = processed_items
+        
+        try:
+            # Шаг 3: Ранжирование
+            ranked_items = self.rank_news(unique_items, ranking_criteria)
+        except RankingError as e:
+            if fail_on_errors:
+                raise
+            self.logger.error(f"Ranking failed, using default scores: {str(e)}")
+            # Устанавливаем дефолтные оценки
+            for item in unique_items:
+                item.relevance_score = 5.0
+            ranked_items = unique_items
         
         self.logger.info(f"Processing complete: {len(ranked_items)} final items")
         return ranked_items

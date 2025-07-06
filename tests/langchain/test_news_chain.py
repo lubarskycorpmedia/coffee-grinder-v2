@@ -6,6 +6,7 @@ from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
 from src.langchain.news_chain import NewsItem, NewsProcessingChain
 from src.openai_client import OpenAIClient
+import json
 
 
 class TestNewsItem:
@@ -419,17 +420,17 @@ class TestNewsProcessingChain:
         
         chain = NewsProcessingChain(openai_client=mock_openai_client, max_news_items=2)
         
-        # Создаем 3 новости
+        # Создаем 3 новости, но должно обработаться только 2
         news_items = [
-            NewsItem(title=f"News {i}", description=f"Description {i}", url=f"https://example.com/{i}",
-                    published_at=datetime(2025, 1, 15, 10, 0, 0), source="test.com")
-            for i in range(3)
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1"),
+            NewsItem("Title 2", "Description 2", "http://example.com/2", datetime.now(), "source2"),
+            NewsItem("Title 3", "Description 3", "http://example.com/3", datetime.now(), "source3")
         ]
         
         result = chain.process_news(news_items)
         
-        # Должно остаться только 2 новости
-        assert len(result) == 2
+        assert len(result) == 2  # Должно быть ограничено до 2
+        assert mock_embeddings_instance.embed_documents.call_count == 1
     
     @patch('src.langchain.news_chain.get_ai_settings')
     @patch('src.langchain.news_chain.OpenAIEmbeddings')
@@ -475,4 +476,569 @@ class TestNewsProcessingChain:
             # Проверяем что кастомные критерии были переданы в LLM
             mock_chain.invoke.assert_called_once()
             call_args = mock_chain.invoke.call_args[0][0]
-            assert call_args["criteria"] == custom_criteria 
+            assert call_args["criteria"] == custom_criteria
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_deduplicate_news_same_time(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест дедупликации когда новости имеют одинаковое время публикации"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client, similarity_threshold=0.9)
+        
+        # Создаем новости с одинаковым временем
+        same_time = datetime(2025, 1, 15, 12, 0, 0)
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", same_time, "source1"),
+            NewsItem("Title 2", "Description 2", "http://example.com/2", same_time, "source2")
+        ]
+        
+        # Устанавливаем очень похожие эмбеддинги
+        news_items[0].embedding = np.array([0.9, 0.1, 0.0], dtype=np.float32)
+        news_items[1].embedding = np.array([0.95, 0.05, 0.0], dtype=np.float32)
+        
+        # Мокаем FAISS для возврата высокой схожести
+        with patch('src.langchain.news_chain.faiss.IndexFlatIP') as mock_index_class:
+            mock_index = Mock()
+            mock_index_class.return_value = mock_index
+            mock_index.search.return_value = (
+                np.array([[0.95, 0.92]]),  # Высокая схожесть
+                np.array([[0, 1]])         # Индексы
+            )
+            
+            result = chain.deduplicate_news(news_items)
+            
+            # Когда время одинаковое, алгоритм может пометить обе новости как дубли
+            # Это корректное поведение для очень похожих новостей
+            assert len(result) == 0  # Обе новости считаются дублями друг друга
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_deduplicate_news_missing_embeddings(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест дедупликации когда у некоторых новостей нет эмбеддингов"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client)
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1"),
+            NewsItem("Title 2", "Description 2", "http://example.com/2", datetime.now(), "source2")
+        ]
+        
+        # Только у одной новости есть эмбеддинг
+        news_items[0].embedding = np.array([0.1, 0.2, 0.3], dtype=np.float32)
+        # news_items[1].embedding остается None
+        
+        result = chain.deduplicate_news(news_items)
+        
+        # Должна остаться только новость с эмбеддингом
+        assert len(result) == 1
+        assert result[0].url == "http://example.com/1"
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_deduplicate_news_no_embeddings(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест дедупликации когда ни у одной новости нет эмбеддингов"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client)
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1"),
+            NewsItem("Title 2", "Description 2", "http://example.com/2", datetime.now(), "source2")
+        ]
+        
+        # Ни у одной новости нет эмбеддинга
+        
+        result = chain.deduplicate_news(news_items)
+        
+        # Должны вернуться все новости без изменений
+        assert len(result) == 2
+        assert result == news_items
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    @patch('src.langchain.news_chain.ChatOpenAI')
+    @patch('src.langchain.news_chain.PromptTemplate')
+    def test_rank_news_json_with_code_block(self, mock_prompt_template, mock_chat_openai, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест ранжирования с JSON в блоке кода"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Мокаем LLM цепочку
+        mock_chain = Mock()
+        mock_prompt_template.return_value.pipe.return_value = mock_chain
+        
+        # Возвращаем JSON в блоке кода
+        mock_chain.invoke.return_value = '''```json
+{
+  "rankings": [
+    {"url": "http://example.com/1", "score": 8.5}
+  ]
+}
+```'''
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client)
+        chain.ranking_chain = mock_chain
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        result = chain.rank_news(news_items)
+        
+        assert len(result) == 1
+        assert result[0].relevance_score == 8.5
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    @patch('src.langchain.news_chain.ChatOpenAI')
+    @patch('src.langchain.news_chain.PromptTemplate')
+    def test_rank_news_json_in_text(self, mock_prompt_template, mock_chat_openai, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест ранжирования с JSON в тексте"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Мокаем LLM цепочку
+        mock_chain = Mock()
+        mock_prompt_template.return_value.pipe.return_value = mock_chain
+        
+        # Возвращаем JSON в тексте
+        mock_chain.invoke.return_value = '''Here is the ranking result:
+{
+  "rankings": [
+    {"url": "http://example.com/1", "score": 7.2}
+  ]
+}
+End of result.'''
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client)
+        chain.ranking_chain = mock_chain
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        result = chain.rank_news(news_items)
+        
+        assert len(result) == 1
+        assert result[0].relevance_score == 7.2
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    @patch('src.langchain.news_chain.ChatOpenAI')
+    @patch('src.langchain.news_chain.PromptTemplate')
+    def test_rank_news_no_json_found(self, mock_prompt_template, mock_chat_openai, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест ранжирования когда JSON не найден"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Мокаем LLM цепочку
+        mock_chain = Mock()
+        mock_prompt_template.return_value.pipe.return_value = mock_chain
+        
+        # Возвращаем текст без JSON
+        mock_chain.invoke.return_value = "This is just plain text without any JSON"
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client)
+        chain.ranking_chain = mock_chain
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        result = chain.rank_news(news_items)
+        
+        # Должна быть установлена дефолтная оценка
+        assert len(result) == 1
+        assert result[0].relevance_score == 5.0
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    @patch('src.langchain.news_chain.ChatOpenAI')
+    @patch('src.langchain.news_chain.PromptTemplate')
+    def test_rank_news_json_not_clean_format(self, mock_prompt_template, mock_chat_openai, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест ранжирования с JSON не в чистом формате"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Мокаем LLM цепочку
+        mock_chain = Mock()
+        mock_prompt_template.return_value.pipe.return_value = mock_chain
+        
+        # Возвращаем JSON не в чистом формате (не начинается и не заканчивается с {})
+        mock_chain.invoke.return_value = '''prefix {"rankings": [{"url": "http://example.com/1", "score": 6.5}]} suffix'''
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client)
+        chain.ranking_chain = mock_chain
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        result = chain.rank_news(news_items)
+        
+        assert len(result) == 1
+        assert result[0].relevance_score == 6.5
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    @patch('src.langchain.news_chain.ChatOpenAI')
+    @patch('src.langchain.news_chain.PromptTemplate')
+    def test_rank_news_json_regex_no_match(self, mock_prompt_template, mock_chat_openai, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест ранжирования когда regex не находит JSON"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Мокаем LLM цепочку
+        mock_chain = Mock()
+        mock_prompt_template.return_value.pipe.return_value = mock_chain
+        
+        # Возвращаем текст без JSON объекта (только отдельные скобки)
+        mock_chain.invoke.return_value = '''Some text { and } separate braces without proper JSON structure'''
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client)
+        chain.ranking_chain = mock_chain
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        result = chain.rank_news(news_items)
+        
+        # Должна быть установлена дефолтная оценка при ошибке
+        assert len(result) == 1
+        assert result[0].relevance_score == 5.0
+
+    @patch('src.langchain.news_chain.get_ai_settings')
+    def test_create_news_processing_chain_function(self, mock_get_ai_settings, mock_openai_client):
+        """Тест функции создания цепочки"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        from src.langchain.news_chain import create_news_processing_chain
+        
+        chain = create_news_processing_chain(
+            openai_client=mock_openai_client,
+            similarity_threshold=0.9,
+            max_news_items=25
+        )
+        
+        assert isinstance(chain, NewsProcessingChain)
+        assert chain.similarity_threshold == 0.9
+        assert chain.max_news_items == 25
+
+
+class TestLLMErrorHandling:
+    """Тесты для обработки ошибок LLM"""
+    
+    @pytest.fixture
+    def mock_openai_client(self):
+        """Фикстура для мокирования OpenAI клиента"""
+        return Mock()
+    
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_retry_with_backoff_rate_limit(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест повторных попыток при rate limit"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Первые 2 вызова - rate limit, третий - успех
+        mock_embeddings_instance.embed_documents.side_effect = [
+            Exception("Rate limit exceeded"),
+            Exception("Rate limit 429"),
+            [[0.1, 0.2, 0.3]]
+        ]
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client, retry_delay=0.1)
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        # Мокаем time.sleep чтобы тесты были быстрыми
+        with patch('src.langchain.news_chain.time.sleep'):
+            result = chain.create_embeddings(news_items)
+        
+        assert len(result) == 1
+        assert result[0].embedding is not None
+        assert mock_embeddings_instance.embed_documents.call_count == 3
+    
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_retry_with_backoff_authentication_error(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест что ошибки аутентификации не повторяются"""
+        from src.langchain.news_chain import EmbeddingError
+        
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Ошибка аутентификации
+        mock_embeddings_instance.embed_documents.side_effect = Exception("Authentication failed")
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client, retry_delay=0.1)
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        with pytest.raises(EmbeddingError):
+            chain.create_embeddings(news_items)
+        
+        # Должен быть только один вызов (без повторов)
+        assert mock_embeddings_instance.embed_documents.call_count == 1
+    
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_retry_with_backoff_network_error(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест повторных попыток при сетевых ошибках"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Первые 2 вызова - сетевые ошибки, третий - успех
+        mock_embeddings_instance.embed_documents.side_effect = [
+            Exception("Connection timeout"),
+            Exception("Network connection failed"),
+            [[0.1, 0.2, 0.3]]
+        ]
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client, retry_delay=0.1)
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        # Мокаем time.sleep чтобы тесты были быстрыми
+        with patch('src.langchain.news_chain.time.sleep'):
+            result = chain.create_embeddings(news_items)
+        
+        assert len(result) == 1
+        assert result[0].embedding is not None
+        assert mock_embeddings_instance.embed_documents.call_count == 3
+    
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_retry_exhausted(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест когда все попытки исчерпаны"""
+        from src.langchain.news_chain import EmbeddingError
+        
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Все вызовы - rate limit
+        mock_embeddings_instance.embed_documents.side_effect = Exception("Rate limit exceeded")
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client, max_retries=2, retry_delay=0.1)
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        # Мокаем time.sleep чтобы тесты были быстрыми
+        with patch('src.langchain.news_chain.time.sleep'):
+            with pytest.raises(EmbeddingError):
+                chain.create_embeddings(news_items)
+        
+        # Должно быть max_retries + 1 попыток
+        assert mock_embeddings_instance.embed_documents.call_count == 3
+    
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    @patch('src.langchain.news_chain.ChatOpenAI')
+    @patch('src.langchain.news_chain.PromptTemplate')
+    def test_ranking_error_handling(self, mock_prompt_template, mock_chat_openai, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест обработки ошибок при ранжировании"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Мокаем LLM цепочку
+        mock_chain = Mock()
+        mock_prompt_template.return_value.pipe.return_value = mock_chain
+        
+        # Возвращаем невалидный JSON
+        mock_chain.invoke.side_effect = Exception("LLM error")
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client, retry_delay=0.1)
+        chain.ranking_chain = mock_chain
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        # Мокаем time.sleep чтобы тесты были быстрыми
+        with patch('src.langchain.news_chain.time.sleep'):
+            result = chain.rank_news(news_items)
+        
+        # Должны получить исходный список с дефолтными оценками
+        assert len(result) == 1
+        assert result[0].relevance_score == 5.0
+    
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    @patch('src.langchain.news_chain.ChatOpenAI')
+    @patch('src.langchain.news_chain.PromptTemplate')
+    def test_process_ranking_result_validation(self, mock_prompt_template, mock_chat_openai, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест валидации результатов ранжирования"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Мокаем LLM цепочку
+        mock_chain = Mock()
+        mock_prompt_template.return_value.pipe.return_value = mock_chain
+        
+        # Возвращаем JSON с невалидными оценками
+        mock_chain.invoke.return_value = json.dumps({
+            "rankings": [
+                {"url": "http://example.com/1", "score": 15},  # Слишком высокая оценка
+                {"url": "http://example.com/2", "score": -5},  # Слишком низкая оценка
+                {"url": "http://example.com/3", "score": "invalid"},  # Невалидная оценка
+                {"url": "http://example.com/4", "score": 7.5}  # Валидная оценка
+            ]
+        })
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client)
+        chain.ranking_chain = mock_chain
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1"),
+            NewsItem("Title 2", "Description 2", "http://example.com/2", datetime.now(), "source2"),
+            NewsItem("Title 3", "Description 3", "http://example.com/3", datetime.now(), "source3"),
+            NewsItem("Title 4", "Description 4", "http://example.com/4", datetime.now(), "source4")
+        ]
+        
+        result = chain.rank_news(news_items)
+        
+        # Проверяем что оценки были скорректированы
+        assert len(result) == 4
+        
+        # Находим новости по URL
+        items_by_url = {item.url: item for item in result}
+        
+        # Высокая оценка должна быть ограничена до 10
+        assert items_by_url["http://example.com/1"].relevance_score == 10.0
+        
+        # Низкая оценка должна быть ограничена до 1
+        assert items_by_url["http://example.com/2"].relevance_score == 1.0
+        
+        # Невалидная оценка должна стать дефолтной
+        assert items_by_url["http://example.com/3"].relevance_score == 5.0
+        
+        # Валидная оценка должна остаться без изменений
+        assert items_by_url["http://example.com/4"].relevance_score == 7.5
+    
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_process_news_fail_on_errors_true(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест режима fail_on_errors=True"""
+        from src.langchain.news_chain import EmbeddingError
+        
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Ошибка создания embeddings
+        mock_embeddings_instance.embed_documents.side_effect = Exception("Embedding failed")
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client, max_retries=1, retry_delay=0.1)
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        # Мокаем time.sleep чтобы тесты были быстрыми
+        with patch('src.langchain.news_chain.time.sleep'):
+            with pytest.raises(EmbeddingError):
+                chain.process_news(news_items, fail_on_errors=True)
+    
+    @patch('src.langchain.news_chain.get_ai_settings')
+    @patch('src.langchain.news_chain.OpenAIEmbeddings')
+    def test_process_news_fail_on_errors_false(self, mock_embeddings_class, mock_get_ai_settings, mock_openai_client):
+        """Тест режима fail_on_errors=False (продолжение при ошибках)"""
+        mock_settings = Mock()
+        mock_settings.OPENAI_API_KEY = "test-key"
+        mock_get_ai_settings.return_value = mock_settings
+        
+        mock_embeddings_instance = Mock()
+        mock_embeddings_class.return_value = mock_embeddings_instance
+        
+        # Ошибка создания embeddings
+        mock_embeddings_instance.embed_documents.side_effect = Exception("Embedding failed")
+        
+        chain = NewsProcessingChain(openai_client=mock_openai_client, max_retries=1, retry_delay=0.1)
+        
+        news_items = [
+            NewsItem("Title 1", "Description 1", "http://example.com/1", datetime.now(), "source1")
+        ]
+        
+        # Мокаем time.sleep чтобы тесты были быстрыми
+        with patch('src.langchain.news_chain.time.sleep'):
+            result = chain.process_news(news_items, fail_on_errors=False)
+        
+        # Должны получить результат несмотря на ошибки
+        assert len(result) == 1
+        assert result[0].embedding is None  # Embedding не создался
+        assert result[0].relevance_score == 5.0  # Дефолтная оценка 

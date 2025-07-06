@@ -15,7 +15,15 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 from src.services.news.fetcher_fabric import create_news_fetcher_with_config
-from src.langchain.news_chain import NewsItem, NewsProcessingChain
+from src.langchain.news_chain import (
+    NewsItem, 
+    NewsProcessingChain, 
+    create_news_processing_chain,
+    LLMProcessingError,
+    EmbeddingError,
+    RankingError,
+    RateLimitError
+)
 from src.openai_client import OpenAIClient
 from src.logger import setup_logger
 
@@ -265,6 +273,142 @@ def test_news_processing_chain():
         return False
 
 
+def test_error_handling():
+    """Тестирует обработку ошибок в LangChain"""
+    print("=== Тестирование обработки ошибок LLM ===")
+    
+    # Создаем тестовые новости
+    news_items = [
+        NewsItem(
+            title="Breakthrough in AI Technology",
+            description="Scientists achieve major breakthrough in artificial intelligence",
+            url="http://example.com/ai-breakthrough",
+            published_at=datetime.now(),
+            source="Tech News",
+            category="Technology"
+        ),
+        NewsItem(
+            title="Global Economic Update",
+            description="World markets show positive trends",
+            url="http://example.com/economy",
+            published_at=datetime.now(),
+            source="Financial Times",
+            category="Economics"
+        )
+    ]
+    
+    try:
+        # Создаем OpenAI клиент
+        openai_client = OpenAIClient()
+        print(f"✓ OpenAI клиент создан")
+        
+        # Создаем цепочку обработки с настройками для тестирования
+        chain = NewsProcessingChain(
+            openai_client=openai_client,
+            max_retries=2,  # Меньше попыток для быстрого тестирования
+            retry_delay=0.5  # Короткая задержка
+        )
+        print(f"✓ NewsProcessingChain создана")
+        
+        # Тестируем режим fail_on_errors=False (по умолчанию)
+        print("\n--- Тест 1: Обработка с продолжением при ошибках ---")
+        try:
+            result = chain.process_news(news_items, fail_on_errors=False)
+            print(f"✓ Обработка завершена: {len(result)} новостей")
+            
+            for i, item in enumerate(result):
+                print(f"  {i+1}. {item.title}")
+                print(f"     Оценка: {item.relevance_score}")
+                print(f"     Embedding: {'Есть' if item.embedding is not None else 'Нет'}")
+                print(f"     Дубль: {'Да' if item.is_duplicate else 'Нет'}")
+                
+        except Exception as e:
+            print(f"✗ Ошибка в режиме fail_on_errors=False: {e}")
+        
+        # Тестируем создание embeddings отдельно
+        print("\n--- Тест 2: Создание embeddings ---")
+        try:
+            news_with_embeddings = chain.create_embeddings(news_items.copy())
+            print(f"✓ Embeddings созданы для {len(news_with_embeddings)} новостей")
+            
+            for item in news_with_embeddings:
+                if item.embedding is not None:
+                    print(f"  {item.title}: embedding размер {len(item.embedding)}")
+                else:
+                    print(f"  {item.title}: embedding отсутствует")
+                    
+        except EmbeddingError as e:
+            print(f"✗ Ошибка создания embeddings: {e}")
+        except Exception as e:
+            print(f"✗ Неожиданная ошибка: {e}")
+        
+        # Тестируем ранжирование отдельно
+        print("\n--- Тест 3: Ранжирование новостей ---")
+        try:
+            ranked_news = chain.rank_news(news_items.copy())
+            print(f"✓ Ранжирование выполнено для {len(ranked_news)} новостей")
+            
+            # Сортируем по оценке для вывода
+            ranked_news.sort(key=lambda x: x.relevance_score, reverse=True)
+            for item in ranked_news:
+                print(f"  {item.title}: оценка {item.relevance_score}")
+                
+        except RankingError as e:
+            print(f"✗ Ошибка ранжирования: {e}")
+        except Exception as e:
+            print(f"✗ Неожиданная ошибка: {e}")
+        
+        # Тестируем удобную функцию создания
+        print("\n--- Тест 4: Функция create_news_processing_chain ---")
+        try:
+            chain2 = create_news_processing_chain(
+                openai_client=openai_client,
+                similarity_threshold=0.9,
+                max_news_items=10
+            )
+            print(f"✓ Цепочка создана через функцию")
+            print(f"  Порог схожести: {chain2.similarity_threshold}")
+            print(f"  Максимум новостей: {chain2.max_news_items}")
+            
+        except Exception as e:
+            print(f"✗ Ошибка создания через функцию: {e}")
+        
+        print("\n=== Тестирование завершено ===")
+        
+    except Exception as e:
+        print(f"✗ Критическая ошибка: {e}")
+        return False
+    
+    return True
+
+
+def test_custom_exceptions():
+    """Тестирует пользовательские исключения"""
+    print("\n=== Тестирование пользовательских исключений ===")
+    
+    # Проверяем что исключения наследуются правильно
+    try:
+        raise EmbeddingError("Тестовая ошибка embedding")
+    except LLMProcessingError as e:
+        print(f"✓ EmbeddingError наследуется от LLMProcessingError: {e}")
+    except Exception as e:
+        print(f"✗ Неожиданная ошибка: {e}")
+    
+    try:
+        raise RankingError("Тестовая ошибка ranking")
+    except LLMProcessingError as e:
+        print(f"✓ RankingError наследуется от LLMProcessingError: {e}")
+    except Exception as e:
+        print(f"✗ Неожиданная ошибка: {e}")
+    
+    try:
+        raise RateLimitError("Тестовая ошибка rate limit")
+    except LLMProcessingError as e:
+        print(f"✓ RateLimitError наследуется от LLMProcessingError: {e}")
+    except Exception as e:
+        print(f"✗ Неожиданная ошибка: {e}")
+
+
 def main():
     """Главная функция тестирования"""
     print("=" * 60)
@@ -304,4 +448,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    print("Тестирование обработки ошибок LangChain")
+    print("=" * 50)
+    
+    test_custom_exceptions()
+    success = test_error_handling()
+    
+    if success:
+        print("\n🎉 Все тесты прошли успешно!")
+    else:
+        print("\n❌ Есть ошибки в тестах")
+        sys.exit(1) 

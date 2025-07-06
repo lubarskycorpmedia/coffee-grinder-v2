@@ -84,7 +84,18 @@ class TheNewsAPIFetcher(BaseFetcher):
         
         for attempt in range(self.settings.MAX_RETRIES):
             try:
-                self.logger.info(f"Making request to {endpoint}, attempt {attempt + 1}/{self.settings.MAX_RETRIES}")
+                # Маскируем API токен для логирования
+                safe_params = params.copy()
+                if 'api_token' in safe_params:
+                    token = safe_params['api_token']
+                    safe_params['api_token'] = f"{token[:8]}...{token[-4:]}" if len(token) > 12 else "***"
+                
+                # Логируем полный URL запроса
+                query_string = "&".join([f"{k}={v}" for k, v in safe_params.items()])
+                full_url = f"{url}?{query_string}"
+                
+                self.logger.info(f"🌐 GET {full_url}")
+                self.logger.info(f"📤 Attempt {attempt + 1}/{self.settings.MAX_RETRIES}")
                 
                 response = self.session.get(
                     url,
@@ -92,6 +103,11 @@ class TheNewsAPIFetcher(BaseFetcher):
                     headers=headers,
                     timeout=30
                 )
+                
+                # Логируем детали ответа
+                self.logger.info(f"📥 Response: {response.status_code} {response.reason}")
+                self.logger.info(f"📊 Content-Type: {response.headers.get('content-type', 'N/A')}")
+                self.logger.info(f"📊 Content-Length: {response.headers.get('content-length', 'N/A')} bytes")
                 
                 # Проверяем статус код
                 if response.status_code == 200:

@@ -1,0 +1,109 @@
+# Product Requirements Document (PRD)
+# AI Services - News Aggregator
+
+## Project Overview
+Создать MVP сервиса автоматического сбора новостей с использованием AI для обработки и анализа. Сервис должен работать в Docker контейнере с поддержкой cron задач и HTTP API.
+
+## Technical Stack
+- Python 3.12
+- Poetry для управления зависимостями
+- LangChain для AI цепочек
+- FAISS для векторного поиска
+- FastAPI для HTTP API
+- Docker с supercronic для cron
+- Google Sheets API для экспорта
+- OpenAI API для AI обработки
+
+## Core Features
+
+### 1. News Fetching
+- Получение новостей из внешних API (TheNewsAPI, NewsAPI)
+- Поддержка множественных источников через фабрику
+- Обработка ошибок и retry логика с экспоненциальным backoff
+- Обработка rate limiting (429 ошибок)
+
+### 2. News Processing
+- Дедупликация новостей с использованием FAISS
+- Ранжирование по релевантности через LangChain
+- Векторизация текста для поиска дубликатов
+
+### 3. Export & Storage
+- Экспорт обработанных новостей в Google Sheets
+- Структурированное хранение данных
+
+### 4. Additional AI Services
+- Обработка изображений (Pillow + LangChain)
+- Генерация презентаций (python-pptx + LangChain)
+- Text-to-Speech (gTTS или OpenAI Audio)
+
+### 5. Infrastructure
+- Docker контейнер с supercronic для cron задач
+- FastAPI HTTP API с эндпоинтами:
+  - /health - проверка статуса
+  - /trigger/run - ручной запуск
+- GitHub Actions CI/CD pipeline
+- Логирование с использованием structlog
+
+## Current Architecture Issues
+
+### CRITICAL: Dependency Injection Problem
+**Проблема:** Fetcher классы зависят от глобальных настроек (get_settings()) которые требуют ALL переменные окружения (Google, OpenAI), хотя fetcher использует только THENEWSAPI_API_TOKEN.
+
+**Решение:** Рефакторить fetcher'ы для работы с отдельными параметрами:
+```python
+# Вместо:
+class TheNewsAPIFetcher:
+    def __init__(self):
+        self.settings = get_settings()  # Требует ВСЕ переменные
+
+# Должно быть:
+class TheNewsAPIFetcher:
+    def __init__(self, api_token: str = None):
+        self.api_token = api_token or os.getenv('THENEWSAPI_API_TOKEN')
+```
+
+## File Structure
+```
+coffee_grinder/
+├── src/
+│   ├── config.py
+│   ├── logger.py
+│   ├── run.py
+│   ├── webapp/main.py
+│   ├── services/
+│   │   ├── news/
+│   │   │   ├── fetcher_fabric.py
+│   │   │   ├── fetchers/
+│   │   │   ├── deduplicftor_rank.py
+│   │   │   └── exporter.py
+│   │   ├── images/
+│   │   ├── presentations/
+│   │   └── audio/
+│   └── langchain/
+├── tests/ (100% coverage required)
+├── scripts/ (manual testing scripts)
+└── tasks/
+```
+
+## Quality Requirements
+- 100% unit test coverage
+- PEP8 compliance
+- Type annotations for all functions
+- Comprehensive error handling
+- Structured logging
+
+## Environment Variables
+- THENEWSAPI_API_TOKEN (required)
+- GOOGLE_GSHEET_ID, GOOGLE_ACCOUNT_EMAIL, GOOGLE_ACCOUNT_KEY
+- OPENAI_API_KEY
+- NEWS_API_PROVIDER (default: thenewsapi)
+- MAX_RETRIES, BACKOFF_FACTOR
+
+## Current Status
+- ✅ Basic utilities and configuration
+- ✅ Fetcher implementation with factory pattern
+- ✅ 100% test coverage (91.67%)
+- ❌ Dependency injection architecture needs refactoring
+- ❌ Deduplication and ranking not implemented
+- ❌ Export to Google Sheets not implemented
+- ❌ AI processing chains not implemented 

@@ -86,4 +86,13 @@ scripts/task-complexity-report.json
 !.env.example
 
 # Dependency directories
-node_modules/ 
+node_modules/
+
+# Added by Claude Task Master
+logs
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+# OS specific
+# Task files

@@ -38,7 +38,7 @@ class NewsItem:
         self.language = language
         self.embedding: Optional[np.ndarray] = None
         self.similarity_score: float = 0.0
-        self.relevance_score: float = 0.0
+        self.relevance_score: float = 5.0
         self.is_duplicate: bool = False
         self.duplicate_of: Optional[str] = None
     
@@ -60,11 +60,17 @@ class NewsItem:
     
     def get_content_for_embedding(self) -> str:
         """Получает текст для создания embedding"""
-        return f"{self.title}\n{self.description}"
+        parts = [self.title, self.description]
+        if self.category:
+            parts.append(self.category)
+        return " ".join(parts)
     
     def get_content_for_ranking(self) -> str:
         """Получает текст для ранжирования"""
-        return f"Title: {self.title}\nDescription: {self.description}\nSource: {self.source}\nCategory: {self.category or 'Unknown'}"
+        if self.category:
+            return f"Заголовок: {self.title}\nОписание: {self.description}\nИсточник: {self.source}\nКатегория: {self.category}"
+        else:
+            return f"Заголовок: {self.title}\nОписание: {self.description}\nИсточник: {self.source}"
 
 
 class NewsProcessingChain:
@@ -108,28 +114,31 @@ class NewsProcessingChain:
         return self._logger
     
     def _setup_langchain_components(self):
-        """Настройка LangChain компонентов"""
-        try:
-            settings = get_ai_settings()
-            api_key = settings.OPENAI_API_KEY
-        except Exception:
-            api_key = None
+        """Настройка компонентов LangChain"""
+        # Получаем настройки AI
+        settings = get_ai_settings()
+        api_key = settings.OPENAI_API_KEY
         
-        # Embeddings
+        # Embeddings для семантического поиска
         self.embeddings = OpenAIEmbeddings(
             model=self.embedding_model,
             openai_api_key=api_key
         )
         
+        # Создаем цепочку для ранжирования
+        self.ranking_chain = self._create_ranking_chain(api_key)
+    
+    def _create_ranking_chain(self, api_key: str):
+        """Создание цепочки для ранжирования новостей"""
         # LLM для ранжирования
-        self.llm = ChatOpenAI(
+        llm = ChatOpenAI(
             model=self.llm_model,
             temperature=0.1,
             openai_api_key=api_key
         )
         
         # Промпт для ранжирования новостей
-        self.ranking_prompt = PromptTemplate(
+        ranking_prompt = PromptTemplate(
             input_variables=["news_items", "criteria"],
             template="""
 Ты - эксперт по анализу новостей. Проанализируй следующие новости и оцени их по критериям важности и актуальности.
@@ -157,10 +166,10 @@ class NewsProcessingChain:
         )
         
         # Цепочка для ранжирования
-        self.ranking_chain = (
+        return (
             RunnablePassthrough()
-            | self.ranking_prompt
-            | self.llm
+            | ranking_prompt
+            | llm
             | StrOutputParser()
         )
     
@@ -300,8 +309,33 @@ class NewsProcessingChain:
                 "criteria": criteria
             })
             
+            # Очищаем результат от возможных префиксов/суффиксов
+            result_text = result.strip()
+            if "```json" in result_text:
+                # Извлекаем JSON из markdown блока
+                start = result_text.find("```json") + 7
+                end = result_text.find("```", start)
+                result_text = result_text[start:end].strip()
+            elif "```" in result_text:
+                # Извлекаем JSON из обычного блока кода
+                start = result_text.find("```") + 3
+                end = result_text.find("```", start)
+                result_text = result_text[start:end].strip()
+            
+            # Ищем JSON объект в тексте
+            if result_text.startswith("{") and result_text.endswith("}"):
+                json_text = result_text
+            else:
+                # Пытаемся найти JSON объект в тексте
+                import re
+                json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
+                if json_match:
+                    json_text = json_match.group(0)
+                else:
+                    raise ValueError("No JSON object found in response")
+            
             # Парсим результат
-            rankings_data = json.loads(result.strip())
+            rankings_data = json.loads(json_text)
             url_to_score = {item["url"]: item["score"] for item in rankings_data["rankings"]}
             
             # Присваиваем оценки

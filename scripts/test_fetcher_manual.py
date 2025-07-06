@@ -13,7 +13,7 @@ from typing import Dict, Any
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from src.services.news.fetcher_fabric import create_news_fetcher
+from src.services.news.fetcher_fabric import create_news_fetcher_with_config
 from src.logger import setup_logger
 
 # ============================================================================
@@ -51,7 +51,7 @@ ALL_NEWS_PARAMS = {
     # "exclude_categories": "sports",  # Категории для исключения
     # "published_after": "2025-01-01", # Дата начала (YYYY-MM-DD)
     # "published_before": "2025-01-15", # Дата окончания (YYYY-MM-DD)
-    "published_on": "2025-07-06",    # Конкретная дата (YYYY-MM-DD)
+    "published_on": "2025-07-05",    # Конкретная дата (YYYY-MM-DD)
     # "page": 1,                       # Номер страницы
 }
 
@@ -138,8 +138,8 @@ def test_fetcher_with_real_api():
     logger.info("✅ Параметры тестов валидны")
     
     try:
-        # Создаем fetcher
-        fetcher = create_news_fetcher("thenewsapi")
+        # Создаем fetcher с получением настроек из конфига
+        fetcher = create_news_fetcher_with_config("thenewsapi")
         logger.info("✅ Fetcher создан успешно")
         
         # Тестируем получение заголовков (может не работать на бесплатном плане)

@@ -37,4 +37,40 @@ class BaseFetcher(ABC):
     @abstractmethod
     def get_sources(self, **kwargs) -> Dict[str, Any]:
         """Получает список доступных источников"""
+        pass
+    
+    @abstractmethod
+    def fetch_news(self, 
+                   query: Optional[str] = None,
+                   category: Optional[str] = None,
+                   language: str = "en",
+                   limit: int = 50,
+                   **kwargs) -> Dict[str, Any]:
+        """
+        Универсальный метод для получения новостей
+        
+        Args:
+            query: Поисковый запрос
+            category: Категория новостей  
+            language: Язык новостей
+            limit: Максимальное количество новостей
+            **kwargs: Дополнительные параметры специфичные для провайдера
+            
+        Returns:
+            Dict с результатами в стандартном формате:
+            {
+                "articles": [
+                    {
+                        "title": "...",
+                        "description": "...",
+                        "url": "...",
+                        "published_at": "...",
+                        "source": "...",
+                        "category": "...",
+                        "language": "..."
+                    }
+                ]
+            }
+            или {"error": NewsAPIError} в случае ошибки
+        """
         pass 

@@ -398,4 +398,116 @@ class TheNewsAPIFetcher(BaseFetcher):
             sort="relevance_score",
             sort_order="desc",
             limit=100
-        ) 
+        )
+    
+    def fetch_news(self, 
+                   query: Optional[str] = None,
+                   category: Optional[str] = None,
+                   language: str = "en",
+                   limit: int = 50,
+                   **kwargs) -> Dict[str, Any]:
+        """
+        Универсальный метод для получения новостей
+        Адаптер между NewsProcessor и fetch_all_news
+        
+        Args:
+            query: Поисковый запрос
+            category: Категория новостей (будет преобразована в categories)
+            language: Язык новостей (по умолчанию русский)
+            limit: Максимальное количество новостей
+            **kwargs: Дополнительные параметры для fetch_all_news
+            
+        Returns:
+            Dict в стандартном формате с полем 'articles'
+        """
+        try:
+            # Вчерашняя дата для published_after
+            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+            
+            # Подготавливаем параметры для fetch_all_news с фиксированными значениями
+            params = {
+                "language": language,
+                "limit": min(limit, 100),
+                "sort": "relevance_score",
+                "sort_order": "desc",
+                "categories": "general,politics,tech,business",
+                "published_after": yesterday
+            }
+            
+            # Добавляем поисковый запрос если есть
+            if query:
+                params["search"] = query
+            
+            # Добавляем категорию если есть (перезапишет categories по умолчанию)
+            if category:
+                params["categories"] = category
+            
+            # Добавляем дополнительные параметры (могут перезаписать defaults)
+            params.update(kwargs)
+            
+            self.logger.debug(f"Calling fetch_all_news with params: {params}")
+            
+            # Вызываем fetch_all_news
+            result = self.fetch_all_news(**params)
+            
+            # Если есть ошибка, возвращаем как есть
+            if "error" in result:
+                return result
+            
+            # Преобразуем формат ответа: "data" -> "articles"
+            raw_articles = result.get("data", [])
+            
+            # Стандартизируем формат каждой статьи
+            articles = []
+            for article in raw_articles:
+                standardized_article = {
+                    "title": article.get("title", ""),
+                    "description": article.get("description", ""),
+                    "url": article.get("url", ""),
+                    "published_at": article.get("published_at", ""),
+                    "source": article.get("source", ""),
+                    "category": self._extract_category(article, category),
+                    "language": article.get("language", language)
+                }
+                articles.append(standardized_article)
+            
+            self.logger.info(f"Successfully standardized {len(articles)} articles")
+            
+            return {
+                "articles": articles,
+                "meta": result.get("meta", {
+                    "total": len(articles),
+                    "limit": limit,
+                    "language": language
+                })
+            }
+            
+        except Exception as e:
+            error_msg = f"Failed to fetch news: {str(e)}"
+            self.logger.error(error_msg)
+            error = NewsAPIError(error_msg, None, 1)
+            return {"error": error}
+    
+    def _extract_category(self, article: Dict[str, Any], requested_category: Optional[str]) -> str:
+        """
+        Извлекает категорию из статьи
+        
+        Args:
+            article: Статья из API
+            requested_category: Запрошенная категория
+            
+        Returns:
+            Строка с категорией
+        """
+        # TheNewsAPI возвращает categories как массив
+        api_categories = article.get("categories", [])
+        
+        if api_categories and isinstance(api_categories, list):
+            # Берем первую категорию из API
+            return api_categories[0]
+        elif requested_category:
+            # Используем запрошенную категорию
+            return requested_category
+        else:
+            # По умолчанию
+            return "general" 

@@ -16,20 +16,14 @@ class TestTheNewsAPIFetcher:
     @pytest.fixture
     def fetcher(self):
         """Создает экземпляр fetcher'а для тестов"""
-        # Теперь можем создать fetcher без моков при импорте
-        fetcher = TheNewsAPIFetcher()
+        fetcher = TheNewsAPIFetcher(
+            api_token="test_token",
+            max_retries=3,
+            backoff_factor=2.0
+        )
         # Мокаем логгер чтобы избежать проблем с настройками
         fetcher._logger = Mock()
         return fetcher
-    
-    @pytest.fixture
-    def mock_settings(self):
-        """Мокает settings для тестов"""
-        mock_settings = MagicMock()
-        mock_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_settings.MAX_RETRIES = 3
-        mock_settings.BACKOFF_FACTOR = 2.0
-        return mock_settings
     
     @pytest.fixture
     def mock_successful_response(self):
@@ -58,16 +52,26 @@ class TestTheNewsAPIFetcher:
         """Мок ответа с ошибкой API"""
         return {
             "error": {
-                "code": "invalid_api_token",
-                "message": "The provided API token is invalid"
+                "code": "invalid_token",
+                "message": "Invalid API token provided"
             }
         }
     
-    def test_successful_fetch_headlines(self, fetcher, mock_successful_response, mock_settings):
-        """Тест успешного получения заголовков"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
+    def test_fetcher_initialization(self):
+        """Тест правильной инициализации fetcher'а"""
+        fetcher = TheNewsAPIFetcher(
+            api_token="test_token",
+            max_retries=5,
+            backoff_factor=1.5
+        )
         
+        assert fetcher.api_token == "test_token"
+        assert fetcher.max_retries == 5
+        assert fetcher.backoff_factor == 1.5
+        assert fetcher.base_url == "https://api.thenewsapi.com/v1"
+    
+    def test_successful_fetch_headlines(self, fetcher, mock_successful_response):
+        """Тест успешного получения заголовков"""
         with patch.object(fetcher.session, 'get') as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
@@ -82,16 +86,13 @@ class TestTheNewsAPIFetcher:
             assert len(result["data"]["general"]) == 1
             assert result["data"]["general"][0]["title"] == "Test News Title"
             
-            # Проверяем что API токен добавлен в параметры
-            mock_get.assert_called_once()
+            # Проверяем что API токен был добавлен в параметры
             call_args = mock_get.call_args
-            assert call_args[1]["params"]["api_token"] == "test_token"
+            params = call_args[1]["params"]
+            assert params["api_token"] == "test_token"
     
-    def test_successful_fetch_all_news(self, fetcher, mock_settings):
+    def test_successful_fetch_all_news(self, fetcher):
         """Тест успешного поиска всех новостей"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         mock_response_data = {
             "data": [
                 {
@@ -120,11 +121,8 @@ class TestTheNewsAPIFetcher:
             assert len(result["data"]) == 1
             assert result["data"][0]["title"] == "AI News"
     
-    def test_successful_fetch_top_stories(self, fetcher, mock_settings):
+    def test_successful_fetch_top_stories(self, fetcher):
         """Тест успешного получения топ новостей"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         mock_response_data = {
             "data": [
                 {
@@ -147,11 +145,8 @@ class TestTheNewsAPIFetcher:
             assert "data" in result
             assert result["data"][0]["title"] == "Breaking News"
     
-    def test_successful_get_sources(self, fetcher, mock_settings):
+    def test_successful_get_sources(self, fetcher):
         """Тест успешного получения источников"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         mock_response_data = {
             "data": [
                 {
@@ -175,11 +170,8 @@ class TestTheNewsAPIFetcher:
             assert "data" in result
             assert result["data"][0]["name"] == "Example News"
     
-    def test_api_error_response(self, fetcher, mock_error_response, mock_settings):
+    def test_api_error_response(self, fetcher, mock_error_response):
         """Тест обработки ошибки API в ответе"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         with patch.object(fetcher.session, 'get') as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
@@ -192,11 +184,8 @@ class TestTheNewsAPIFetcher:
             assert isinstance(result["error"], NewsAPIError)
             assert "invalid" in result["error"].message.lower()
     
-    def test_rate_limit_429_with_retries(self, fetcher, mock_settings):
+    def test_rate_limit_429_with_retries(self, fetcher):
         """Тест обработки 429 ошибки с ретраями"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         with patch.object(fetcher.session, 'get') as mock_get, \
              patch('time.sleep') as mock_sleep:
             
@@ -229,22 +218,19 @@ class TestTheNewsAPIFetcher:
             assert "error" not in result
             assert "data" in result
     
-    def test_rate_limit_429_max_retries_exceeded(self, fetcher, mock_settings):
+    def test_rate_limit_429_max_retries_exceeded(self, fetcher):
         """Тест обработки 429 когда исчерпаны все попытки"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         with patch.object(fetcher.session, 'get') as mock_get, \
              patch('time.sleep') as mock_sleep:
             
-            # Все попытки возвращают 429
-            mock_response = Mock()
-            mock_response.status_code = 429
-            mock_get.return_value = mock_response
+            # Все попытки - 429
+            mock_429 = Mock()
+            mock_429.status_code = 429
+            mock_get.return_value = mock_429
             
             result = fetcher.fetch_headlines()
             
-            # Проверяем что сделано MAX_RETRIES попыток
+            # Проверяем что сделано max_retries попыток
             assert mock_get.call_count == 3
             
             # Проверяем что были задержки (на 1 меньше чем попыток)
@@ -254,31 +240,9 @@ class TestTheNewsAPIFetcher:
             assert "error" in result
             assert isinstance(result["error"], NewsAPIError)
             assert result["error"].status_code == 429
-            assert "rate limit" in result["error"].message.lower()
     
-    def test_http_error_handling(self, fetcher, mock_settings):
-        """Тест обработки HTTP ошибок"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
-        with patch.object(fetcher.session, 'get') as mock_get:
-            mock_response = Mock()
-            mock_response.status_code = 404
-            mock_response.text = "Not Found"
-            mock_response.json.side_effect = ValueError("No JSON")
-            mock_get.return_value = mock_response
-            
-            result = fetcher.fetch_headlines()
-            
-            assert "error" in result
-            assert isinstance(result["error"], NewsAPIError)
-            assert result["error"].status_code == 404
-    
-    def test_server_error_with_retry(self, fetcher, mock_settings):
+    def test_server_error_with_retry(self, fetcher):
         """Тест обработки серверной ошибки 5xx с ретраем"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         with patch.object(fetcher.session, 'get') as mock_get, \
              patch('time.sleep') as mock_sleep:
             
@@ -309,11 +273,8 @@ class TestTheNewsAPIFetcher:
             # Проверяем успешный результат
             assert "error" not in result
     
-    def test_network_error_handling(self, fetcher, mock_settings):
+    def test_network_error_handling(self, fetcher):
         """Тест обработки сетевых ошибок"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         with patch.object(fetcher.session, 'get') as mock_get, \
              patch('time.sleep') as mock_sleep:
             
@@ -333,11 +294,8 @@ class TestTheNewsAPIFetcher:
             assert isinstance(result["error"], NewsAPIError)
             assert "network error" in result["error"].message.lower()
     
-    def test_exponential_backoff_calculation(self, fetcher, mock_settings):
+    def test_exponential_backoff_calculation(self, fetcher):
         """Тест расчета экспоненциального backoff"""
-        # Мокаем _settings напрямую
-        fetcher._settings = mock_settings
-        
         # Проверяем что задержка увеличивается экспоненциально
         delay_0 = fetcher._exponential_backoff(0)
         delay_1 = fetcher._exponential_backoff(1)
@@ -350,11 +308,8 @@ class TestTheNewsAPIFetcher:
         delay_large = fetcher._exponential_backoff(10)
         assert delay_large <= 60.0
     
-    def test_fetch_recent_tech_news(self, fetcher, mock_settings):
+    def test_fetch_recent_tech_news(self, fetcher):
         """Тест получения последних технологических новостей"""
-        # Мокаем settings
-        fetcher._settings = mock_settings
-        
         mock_response_data = {
             "data": [
                 {

@@ -9,25 +9,27 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .base import BaseFetcher, NewsAPIError
-from ....config import get_settings
 from ....logger import setup_logger
 
 
 class TheNewsAPIFetcher(BaseFetcher):
     """Fetcher для thenewsapi.com с поддержкой всех эндпоинтов"""
     
-    def __init__(self):
-        self._settings = None
-        self._logger = None
+    def __init__(self, api_token: str, max_retries: int = 3, backoff_factor: float = 2.0):
+        """
+        Инициализация fetcher'а
+        
+        Args:
+            api_token: API токен для thenewsapi.com
+            max_retries: Максимальное количество попыток при ошибках
+            backoff_factor: Коэффициент для экспоненциального backoff
+        """
+        self.api_token = api_token
+        self.max_retries = max_retries
+        self.backoff_factor = backoff_factor
         self.base_url = "https://api.thenewsapi.com/v1"
         self._session = None
-    
-    @property
-    def settings(self):
-        """Ленивое создание настроек"""
-        if self._settings is None:
-            self._settings = get_settings()
-        return self._settings
+        self._logger = None
     
     @property
     def session(self):
@@ -65,7 +67,7 @@ class TheNewsAPIFetcher(BaseFetcher):
         base_delay = 1.0  # Базовая задержка в секундах
         max_delay = 60.0  # Максимальная задержка
         
-        delay = base_delay * (self.settings.BACKOFF_FACTOR ** attempt) + random.uniform(0, 1)
+        delay = base_delay * (self.backoff_factor ** attempt) + random.uniform(0, 1)
         return min(delay, max_delay)
     
     def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -73,7 +75,7 @@ class TheNewsAPIFetcher(BaseFetcher):
         url = f"{self.base_url}/{endpoint}"
         
         # Добавляем API токен в параметры
-        params["api_token"] = self.settings.THENEWSAPI_API_TOKEN
+        params["api_token"] = self.api_token
         
         headers = {
             "User-Agent": "coffee-grinder-news-service/1.0",
@@ -82,32 +84,11 @@ class TheNewsAPIFetcher(BaseFetcher):
         
         last_error = None
         
-        for attempt in range(self.settings.MAX_RETRIES):
+        for attempt in range(self.max_retries):
             try:
-                # Маскируем API токен для логирования
-                safe_params = params.copy()
-                if 'api_token' in safe_params:
-                    token = safe_params['api_token']
-                    safe_params['api_token'] = f"{token[:8]}...{token[-4:]}" if len(token) > 12 else "***"
+                self.logger.debug(f"Making request to {url}, attempt {attempt + 1}/{self.max_retries}")
                 
-                # Логируем полный URL запроса
-                query_string = "&".join([f"{k}={v}" for k, v in safe_params.items()])
-                full_url = f"{url}?{query_string}"
-                
-                self.logger.info(f"🌐 GET {full_url}")
-                self.logger.info(f"📤 Attempt {attempt + 1}/{self.settings.MAX_RETRIES}")
-                
-                response = self.session.get(
-                    url,
-                    params=params,
-                    headers=headers,
-                    timeout=30
-                )
-                
-                # Логируем детали ответа
-                self.logger.info(f"📥 Response: {response.status_code} {response.reason}")
-                self.logger.info(f"📊 Content-Type: {response.headers.get('content-type', 'N/A')}")
-                self.logger.info(f"📊 Content-Length: {response.headers.get('content-length', 'N/A')} bytes")
+                response = self.session.get(url, params=params, headers=headers, timeout=30)
                 
                 # Проверяем статус код
                 if response.status_code == 200:
@@ -128,18 +109,18 @@ class TheNewsAPIFetcher(BaseFetcher):
                     
                 elif response.status_code == 429:
                     # Rate limit exceeded
-                    self.logger.warning(f"Rate limit exceeded (429), attempt {attempt + 1}/{self.settings.MAX_RETRIES}")
+                    self.logger.warning(f"Rate limit exceeded (429), attempt {attempt + 1}/{self.max_retries}")
                     last_error = NewsAPIError("Rate limit exceeded", 429, attempt + 1)
                     
                     # Если это не последняя попытка, ждем
-                    if attempt < self.settings.MAX_RETRIES - 1:
+                    if attempt < self.max_retries - 1:
                         delay = self._exponential_backoff(attempt)
                         self.logger.info(f"Waiting {delay:.2f} seconds before retry...")
                         time.sleep(delay)
                         continue
                     else:
                         # Последняя попытка - возвращаем ошибку
-                        self.logger.error(f"Rate limit exceeded after {self.settings.MAX_RETRIES} attempts")
+                        self.logger.error(f"Rate limit exceeded after {self.max_retries} attempts")
                         return {"error": last_error}
                 
                 else:
@@ -157,7 +138,7 @@ class TheNewsAPIFetcher(BaseFetcher):
                     last_error = NewsAPIError(error_msg, response.status_code, attempt + 1)
                     
                     # Для серверных ошибок (5xx) пытаемся повторить
-                    if 500 <= response.status_code < 600 and attempt < self.settings.MAX_RETRIES - 1:
+                    if 500 <= response.status_code < 600 and attempt < self.max_retries - 1:
                         delay = self._exponential_backoff(attempt)
                         self.logger.info(f"Server error, waiting {delay:.2f} seconds before retry...")
                         time.sleep(delay)
@@ -171,7 +152,7 @@ class TheNewsAPIFetcher(BaseFetcher):
                 last_error = NewsAPIError(error_msg, None, attempt + 1)
                 
                 # Для сетевых ошибок пытаемся повторить
-                if attempt < self.settings.MAX_RETRIES - 1:
+                if attempt < self.max_retries - 1:
                     delay = self._exponential_backoff(attempt)
                     self.logger.info(f"Network error, waiting {delay:.2f} seconds before retry...")
                     time.sleep(delay)

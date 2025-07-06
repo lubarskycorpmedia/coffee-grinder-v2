@@ -3,8 +3,8 @@
 import sys
 import argparse
 from typing import Optional
-from src.logger import get_logger
-from src.config import get_settings
+from src.logger import setup_logger
+from src.config import get_news_settings, get_ai_settings, get_google_settings
 
 
 def check_configuration() -> bool:
@@ -14,42 +14,42 @@ def check_configuration() -> bool:
     Returns:
         True если конфигурация корректна, False иначе
     """
-    logger = get_logger()  # Создаем логгер в начале функции
+    logger = setup_logger(__name__)
     
     try:
-        settings = get_settings()
-        
-        # Проверяем обязательные переменные окружения
-        required_vars = [
-            'THENEWSAPI_API_TOKEN',
-            'OPENAI_API_KEY', 
-            'GOOGLE_GSHEET_ID',
-            'GOOGLE_ACCOUNT_EMAIL',
-            'GOOGLE_ACCOUNT_KEY'
-        ]
-        
-        missing_vars = []
-        for var in required_vars:
-            value = getattr(settings, var, None)
-            if not value:
-                missing_vars.append(var)
-        
-        if missing_vars:
-            logger.error(f"Отсутствуют обязательные переменные окружения: {missing_vars}")
+        # Проверяем настройки новостей
+        try:
+            news_settings = get_news_settings()
+            if not news_settings.THENEWSAPI_API_TOKEN:
+                logger.error("THENEWSAPI_API_TOKEN не настроен")
+                return False
+            logger.info("✓ Настройки новостей корректны")
+        except Exception as e:
+            logger.error(f"Ошибка настроек новостей: {e}")
             return False
         
-        # Проверяем корректность значений
-        if not (0.0 <= settings.DEDUP_THRESHOLD <= 1.0):
-            logger.error(f"DEDUP_THRESHOLD должен быть от 0.0 до 1.0, получен: {settings.DEDUP_THRESHOLD}")
+        # Проверяем настройки AI
+        try:
+            ai_settings = get_ai_settings()
+            if not ai_settings.OPENAI_API_KEY:
+                logger.error("OPENAI_API_KEY не настроен")
+                return False
+            logger.info("✓ Настройки AI корректны")
+        except Exception as e:
+            logger.error(f"Ошибка настроек AI: {e}")
             return False
         
-        if settings.MAX_RETRIES < 0:
-            logger.error(f"MAX_RETRIES должен быть >= 0, получен: {settings.MAX_RETRIES}")
-            return False
-        
-        if settings.ASK_NEWS_COUNT <= 0:
-            logger.error(f"ASK_NEWS_COUNT должен быть > 0, получен: {settings.ASK_NEWS_COUNT}")
-            return False
+        # Проверяем настройки Google (опционально)
+        try:
+            google_settings = get_google_settings()
+            if not google_settings.GOOGLE_GSHEET_ID:
+                logger.warning("GOOGLE_GSHEET_ID не настроен - экспорт будет недоступен")
+            elif not google_settings.GOOGLE_ACCOUNT_KEY:
+                logger.warning("GOOGLE_ACCOUNT_KEY не настроен - экспорт будет недоступен")
+            else:
+                logger.info("✓ Настройки Google Sheets корректны")
+        except Exception as e:
+            logger.warning(f"Настройки Google Sheets недоступны: {e}")
         
         logger.info("Конфигурация корректна")
         return True
@@ -66,7 +66,7 @@ def check_dependencies() -> bool:
     Returns:
         True если все зависимости доступны, False иначе
     """
-    logger = get_logger()
+    logger = setup_logger(__name__)
     required_modules = [
         'openai',
         'langchain',
@@ -101,9 +101,21 @@ def dry_run_check() -> bool:
     Returns:
         True если dry-run возможен, False иначе
     """
-    logger = get_logger()
+    logger = setup_logger(__name__)
     try:
-        # TODO: Здесь будет проверка run.py --dry-run когда он будет реализован
+        # Проверяем, что можем импортировать основные модули
+        from src.services.news.news_processor import create_news_processor
+        from src.run import validate_environment
+        
+        # Проверяем валидацию окружения
+        validation = validate_environment()
+        if validation["errors"]:
+            logger.error(f"Ошибки валидации окружения: {validation['errors']}")
+            return False
+        
+        if validation["warnings"]:
+            logger.warning(f"Предупреждения валидации: {validation['warnings']}")
+        
         logger.info("Dry-run проверка пройдена")
         return True
     except Exception as e:
@@ -121,8 +133,8 @@ def healthcheck(dry_run: bool = False) -> bool:
     Returns:
         True если все проверки пройдены, False иначе
     """
-    logger = get_logger()
-    logger.info("Запуск проверки здоровья сервиса...")
+    logger = setup_logger(__name__)
+    logger.info("🔍 Запуск проверки здоровья сервиса...")
     
     checks = [
         ("Конфигурация", check_configuration),
@@ -136,15 +148,15 @@ def healthcheck(dry_run: bool = False) -> bool:
     for check_name, check_func in checks:
         logger.info(f"Проверка: {check_name}")
         if not check_func():
-            logger.error(f"Проверка '{check_name}' провалена")
+            logger.error(f"❌ Проверка '{check_name}' провалена")
             all_passed = False
         else:
-            logger.info(f"Проверка '{check_name}' пройдена")
+            logger.info(f"✅ Проверка '{check_name}' пройдена")
     
     if all_passed:
-        logger.info("Все проверки здоровья пройдены успешно")
+        logger.info("🎉 Все проверки здоровья пройдены успешно")
     else:
-        logger.error("Некоторые проверки здоровья провалены")
+        logger.error("💔 Некоторые проверки здоровья провалены")
     
     return all_passed
 

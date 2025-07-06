@@ -8,19 +8,19 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.12"
 # OpenAI SDK - последняя стабильная версия
-openai = "^1.51.0"
-# LangChain - совместимая с OpenAI 1.x
-langchain = "^0.3.0"
-langchain-openai = "^0.2.0"
+openai = "^1.60.0"
+# LangChain - последняя стабильная версия
+langchain = "^0.3.26"
+langchain-openai = "^0.3.27"
 # FAISS - последняя стабильная
-faiss-cpu = "^1.8.0"
+faiss-cpu = "^1.11.0"
 # Google интеграция
-gspread = "^6.1.0"
+gspread = "^6.2.1"
 google-auth = "^2.35.0"
 # Базовые зависимости
-pydantic = "^2.9.0"
+pydantic = "^2.11.7"
 python-dotenv = "^1.0.1"
-requests = "^2.32.0"
+requests = "^2.32.4"
 # Дополнительные зависимости
 structlog = "^24.4.0"
 tenacity = "^9.0.0"

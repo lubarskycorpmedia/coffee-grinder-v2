@@ -18,92 +18,100 @@ from src.healthcheck import (
 class TestCheckConfiguration:
     """Тесты для функции check_configuration."""
     
-    @patch('src.healthcheck.get_settings')
-    def test_check_configuration_success(self, mock_get_settings):
+    @patch('src.healthcheck.get_google_settings')
+    @patch('src.healthcheck.get_ai_settings')
+    @patch('src.healthcheck.get_news_settings')
+    def test_check_configuration_success(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
         """Тест успешной проверки конфигурации."""
-        mock_settings = MagicMock()
-        mock_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_settings.OPENAI_API_KEY = "test_key"
-        mock_settings.GOOGLE_GSHEET_ID = "test_id"
-        mock_settings.GOOGLE_ACCOUNT_EMAIL = "test@email.com"
-        mock_settings.GOOGLE_ACCOUNT_KEY = "test_key"
-        mock_settings.DEDUP_THRESHOLD = 0.85
-        mock_settings.MAX_RETRIES = 3
-        mock_settings.ASK_NEWS_COUNT = 10
-        mock_get_settings.return_value = mock_settings
+        # Мокаем настройки новостей
+        mock_news_settings = MagicMock()
+        mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
+        mock_get_news_settings.return_value = mock_news_settings
+        
+        # Мокаем настройки AI
+        mock_ai_settings = MagicMock()
+        mock_ai_settings.OPENAI_API_KEY = "test_key"
+        mock_get_ai_settings.return_value = mock_ai_settings
+        
+        # Мокаем настройки Google
+        mock_google_settings = MagicMock()
+        mock_google_settings.GOOGLE_GSHEET_ID = "test_id"
+        mock_google_settings.GOOGLE_ACCOUNT_KEY = "test_key"
+        mock_get_google_settings.return_value = mock_google_settings
         
         result = check_configuration()
         assert result is True
     
-    @patch('src.healthcheck.get_settings')
-    def test_check_configuration_missing_vars(self, mock_get_settings):
+    @patch('src.healthcheck.get_google_settings')
+    @patch('src.healthcheck.get_ai_settings')
+    @patch('src.healthcheck.get_news_settings')
+    def test_check_configuration_missing_vars(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
         """Тест проверки конфигурации с отсутствующими переменными."""
-        mock_settings = MagicMock()
-        mock_settings.THENEWSAPI_API_TOKEN = ""
-        mock_settings.OPENAI_API_KEY = "test_key"
-        mock_settings.GOOGLE_GSHEET_ID = "test_id"
-        mock_settings.GOOGLE_ACCOUNT_EMAIL = "test@email.com"
-        mock_settings.GOOGLE_ACCOUNT_KEY = "test_key"
-        mock_get_settings.return_value = mock_settings
+        # Мокаем настройки новостей с пустым токеном
+        mock_news_settings = MagicMock()
+        mock_news_settings.THENEWSAPI_API_TOKEN = ""
+        mock_get_news_settings.return_value = mock_news_settings
+        
+        # Мокаем настройки AI
+        mock_ai_settings = MagicMock()
+        mock_ai_settings.OPENAI_API_KEY = "test_key"
+        mock_get_ai_settings.return_value = mock_ai_settings
+        
+        # Мокаем настройки Google
+        mock_google_settings = MagicMock()
+        mock_google_settings.GOOGLE_GSHEET_ID = "test_id"
+        mock_google_settings.GOOGLE_ACCOUNT_KEY = "test_key"
+        mock_get_google_settings.return_value = mock_google_settings
         
         result = check_configuration()
         assert result is False
     
-    @patch('src.healthcheck.get_settings')
-    def test_check_configuration_invalid_threshold(self, mock_get_settings):
-        """Тест проверки конфигурации с неверным порогом дедупликации."""
-        mock_settings = MagicMock()
-        mock_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_settings.OPENAI_API_KEY = "test_key"
-        mock_settings.GOOGLE_GSHEET_ID = "test_id"
-        mock_settings.GOOGLE_ACCOUNT_EMAIL = "test@email.com"
-        mock_settings.GOOGLE_ACCOUNT_KEY = "test_key"
-        mock_settings.DEDUP_THRESHOLD = 1.5  # Неверное значение
-        mock_settings.MAX_RETRIES = 3
-        mock_settings.ASK_NEWS_COUNT = 10
-        mock_get_settings.return_value = mock_settings
+    @patch('src.healthcheck.get_google_settings')
+    @patch('src.healthcheck.get_ai_settings')
+    @patch('src.healthcheck.get_news_settings')
+    def test_check_configuration_missing_ai_key(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
+        """Тест проверки конфигурации с отсутствующим AI ключом."""
+        # Мокаем настройки новостей
+        mock_news_settings = MagicMock()
+        mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
+        mock_get_news_settings.return_value = mock_news_settings
+        
+        # Мокаем настройки AI с пустым ключом
+        mock_ai_settings = MagicMock()
+        mock_ai_settings.OPENAI_API_KEY = ""
+        mock_get_ai_settings.return_value = mock_ai_settings
+        
+        # Мокаем настройки Google
+        mock_google_settings = MagicMock()
+        mock_google_settings.GOOGLE_GSHEET_ID = "test_id"
+        mock_google_settings.GOOGLE_ACCOUNT_KEY = "test_key"
+        mock_get_google_settings.return_value = mock_google_settings
         
         result = check_configuration()
         assert result is False
     
-    @patch('src.healthcheck.get_settings')
-    def test_check_configuration_invalid_retries(self, mock_get_settings):
-        """Тест проверки конфигурации с неверным количеством ретраев."""
-        mock_settings = MagicMock()
-        mock_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_settings.OPENAI_API_KEY = "test_key"
-        mock_settings.GOOGLE_GSHEET_ID = "test_id"
-        mock_settings.GOOGLE_ACCOUNT_EMAIL = "test@email.com"
-        mock_settings.GOOGLE_ACCOUNT_KEY = "test_key"
-        mock_settings.DEDUP_THRESHOLD = 0.85
-        mock_settings.MAX_RETRIES = -1  # Неверное значение
-        mock_settings.ASK_NEWS_COUNT = 10
-        mock_get_settings.return_value = mock_settings
+    @patch('src.healthcheck.get_google_settings')
+    @patch('src.healthcheck.get_ai_settings')
+    @patch('src.healthcheck.get_news_settings')
+    def test_check_configuration_news_exception(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
+        """Тест обработки исключения в настройках новостей."""
+        mock_get_news_settings.side_effect = Exception("News settings error")
         
         result = check_configuration()
         assert result is False
     
-    @patch('src.healthcheck.get_settings')
-    def test_check_configuration_invalid_news_count(self, mock_get_settings):
-        """Тест проверки конфигурации с неверным количеством новостей."""
-        mock_settings = MagicMock()
-        mock_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_settings.OPENAI_API_KEY = "test_key"
-        mock_settings.GOOGLE_GSHEET_ID = "test_id"
-        mock_settings.GOOGLE_ACCOUNT_EMAIL = "test@email.com"
-        mock_settings.GOOGLE_ACCOUNT_KEY = "test_key"
-        mock_settings.DEDUP_THRESHOLD = 0.85
-        mock_settings.MAX_RETRIES = 3
-        mock_settings.ASK_NEWS_COUNT = 0  # Неверное значение
-        mock_get_settings.return_value = mock_settings
+    @patch('src.healthcheck.get_google_settings')
+    @patch('src.healthcheck.get_ai_settings')
+    @patch('src.healthcheck.get_news_settings')
+    def test_check_configuration_ai_exception(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
+        """Тест обработки исключения в настройках AI."""
+        # Мокаем настройки новостей
+        mock_news_settings = MagicMock()
+        mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
+        mock_get_news_settings.return_value = mock_news_settings
         
-        result = check_configuration()
-        assert result is False
-    
-    @patch('src.healthcheck.get_settings')
-    def test_check_configuration_exception(self, mock_get_settings):
-        """Тест обработки исключения в check_configuration."""
-        mock_get_settings.side_effect = Exception("Configuration error")
+        # AI настройки выбрасывают исключение
+        mock_get_ai_settings.side_effect = Exception("AI settings error")
         
         result = check_configuration()
         assert result is False
@@ -129,22 +137,35 @@ class TestCheckDependencies:
 class TestDryRunCheck:
     """Тесты для функции dry_run_check."""
     
-    def test_dry_run_check_success(self):
+    @patch('src.run.validate_environment')
+    def test_dry_run_check_success(self, mock_validate_environment):
         """Тест успешной проверки dry-run."""
+        mock_validate_environment.return_value = {
+            "errors": [],
+            "warnings": []
+        }
+        
         result = dry_run_check()
-        assert result is True  # Пока всегда True, так как run.py не реализован
+        assert result is True
     
-    @patch('src.healthcheck.get_logger')
-    def test_dry_run_check_exception(self, mock_get_logger):
-        """Тест обработки исключения в dry_run_check."""
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
-        # Мокаем logger.info чтобы он выбрасывал исключение
-        mock_logger.info.side_effect = Exception("Logger error")
+    @patch('src.run.validate_environment')
+    def test_dry_run_check_with_errors(self, mock_validate_environment):
+        """Тест dry-run проверки с ошибками валидации."""
+        mock_validate_environment.return_value = {
+            "errors": ["Missing API key"],
+            "warnings": []
+        }
         
         result = dry_run_check()
         assert result is False
-        mock_logger.error.assert_called_once()
+    
+    @patch('src.run.validate_environment')
+    def test_dry_run_check_exception(self, mock_validate_environment):
+        """Тест обработки исключения в dry_run_check."""
+        mock_validate_environment.side_effect = Exception("Validation error")
+        
+        result = dry_run_check()
+        assert result is False
 
 
 class TestHealthcheck:

@@ -76,6 +76,7 @@ dev-debug.log
 
 # Project specific
 .config/
+.roo/
 tasks.json
 tasks/
 tmp/
@@ -94,5 +95,6 @@ logs
 # Editor directories and files
 .idea
 .vscode
+.windsurfrules
 # OS specific
 # Task files

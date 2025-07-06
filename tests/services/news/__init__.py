@@ -1,0 +1,1 @@
+# tests/services/news/__init__.py 

@@ -1,0 +1,1 @@
+# src/services/news/fetchers/__init__.py 

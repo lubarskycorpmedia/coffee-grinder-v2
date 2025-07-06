@@ -22,7 +22,7 @@ class TestOpenAIClient:
     @pytest.fixture
     def client(self, mock_settings):
         """Создает экземпляр клиента для тестов"""
-        with patch('src.openai_client.get_settings', return_value=mock_settings):
+        with patch('src.openai_client.get_ai_settings', return_value=mock_settings):
             client = OpenAIClient(max_retries=3, backoff_factor=2.0)
             client._logger = Mock()  # Мокаем логгер
             return client
@@ -38,7 +38,7 @@ class TestOpenAIClient:
     
     def test_client_initialization_with_settings(self, mock_settings):
         """Тест инициализации клиента с настройками из config"""
-        with patch('src.openai_client.get_settings', return_value=mock_settings):
+        with patch('src.openai_client.get_ai_settings', return_value=mock_settings):
             client = OpenAIClient()
             
             assert client.max_retries == 3  # дефолтный
@@ -96,11 +96,10 @@ class TestOpenAIClient:
         mock_response.choices = [Mock()]
         mock_response.choices[0].message.content = "Test response"
         
-        with patch.object(client.client.chat.completions, 'create', return_value=mock_response), \
-             patch('src.openai_client.get_settings', return_value=mock_settings):
+        with patch.object(client.client.chat.completions, 'create', return_value=mock_response):
             messages = [{"role": "user", "content": "Test message"}]
             
-            result = client.create_chat_completion(messages, temperature=0.5)
+            result = client.create_chat_completion(messages, temperature=0.5, model="gpt-4o-mini")
             
             assert result == mock_response
             client.client.chat.completions.create.assert_called_once_with(
@@ -186,11 +185,10 @@ class TestOpenAIClient:
         mock_response.data = [Mock()]
         mock_response.data[0].embedding = [0.1, 0.2, 0.3]
         
-        with patch.object(client.client.embeddings, 'create', return_value=mock_response), \
-             patch('src.openai_client.get_settings', return_value=mock_settings):
+        with patch.object(client.client.embeddings, 'create', return_value=mock_response):
             texts = ["Test text 1", "Test text 2"]
             
-            result = client.create_embeddings(texts)
+            result = client.create_embeddings(texts, model="text-embedding-3-small")
             
             assert result == mock_response
             client.client.embeddings.create.assert_called_once_with(
@@ -202,11 +200,10 @@ class TestOpenAIClient:
         """Тест создания embeddings для одного текста"""
         mock_response = Mock()
         
-        with patch.object(client.client.embeddings, 'create', return_value=mock_response), \
-             patch('src.openai_client.get_settings', return_value=mock_settings):
+        with patch.object(client.client.embeddings, 'create', return_value=mock_response):
             text = "Single test text"
             
-            result = client.create_embeddings(text)
+            result = client.create_embeddings(text, model="text-embedding-3-small")
             
             assert result == mock_response
             client.client.embeddings.create.assert_called_once_with(

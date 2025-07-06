@@ -1,0 +1,12 @@
+# Доступные категории TheNewsAPI.com
+# Получено: 9 категорий
+
+business
+entertainment
+food
+general
+health
+politics
+science
+sports
+tech

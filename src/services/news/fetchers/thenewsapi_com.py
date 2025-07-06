@@ -9,7 +9,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .base import BaseFetcher, NewsAPIError
-from ....logger import setup_logger
+from src.logger import setup_logger
 
 
 class TheNewsAPIFetcher(BaseFetcher):

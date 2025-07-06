@@ -6,9 +6,11 @@ from collections import Counter
 
 # Добавляем путь к src для импорта модулей
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(project_root, 'src'))
+src_path = os.path.join(project_root, 'src')
+sys.path.insert(0, src_path)
+sys.path.insert(0, project_root)
 
-from services.news.fetcher_fabric import create_news_fetcher
+from src.services.news.fetcher_fabric import create_news_fetcher
 
 
 def load_environment():
@@ -41,7 +43,8 @@ def get_all_categories():
     
     try:
         # Создаем fetcher
-        fetcher = create_news_fetcher("thenewsapi")
+        api_token = os.getenv('THENEWSAPI_API_TOKEN')
+        fetcher = create_news_fetcher("thenewsapi", api_token=api_token)
         
         # Получаем все источники
         sources_response = fetcher.get_sources()

@@ -8,8 +8,8 @@ from openai.types.chat import ChatCompletion
 from openai.types import CreateEmbeddingResponse
 import openai
 
-from .config import get_settings
-from .logger import setup_logger
+from src.config import get_ai_settings
+from src.logger import setup_logger
 
 
 class OpenAIClientError(Exception):
@@ -46,7 +46,7 @@ class OpenAIClient:
         
         # Получаем API ключ
         if api_key is None:
-            settings = get_settings()
+            settings = get_ai_settings()
             api_key = settings.OPENAI_API_KEY
         
         # Инициализируем клиент
@@ -131,8 +131,8 @@ class OpenAIClient:
         """
         if model is None:
             try:
-                settings = get_settings()
-                model = settings.LLM_MODEL
+                settings = get_ai_settings()
+                model = settings.OPENAI_MODEL
             except Exception:
                 model = "gpt-4o-mini"  # Fallback модель
         
@@ -190,8 +190,8 @@ class OpenAIClient:
         """
         if model is None:
             try:
-                settings = get_settings()
-                model = settings.EMBEDDING_MODEL
+                settings = get_ai_settings()
+                model = settings.OPENAI_EMBEDDING_MODEL
             except Exception:
                 model = "text-embedding-3-small"  # Fallback модель
         

@@ -47,7 +47,7 @@ ALL_NEWS_PARAMS = {
     # "exclude_domains": "",           # Домены для исключения
     # "source_ids": "",                # ID источников для включения
     # "exclude_source_ids": "",        # ID источников для исключения
-    # "categories": "tech,business",   # Категории для включения
+    "categories": "general,politics,tech,business",   # Категории для включения
     # "exclude_categories": "sports",  # Категории для исключения
     # "published_after": "2025-01-01", # Дата начала (YYYY-MM-DD)
     # "published_before": "2025-01-15", # Дата окончания (YYYY-MM-DD)

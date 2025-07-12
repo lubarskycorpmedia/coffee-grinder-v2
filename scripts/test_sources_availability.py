@@ -18,10 +18,10 @@ from dotenv import load_dotenv
 
 # Массив доменов для тестирования
 DOMAINS_TO_TEST = [
-    # "ground.news",
+    "ground.news",
     "nytimes.com", 
     # "washingtonpost.com",
-    "bloomberg.com",
+    # "bloomberg.com",
     # "thehill.com",
     # "reuters.com",
     # "wsj.com",
@@ -61,7 +61,12 @@ def test_source_availability(fetcher, domain: str, provider_name: str) -> str:
     """
     try:
         # Используем единый универсальный метод fetch_news для всех провайдеров
-        response = fetcher.fetch_news(domains=domain)
+        # Передаем только домен, отключаем любые временные фильтры
+        response = fetcher.fetch_news(
+            domains=domain,
+            published_after=None,  # Отключаем фильтр по дате начала
+            published_before=None  # Отключаем фильтр по дате окончания
+        )
         
         # Проверяем на ошибку
         if "error" in response:
@@ -98,23 +103,20 @@ def normalize_domain(domain: str) -> str:
 def update_google_sheets(results: Dict[str, str], provider_name: str):
     """
     Обновляет Google Sheets с результатами тестирования
-    Использует тот же подход что и в test_real_pipeline.py
+    Создает exporter напрямую с локальными настройками
     
     Args:
         results: Словарь {домен: результат}
         provider_name: Название провайдера (из config.py)
     """
     try:
-        # Создаем оркестратор как в test_real_pipeline.py
-        from src.services.news.pipeline import create_news_pipeline_orchestrator
+        # Очищаем кэш настроек, чтобы подхватить локальную переменную окружения
+        from src.config import get_settings
+        get_settings.cache_clear()
+        get_google_settings.cache_clear()
         
-        orchestrator = create_news_pipeline_orchestrator(
-            provider=provider_name,  # Используем переданный провайдер
-            worksheet_name="Источники"
-        )
-        
-        # Получаем exporter из оркестратора (он уже правильно настроен)
-        exporter = orchestrator.exporter
+        # Создаем exporter напрямую с локальными настройками
+        exporter = create_google_sheets_exporter(worksheet_name="Источники")
         
         # Получаем worksheet для прямой работы
         worksheet = exporter._get_worksheet()
@@ -253,10 +255,6 @@ def main():
         from src.services.news.fetcher_fabric import create_news_fetcher_from_config
         fetcher = create_news_fetcher_from_config(provider_name)
         
-        # Вычисляем дату 30 дней назад
-        thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-        
-        print(f"📅 Поиск новостей за период с {thirty_days_ago}")
         print(f"🔧 Провайдер: {provider_name}")
         print(f"📰 Тестируется {len(DOMAINS_TO_TEST)} источников")
         print()

@@ -133,7 +133,7 @@ class NewsPipelineOrchestrator:
                     query: str, 
                     categories: List[str],
                     limit: Optional[int] = None,
-                    language: str = "en") -> PipelineResult:
+                    language: Optional[str] = None) -> PipelineResult:
         """
         Запускает полный pipeline обработки новостей
         
@@ -141,7 +141,7 @@ class NewsPipelineOrchestrator:
             query: Поисковый запрос
             categories: Список категорий новостей
             limit: Количество новостей (по умолчанию из настроек)
-            language: Язык поиска (всегда "en" согласно требованиям)
+            language: Язык поиска (опционально)
             
         Returns:
             PipelineResult с детальными результатами выполнения
@@ -150,10 +150,9 @@ class NewsPipelineOrchestrator:
         
         # Параметры pipeline
         limit = limit or self.pipeline_settings.DEFAULT_LIMIT
-        language = self.pipeline_settings.DEFAULT_LANGUAGE  # Всегда "en"
         categories_str = ",".join(categories)
         
-        self.logger.info(f"Starting pipeline: query='{query}', categories={categories}, limit={limit}")
+        self.logger.info(f"Starting pipeline: query='{query}', categories={categories}, limit={limit}, language={language}")
         
         # Инициализируем результат
         results = {
@@ -214,7 +213,7 @@ class NewsPipelineOrchestrator:
         
         return self._create_pipeline_result(overall_success, 3, completed_stages, results, errors, start_time)
     
-    def _run_fetch_stage(self, query: str, categories: str, limit: int, language: str) -> StageResult:
+    def _run_fetch_stage(self, query: str, categories: str, limit: int, language: Optional[str]) -> StageResult:
         """Выполняет этап получения новостей"""
         start_time = time.time()
         
@@ -432,20 +431,20 @@ class NewsPipelineOrchestrator:
             errors=errors
         )
     
-    def run_all_rubrics(self, limit: int = 5, language: str = "en") -> List[Dict[str, Any]]:
+    def run_all_rubrics(self, limit: int = 5, language: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Запускает pipeline для всех активных рубрик
         
         Args:
             limit: Количество новостей на рубрику
-            language: Язык поиска
+            language: Язык поиска (опционально)
             
         Returns:
             Список результатов выполнения pipeline для каждой рубрики
         """
         start_time = time.time()
         
-        self.logger.info(f"Starting pipeline for all active rubrics with limit={limit}")
+        self.logger.info(f"Starting pipeline for all active rubrics with limit={limit}, language={language}")
         
         # Получаем активные рубрики
         active_rubrics = get_active_rubrics()
@@ -525,7 +524,6 @@ class NewsPipelineOrchestrator:
             "provider": self.provider,
             "worksheet_name": self.worksheet_name,
             "settings": {
-                "default_language": self.pipeline_settings.DEFAULT_LANGUAGE,
                 "default_limit": self.pipeline_settings.DEFAULT_LIMIT,
                 "pipeline_timeout": self.pipeline_settings.PIPELINE_TIMEOUT,
                 "enable_partial_results": self.pipeline_settings.ENABLE_PARTIAL_RESULTS,

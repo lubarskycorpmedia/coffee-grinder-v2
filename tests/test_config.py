@@ -101,9 +101,6 @@ class TestTheNewsAPISettings:
             max_retries=5,
             backoff_factor=1.5,
             base_url="https://api.test.com/v1",
-            supported_languages=["en", "ru"],
-            supported_categories=["tech", "sports"],
-            default_locale="ru",
             headlines_per_category=10
         )
         
@@ -113,9 +110,6 @@ class TestTheNewsAPISettings:
         assert settings.max_retries == 5
         assert settings.backoff_factor == 1.5
         assert settings.base_url == "https://api.test.com/v1"
-        assert settings.supported_languages == ["en", "ru"]
-        assert settings.supported_categories == ["tech", "sports"]
-        assert settings.default_locale == "ru"
         assert settings.headlines_per_category == 10
     
     def test_thenewsapi_settings_defaults(self):
@@ -128,9 +122,6 @@ class TestTheNewsAPISettings:
         assert settings.max_retries == 3  # наследуется от базового
         assert settings.backoff_factor == 2.0  # наследуется от базового
         assert settings.base_url == "https://api.thenewsapi.com/v1"
-        assert "en" in settings.supported_languages
-        assert "general" in settings.supported_categories
-        assert settings.default_locale == "us"
         assert settings.headlines_per_category == 6
     
     def test_thenewsapi_settings_validation_error(self):
@@ -149,9 +140,6 @@ class TestNewsAPISettings:
             enabled=True,
             priority=2,
             base_url="https://newsapi.test.com/v2",
-            supported_languages=["en", "fr"],
-            supported_categories=["business", "health"],
-            default_country="fr",
             page_size=50
         )
         
@@ -159,9 +147,6 @@ class TestNewsAPISettings:
         assert settings.enabled == True
         assert settings.priority == 2
         assert settings.base_url == "https://newsapi.test.com/v2"
-        assert settings.supported_languages == ["en", "fr"]
-        assert settings.supported_categories == ["business", "health"]
-        assert settings.default_country == "fr"
         assert settings.page_size == 50
     
     def test_newsapi_settings_defaults(self):
@@ -172,9 +157,6 @@ class TestNewsAPISettings:
         assert settings.enabled == True  # наследуется от базового
         assert settings.priority == 1  # наследуется от базового
         assert settings.base_url == "https://newsapi.org/v2"
-        assert "en" in settings.supported_languages
-        assert "business" in settings.supported_categories
-        assert settings.default_country == "us"
         assert settings.page_size == 100
     
     def test_newsapi_settings_validation_error(self):

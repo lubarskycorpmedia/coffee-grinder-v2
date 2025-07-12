@@ -1,133 +1,92 @@
-# /src/services/news/news_processor.py
+# src/services/news/news_processor.py
 
-from typing import List, Dict, Any, Optional
+import logging
 from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional, Union
+from dataclasses import dataclass, field
 
-from src.services.news.fetcher_fabric import create_news_fetcher_from_config
-from src.services.news.exporter import GoogleSheetsExporter, create_google_sheets_exporter
-from src.langchain.news_chain import NewsProcessingChain, create_news_processing_chain, NewsItem
-from src.openai_client import OpenAIClient
-from src.config import get_news_providers_settings, get_ai_settings, get_google_settings
+from src.config import get_news_providers_settings
+from src.services.news.fetcher_fabric import FetcherFactory
 from src.logger import setup_logger
+from src.langchain.news_chain import NewsItem
+
+
+@dataclass
+class NewsProcessingResult:
+    """Результат обработки новостей"""
+    success: bool
+    news_items: List[NewsItem] = field(default_factory=list)
+    total_fetched: int = 0
+    total_processed: int = 0
+    duplicates_removed: int = 0
+    errors: List[str] = field(default_factory=list)
+    processing_time: float = 0.0
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class NewsProcessingError(Exception):
-    """Базовое исключение для ошибок обработки новостей"""
+    """Исключение для ошибок обработки новостей"""
     pass
 
 
 class NewsProcessor:
     """
-    Главный класс для обработки новостей: получение -> обработка -> экспорт
+    Класс для обработки новостей с различными провайдерами
+    
+    Поддерживает:
+    - Получение новостей от различных провайдеров
+    - Фильтрацию и валидацию данных
+    - Дедупликацию новостей
+    - Обработку ошибок
     """
     
     def __init__(self, 
                  news_provider: str = "thenewsapi",
-                 spreadsheet_id: Optional[str] = None,
-                 worksheet_name: str = "News",
-                 max_news_items: int = 50,
-                 similarity_threshold: float = 0.85,
-                 fail_on_errors: bool = False):
+                 fail_on_errors: bool = False,
+                 enable_deduplication: bool = True,
+                 max_items_per_request: int = 100):
         """
         Инициализация процессора новостей
         
         Args:
-            news_provider: Провайдер новостей ("thenewsapi", "newsapi")
-            spreadsheet_id: ID Google таблицы
-            worksheet_name: Имя листа в таблице
-            max_news_items: Максимальное количество новостей для обработки
-            similarity_threshold: Порог схожести для дедупликации
-            fail_on_errors: Прерывать ли обработку при ошибках
+            news_provider: Название провайдера новостей
+            fail_on_errors: Прерывать выполнение при ошибках
+            enable_deduplication: Включить дедупликацию
+            max_items_per_request: Максимальное количество элементов за запрос
         """
         self.news_provider = news_provider
-        self.spreadsheet_id = spreadsheet_id
-        self.worksheet_name = worksheet_name
-        self.max_news_items = max_news_items
-        self.similarity_threshold = similarity_threshold
         self.fail_on_errors = fail_on_errors
+        self.enable_deduplication = enable_deduplication
+        self.max_items_per_request = max_items_per_request
         
-        self._logger = None
-        self._news_fetcher = None
-        self._openai_client = None
-        self._news_chain = None
-        self._exporter = None
+        # Инициализируем логгер
+        self.logger = setup_logger(__name__)
         
-        # Проверяем настройки
-        self._validate_settings()
-    
-    @property
-    def logger(self):
-        """Ленивое создание логгера"""
-        if self._logger is None:
-            self._logger = setup_logger(__name__)
-        return self._logger
-    
-    def _validate_settings(self):
-        """Проверяет наличие всех необходимых настроек"""
-        try:
-            # Проверяем настройки новостных провайдеров
-            providers_settings = get_news_providers_settings()
-            provider_settings = providers_settings.get_provider_settings(self.news_provider)
-            
-            if provider_settings is None:
-                raise NewsProcessingError(f"Provider '{self.news_provider}' not found in configuration")
-            
-            if not provider_settings.enabled:
-                raise NewsProcessingError(f"Provider '{self.news_provider}' is disabled")
-            
-            # Проверяем настройки AI
-            ai_settings = get_ai_settings()
-            if not ai_settings.OPENAI_API_KEY:
-                raise NewsProcessingError("OPENAI_API_KEY is required")
-            
-            # Проверяем настройки Google (опционально)
-            try:
-                google_settings = get_google_settings()
-                if not google_settings.GOOGLE_SHEET_ID:
-                    self.logger.warning("GOOGLE_SHEET_ID not configured - export to Google Sheets will be disabled")
-                if not google_settings.GOOGLE_ACCOUNT_KEY:
-                    self.logger.warning("GOOGLE_ACCOUNT_KEY not configured - export to Google Sheets will be disabled")
-            except Exception as e:
-                self.logger.warning(f"Google settings validation failed: {e}")
-                
-        except Exception as e:
-            raise NewsProcessingError(f"Settings validation failed: {str(e)}")
+        # Кеш для провайдеров
+        self._fetcher_cache = {}
+        
+        self.logger.info(f"NewsProcessor initialized with provider: {news_provider}")
     
     def _get_news_fetcher(self):
-        """Получает фетчер новостей"""
-        if self._news_fetcher is None:
-            self._news_fetcher = create_news_fetcher_from_config(self.news_provider)
-        return self._news_fetcher
-    
-    def _get_openai_client(self):
-        """Получает OpenAI клиент"""
-        if self._openai_client is None:
-            self._openai_client = OpenAIClient()
-        return self._openai_client
-    
-    def _get_news_chain(self):
-        """Получает цепочку обработки новостей"""
-        if self._news_chain is None:
-            self._news_chain = create_news_processing_chain(
-                openai_client=self._get_openai_client(),
-                similarity_threshold=self.similarity_threshold,
-                max_news_items=self.max_news_items
-            )
-        return self._news_chain
-    
-    def _get_exporter(self):
-        """Получает экспортер Google Sheets"""
-        if self._exporter is None:
-            self._exporter = create_google_sheets_exporter(
-                spreadsheet_id=self.spreadsheet_id,
-                worksheet_name=self.worksheet_name
-            )
-        return self._exporter
+        """Получить fetcher для новостей с кешированием"""
+        if self.news_provider not in self._fetcher_cache:
+            try:
+                fetcher = FetcherFactory.create_fetcher_from_config(self.news_provider)
+                self._fetcher_cache[self.news_provider] = fetcher
+                self.logger.info(f"Created fetcher for provider: {self.news_provider}")
+            except Exception as e:
+                error_msg = f"Failed to create fetcher for provider {self.news_provider}: {str(e)}"
+                self.logger.error(error_msg)
+                if self.fail_on_errors:
+                    raise NewsProcessingError(error_msg) from e
+                return None
+        
+        return self._fetcher_cache[self.news_provider]
     
     def fetch_news(self, 
                    query: Optional[str] = None,
                    category: Optional[str] = None,
-                   language: str = "en",
+                   language: Optional[str] = None,
                    limit: int = 50) -> List[NewsItem]:
         """
         Получает новости от провайдера
@@ -135,7 +94,7 @@ class NewsProcessor:
         Args:
             query: Поисковый запрос
             category: Категория новостей
-            language: Язык новостей
+            language: Язык новостей (опционально)
             limit: Максимальное количество новостей
             
         Returns:
@@ -164,7 +123,7 @@ class NewsProcessor:
                     published_at=datetime.fromisoformat(article['published_at'].replace('Z', '+00:00')) if article.get('published_at') else datetime.now(timezone.utc),
                     source=article.get('source', ''),
                     category=article.get('category', category or ''),
-                    language=language
+                    language=article.get('language', language or '')
                 )
                 news_items.append(news_item)
             
@@ -178,75 +137,98 @@ class NewsProcessor:
                 raise NewsProcessingError(error_msg) from e
             return []
     
-    def process_news(self, news_items: List[NewsItem]) -> List[NewsItem]:
+    def search_news(self, 
+                    query: str,
+                    language: Optional[str] = None,
+                    limit: int = 50,
+                    **kwargs) -> List[NewsItem]:
         """
-        Обрабатывает новости (embeddings, дедупликация, ранжирование)
+        Поиск новостей по запросу
         
         Args:
-            news_items: Список новостей для обработки
+            query: Поисковый запрос
+            language: Язык новостей (опционально)
+            limit: Максимальное количество новостей
+            **kwargs: Дополнительные параметры для поиска
             
         Returns:
-            Список обработанных новостей
+            Список новостей
         """
-        if not news_items:
-            self.logger.warning("No news items to process")
+        self.logger.info(f"Searching news with query: {query}")
+        
+        try:
+            fetcher = self._get_news_fetcher()
+            
+            # Выполняем поиск
+            articles = fetcher.search_news(
+                query=query,
+                language=language,
+                limit=limit,
+                **kwargs
+            )
+            
+            # Конвертируем в NewsItem объекты
+            news_items = []
+            for article in articles:
+                news_item = NewsItem(
+                    title=article.get('title', ''),
+                    description=article.get('description', ''),
+                    url=article.get('url', ''),
+                    published_at=datetime.fromisoformat(article['published_at'].replace('Z', '+00:00')) if article.get('published_at') else datetime.now(timezone.utc),
+                    source=article.get('source', ''),
+                    category=article.get('category', ''),
+                    language=article.get('language', language or '')
+                )
+                news_items.append(news_item)
+            
+            self.logger.info(f"Found {len(news_items)} news items")
+            return news_items
+            
+        except Exception as e:
+            error_msg = f"Failed to search news: {str(e)}"
+            self.logger.error(error_msg)
+            if self.fail_on_errors:
+                raise NewsProcessingError(error_msg) from e
             return []
-        
-        self.logger.info(f"Processing {len(news_items)} news items")
-        
-        try:
-            chain = self._get_news_chain()
-            processed_news = chain.process_news(news_items, fail_on_errors=self.fail_on_errors)
-            
-            self.logger.info(f"Processed {len(processed_news)} news items")
-            return processed_news
-            
-        except Exception as e:
-            error_msg = f"Failed to process news: {str(e)}"
-            self.logger.error(error_msg)
-            if self.fail_on_errors:
-                raise NewsProcessingError(error_msg) from e
-            return news_items  # Возвращаем исходные новости
     
-    def export_to_sheets(self, news_items: List[NewsItem], append: bool = True) -> bool:
+    def validate_news_items(self, news_items: List[NewsItem]) -> List[NewsItem]:
         """
-        Экспортирует новости в Google Sheets
+        Валидация и фильтрация новостных элементов
         
         Args:
-            news_items: Список новостей для экспорта
-            append: Добавлять к существующим данным или перезаписывать
+            news_items: Список новостей для валидации
             
         Returns:
-            True если экспорт успешен
+            Список валидных новостей
         """
-        if not news_items:
-            self.logger.warning("No news items to export")
-            return True
+        valid_items = []
         
-        self.logger.info(f"Exporting {len(news_items)} news items to Google Sheets")
+        for item in news_items:
+            try:
+                # Основные проверки
+                if not item.title or not item.url:
+                    self.logger.warning(f"Skipping item with missing title or URL: {item}")
+                    continue
+                
+                # Проверка на дубликаты URL
+                if self.enable_deduplication:
+                    if any(existing.url == item.url for existing in valid_items):
+                        self.logger.debug(f"Skipping duplicate URL: {item.url}")
+                        continue
+                
+                valid_items.append(item)
+                
+            except Exception as e:
+                self.logger.warning(f"Error validating news item: {str(e)}")
+                continue
         
-        try:
-            exporter = self._get_exporter()
-            success = exporter.export_news(news_items, append=append)
-            
-            if success:
-                self.logger.info("Export to Google Sheets completed successfully")
-            else:
-                self.logger.error("Export to Google Sheets failed")
-            
-            return success
-            
-        except Exception as e:
-            error_msg = f"Failed to export to Google Sheets: {str(e)}"
-            self.logger.error(error_msg)
-            if self.fail_on_errors:
-                raise NewsProcessingError(error_msg) from e
-            return False
+        self.logger.info(f"Validated {len(valid_items)} out of {len(news_items)} news items")
+        return valid_items
     
     def run_full_pipeline(self, 
                          query: Optional[str] = None,
                          category: Optional[str] = None,
-                         language: str = "en",
+                         language: Optional[str] = None,
                          limit: int = 50,
                          export_to_sheets: bool = True,
                          append_to_sheets: bool = True) -> Dict[str, Any]:
@@ -256,7 +238,7 @@ class NewsProcessor:
         Args:
             query: Поисковый запрос
             category: Категория новостей
-            language: Язык новостей
+            language: Язык новостей (опционально)
             limit: Максимальное количество новостей
             export_to_sheets: Экспортировать ли в Google Sheets
             append_to_sheets: Добавлять к существующим данным
@@ -282,35 +264,63 @@ class NewsProcessor:
         }
         
         try:
-            # Шаг 1: Получение новостей
+            # Этап 1: Получение новостей
+            self.logger.info("Step 1: Fetching news")
             news_items = self.fetch_news(
                 query=query,
                 category=category,
                 language=language,
                 limit=limit
             )
+            
             results["fetched_count"] = len(news_items)
             
             if not news_items:
-                self.logger.warning("No news items fetched")
-                results["success"] = True
+                results["errors"].append("No news items fetched")
                 return results
             
-            # Шаг 2: Обработка новостей
-            processed_news = self.process_news(news_items)
-            results["processed_count"] = len(processed_news)
+            # Этап 2: Валидация и фильтрация
+            self.logger.info("Step 2: Validating news items")
+            valid_items = self.validate_news_items(news_items)
             
-            # Подсчитываем дубликаты
-            duplicates = [item for item in processed_news if item.is_duplicate]
-            results["duplicates_found"] = len(duplicates)
+            results["processed_count"] = len(valid_items)
+            results["duplicates_found"] = len(news_items) - len(valid_items)
             
-            # Шаг 3: Экспорт в Google Sheets (опционально)
+            if not valid_items:
+                results["errors"].append("No valid news items after filtering")
+                return results
+            
+            # Этап 3: Экспорт (если требуется)
             if export_to_sheets:
-                export_success = self.export_to_sheets(processed_news, append=append_to_sheets)
-                if export_success:
-                    results["exported_count"] = len(processed_news)
+                self.logger.info("Step 3: Exporting to Google Sheets")
+                try:
+                    from src.services.news.exporter import GoogleSheetsExporter
+                    
+                    exporter = GoogleSheetsExporter()
+                    export_result = exporter.export_news_items(
+                        news_items=valid_items,
+                        append_mode=append_to_sheets
+                    )
+                    
+                    if export_result.get("success"):
+                        results["exported_count"] = export_result.get("exported_count", 0)
+                    else:
+                        results["errors"].append(f"Export failed: {export_result.get('error', 'Unknown error')}")
+                        
+                except Exception as e:
+                    error_msg = f"Export error: {str(e)}"
+                    self.logger.error(error_msg)
+                    results["errors"].append(error_msg)
             
+            # Финализация результатов
+            end_time = datetime.now(timezone.utc)
+            results["end_time"] = end_time.isoformat()
+            results["processing_time"] = (end_time - start_time).total_seconds()
+            results["duration_seconds"] = results["processing_time"]  # Совместимость с run.py
             results["success"] = True
+            
+            self.logger.info("News processing pipeline completed successfully")
+            return results
             
         except Exception as e:
             error_msg = f"Pipeline failed: {str(e)}"
@@ -319,42 +329,59 @@ class NewsProcessor:
             
             if self.fail_on_errors:
                 raise NewsProcessingError(error_msg) from e
-        
-        finally:
-            end_time = datetime.now(timezone.utc)
-            results["end_time"] = end_time.isoformat()
-            results["duration_seconds"] = (end_time - start_time).total_seconds()
             
-            self.logger.info(f"Pipeline completed in {results['duration_seconds']:.2f} seconds")
-            self.logger.info(f"Results: {results['fetched_count']} fetched, {results['processed_count']} processed, {results['exported_count']} exported")
-        
-        return results
+            return results
     
-    def get_export_summary(self) -> Dict[str, Any]:
+    def get_provider_info(self) -> Dict[str, Any]:
         """
-        Получает сводную информацию об экспорте
+        Получить информацию о текущем провайдере
         
         Returns:
-            Словарь с информацией о таблице
+            Словарь с информацией о провайдере
         """
         try:
-            exporter = self._get_exporter()
-            return exporter.get_export_summary()
+            fetcher = self._get_news_fetcher()
+            if fetcher:
+                return {
+                    "provider": self.news_provider,
+                    "status": "active",
+                    "categories": fetcher.get_categories(),
+                    "languages": fetcher.get_languages(),
+                    "health": fetcher.check_health()
+                }
+            else:
+                return {
+                    "provider": self.news_provider,
+                    "status": "error",
+                    "error": "Failed to initialize fetcher"
+                }
         except Exception as e:
-            self.logger.error(f"Failed to get export summary: {str(e)}")
-            return {"error": str(e)}
+            return {
+                "provider": self.news_provider,
+                "status": "error",
+                "error": str(e)
+            }
 
 
 def create_news_processor(news_provider: str = "thenewsapi",
-                         **kwargs) -> NewsProcessor:
+                         max_news_items: int = 50,
+                         similarity_threshold: float = 0.85,
+                         fail_on_errors: bool = False) -> NewsProcessor:
     """
-    Удобная функция для создания процессора новостей
+    Фабричная функция для создания NewsProcessor
     
     Args:
-        news_provider: Провайдер новостей
-        **kwargs: Дополнительные параметры для NewsProcessor
+        news_provider: Название провайдера новостей
+        max_news_items: Максимальное количество новостей
+        similarity_threshold: Порог схожести для дедупликации
+        fail_on_errors: Прерывать выполнение при ошибках
         
     Returns:
         Экземпляр NewsProcessor
     """
-    return NewsProcessor(news_provider=news_provider, **kwargs) 
+    return NewsProcessor(
+        news_provider=news_provider,
+        fail_on_errors=fail_on_errors,
+        enable_deduplication=True,
+        max_items_per_request=max_news_items
+    ) 

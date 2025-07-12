@@ -1,28 +1,48 @@
 # src/services/news/fetchers/newsapi_org.py
+
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from typing import Dict, Any, Optional, List
+from datetime import datetime
 from newsapi import NewsApiClient
 from newsapi.newsapi_exception import NewsAPIException
 
-from .base import BaseFetcher
+from .base import BaseFetcher, NewsAPIError
+from src.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class NewsAPIFetcher(BaseFetcher):
-    """Провайдер для получения новостей с NewsAPI.org"""
+    """Fetcher для NewsAPI.org с полной поддержкой всех эндпоинтов"""
     
     PROVIDER_NAME = "newsapi"
     
     def __init__(self, provider_settings):
+        """
+        Инициализация fetcher'а
+        
+        Args:
+            provider_settings: Настройки провайдера NewsAPISettings
+        """
         super().__init__(provider_settings)
-        self.client = NewsApiClient(api_key=provider_settings.api_key)
+        
+        # Сохраняем настройки для совместимости с тестами
         self.settings = provider_settings
         
+        # Получаем настройки
+        self.api_key = provider_settings.api_key
+        self.base_url = provider_settings.base_url
+        self.page_size = provider_settings.page_size
+        
+        # Инициализируем клиент
+        self.client = NewsApiClient(api_key=self.api_key)
+        
+        # Инициализируем логгер
+        self.logger = setup_logger(__name__)
+    
     def fetch_headlines(self, **kwargs) -> Dict[str, Any]:
         """
-        Получает заголовки новостей (для совместимости с базовым классом)
+        Получает топ заголовки (для совместимости с базовым классом)
         
         Returns:
             Dict[str, Any]: Результат в формате базового класса
@@ -36,17 +56,13 @@ class NewsAPIFetcher(BaseFetcher):
     
     def fetch_all_news(self, **kwargs) -> Dict[str, Any]:
         """
-        Получает все новости по поиску (для совместимости с базовым классом)
+        Получает все новости (для совместимости с базовым классом)
         
         Returns:
             Dict[str, Any]: Результат в формате базового класса
         """
         try:
-            query = kwargs.get('query', kwargs.get('q', ''))
-            if not query:
-                return {"articles": []}
-            
-            articles = self.search_news(query, **kwargs)
+            articles = self.search_news(**kwargs)
             return {"articles": articles}
         except Exception as e:
             from .base import NewsAPIError
@@ -69,7 +85,7 @@ class NewsAPIFetcher(BaseFetcher):
     def fetch_news(self, 
                    query: Optional[str] = None,
                    category: Optional[str] = None,
-                   language: str = "en",
+                   language: Optional[str] = None,
                    limit: int = 50,
                    **kwargs) -> Dict[str, Any]:
         """
@@ -101,12 +117,23 @@ class NewsAPIFetcher(BaseFetcher):
             api_category = self._map_rubric_to_category(category)
             
             # Получаем топ заголовки
-            response = self.client.get_top_headlines(
-                category=api_category,
-                language=language if language in self.settings.supported_languages else "en",
-                country=self.settings.default_country,
-                page_size=min(limit, self.settings.page_size)
-            )
+            params = {
+                'page_size': min(limit, self.page_size)
+            }
+            
+            # Добавляем категорию только если она указана
+            if api_category:
+                params['category'] = api_category
+            
+            # Добавляем язык только если он указан
+            if language:
+                params['language'] = language
+            
+            # Добавляем страну только если она указана
+            if 'country' in kwargs:
+                params['country'] = kwargs['country']
+            
+            response = self.client.get_top_headlines(**params)
             
             if response.get('status') != 'ok':
                 logger.error(f"NewsAPI error: {response.get('message', 'Unknown error')}")
@@ -118,43 +145,46 @@ class NewsAPIFetcher(BaseFetcher):
             return {"articles": standardized_articles}
             
         except NewsAPIException as e:
-            logger.error(f"NewsAPI exception: {e}")
+            logger.error(f"NewsAPI fetch exception: {e}")
             from .base import NewsAPIError
-            return {"error": NewsAPIError(f"NewsAPI exception: {e}")}
+            return {"error": NewsAPIError(f"NewsAPI fetch exception: {e}")}
         except Exception as e:
-            logger.error(f"Unexpected error in NewsAPI fetcher: {e}")
+            logger.error(f"Unexpected error in NewsAPI fetch: {e}")
             from .base import NewsAPIError
-            return {"error": NewsAPIError(f"Unexpected error in NewsAPI fetcher: {e}")}
+            return {"error": NewsAPIError(f"Unexpected error in NewsAPI fetch: {e}")}
     
     def search_news(self, 
                     query: str,
-                    language: str = "en",
-                    limit: int = 100,
+                    language: Optional[str] = None,
                     from_date: Optional[datetime] = None,
                     to_date: Optional[datetime] = None,
+                    limit: int = 50,
                     **kwargs) -> List[Dict[str, Any]]:
         """
-        Поиск новостей по запросу
+        Поиск новостей через эндпоинт /v2/everything
         
         Args:
-            query: Поисковый запрос
-            language: Язык новостей
-            limit: Максимальное количество новостей
+            query: Поисковый запрос (обязательный)
+            language: Язык новостей (опционально)
             from_date: Дата начала поиска
             to_date: Дата окончания поиска
-            **kwargs: Дополнительные параметры
+            limit: Максимальное количество новостей
+            **kwargs: Дополнительные параметры (sources, domains, etc.)
             
         Returns:
-            List[Dict[str, Any]]: Список новостей в стандартизованном формате
+            List[Dict[str, Any]]: Список стандартизированных статей
         """
         try:
             # Подготавливаем параметры для поиска
             params = {
                 'q': query,
-                'language': language if language in self.settings.supported_languages else "en",
-                'page_size': min(limit, self.settings.page_size),
+                'page_size': min(limit, self.page_size),
                 'sort_by': kwargs.get('sort_by', 'publishedAt')
             }
+            
+            # Добавляем язык только если он указан
+            if language:
+                params['language'] = language
             
             # Добавляем даты если указаны
             if from_date:
@@ -187,16 +217,16 @@ class NewsAPIFetcher(BaseFetcher):
             return []
     
     def get_sources(self, 
-                    language: str = "en",
+                    language: Optional[str] = None,
                     category: Optional[str] = None,
                     country: Optional[str] = None) -> Dict[str, Any]:
         """
         Получить список доступных источников
         
         Args:
-            language: Язык источников
-            category: Категория источников
-            country: Страна источников
+            language: Язык источников (опционально)
+            category: Категория источников (опционально)
+            country: Страна источников (опционально)
             
         Returns:
             Dict[str, Any]: Результат в формате базового класса
@@ -204,9 +234,10 @@ class NewsAPIFetcher(BaseFetcher):
         try:
             params = {}
             
-            if language in self.settings.supported_languages:
+            # Добавляем параметры только если они указаны
+            if language:
                 params['language'] = language
-            if category and category in self.settings.supported_categories:
+            if category:
                 params['category'] = category
             if country:
                 params['country'] = country
@@ -230,67 +261,69 @@ class NewsAPIFetcher(BaseFetcher):
             from .base import NewsAPIError
             return {"error": NewsAPIError(f"Unexpected error in NewsAPI get_sources: {e}")}
     
-    def get_categories(self) -> List[str]:
-        """
-        Получить список поддерживаемых категорий
-        
-        Returns:
-            List[str]: Список категорий
-        """
-        return self.settings.supported_categories.copy()
-    
-    def get_languages(self) -> List[str]:
-        """
-        Получить список поддерживаемых языков
-        
-        Returns:
-            List[str]: Список языков
-        """
-        return self.settings.supported_languages.copy()
-    
     def check_health(self) -> Dict[str, Any]:
         """
-        Проверить состояние провайдера
+        Проверка состояния провайдера
         
         Returns:
-            Dict[str, Any]: Статус провайдера
+            Dict[str, Any]: Результат проверки
         """
         try:
-            # Делаем простой запрос для проверки работоспособности
+            # Делаем минимальный запрос для проверки доступности API
             response = self.client.get_sources()
             
             if response.get('status') == 'ok':
                 return {
-                    'status': 'healthy',
-                    'provider': self.PROVIDER_NAME,
-                    'message': 'NewsAPI is accessible'
+                    "status": "healthy",
+                    "provider": self.PROVIDER_NAME,
+                    "message": "NewsAPI is accessible"
                 }
             else:
                 return {
-                    'status': 'unhealthy',
-                    'provider': self.PROVIDER_NAME,
-                    'message': f"NewsAPI error: {response.get('message', 'Unknown error')}"
+                    "status": "unhealthy",
+                    "provider": self.PROVIDER_NAME,
+                    "message": f"NewsAPI error: {response.get('message', 'Unknown error')}"
                 }
                 
         except NewsAPIException as e:
             return {
-                'status': 'unhealthy',
-                'provider': self.PROVIDER_NAME,
-                'message': f"NewsAPI exception: {e}"
+                "status": "unhealthy",
+                "provider": self.PROVIDER_NAME,
+                "message": f"NewsAPI exception: {e}"
             }
         except Exception as e:
             return {
-                'status': 'unhealthy',
-                'provider': self.PROVIDER_NAME,
-                'message': f"Unexpected error: {e}"
+                "status": "unhealthy",
+                "provider": self.PROVIDER_NAME,
+                "message": f"Unexpected error: {e}"
             }
+    
+    def get_categories(self) -> List[str]:
+        """
+        Получить поддерживаемые категории
+        
+        Returns:
+            List[str]: Список поддерживаемых категорий
+        """
+        # Возвращаем стандартные категории NewsAPI
+        return ["business", "entertainment", "general", "health", "science", "sports", "technology"]
+    
+    def get_languages(self) -> List[str]:
+        """
+        Получить поддерживаемые языки
+        
+        Returns:
+            List[str]: Список поддерживаемых языков
+        """
+        # Возвращаем стандартные языки NewsAPI
+        return ["en", "ar", "de", "es", "fr", "he", "it", "nl", "no", "pt", "ru", "sv", "ud", "zh"]
     
     def _map_rubric_to_category(self, rubric: Optional[str]) -> Optional[str]:
         """
         Маппинг рубрики в категорию NewsAPI
         
         Args:
-            rubric: Рубрика из нашей системы
+            rubric: Рубрика для маппинга
             
         Returns:
             Optional[str]: Категория NewsAPI или None
@@ -298,23 +331,25 @@ class NewsAPIFetcher(BaseFetcher):
         if not rubric:
             return None
             
-        # Маппинг наших рубрик в категории NewsAPI
+        # Маппинг рубрик в категории NewsAPI
         rubric_mapping = {
-            'business': 'business',
-            'entertainment': 'entertainment', 
-            'general': 'general',
-            'health': 'health',
-            'science': 'science',
-            'sports': 'sports',
-            'technology': 'technology'
+            "business": "business",
+            "entertainment": "entertainment", 
+            "general": "general",
+            "health": "health",
+            "science": "science",
+            "sports": "sports",
+            "technology": "technology",
+            "tech": "technology",
+            "sport": "sports",
+            "finance": "business",
+            "politics": "general",
+            "world": "general",
+            "national": "general",
+            "local": "general"
         }
         
-        # Пытаемся найти прямое соответствие
-        if rubric.lower() in rubric_mapping:
-            return rubric_mapping[rubric.lower()]
-            
-        # Если прямого соответствия нет, возвращаем general
-        return 'general'
+        return rubric_mapping.get(rubric.lower())
     
     def _standardize_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -349,14 +384,14 @@ class NewsAPIFetcher(BaseFetcher):
             },
             'author': article.get('author', ''),
             'provider': self.PROVIDER_NAME,
-            'language': 'en',  # NewsAPI не всегда возвращает язык
+            'language': None,  # NewsAPI не всегда возвращает язык
             'category': None,  # NewsAPI не возвращает категорию в статьях
             'raw_data': article  # Сохраняем оригинальные данные
         }
     
     def _standardize_source(self, source: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Стандартизация формата источника NewsAPI
+        Стандартизация формата источника NewsAPI под общий формат
         
         Args:
             source: Источник от NewsAPI
@@ -372,5 +407,6 @@ class NewsAPIFetcher(BaseFetcher):
             'category': source.get('category', ''),
             'language': source.get('language', ''),
             'country': source.get('country', ''),
-            'provider': self.PROVIDER_NAME
+            'provider': self.PROVIDER_NAME,
+            'raw_data': source  # Сохраняем оригинальные данные
         } 

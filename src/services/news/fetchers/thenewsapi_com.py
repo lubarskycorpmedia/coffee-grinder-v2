@@ -29,195 +29,158 @@ class TheNewsAPIFetcher(BaseFetcher):
         # Получаем специфичные настройки для TheNewsAPI
         self.api_token = provider_settings.api_token
         self.base_url = provider_settings.base_url
-        self.supported_languages = provider_settings.supported_languages
-        self.supported_categories = provider_settings.supported_categories
-        self.default_locale = provider_settings.default_locale
         self.headlines_per_category = provider_settings.headlines_per_category
         
         # Инициализируем сессию и логгер лениво
         self._session = None
         self._logger = None
     
-    @classmethod
-    def create_from_config(cls, provider_settings) -> 'TheNewsAPIFetcher':
-        """
-        Создает экземпляр fetcher'а из настроек
-        
-        Args:
-            provider_settings: Настройки провайдера TheNewsAPISettings
-            
-        Returns:
-            Экземпляр TheNewsAPIFetcher
-        """
-        from src.config import TheNewsAPISettings
-        
-        if not isinstance(provider_settings, TheNewsAPISettings):
-            raise ValueError(f"Invalid settings type for TheNewsAPI provider. Expected TheNewsAPISettings, got {type(provider_settings)}")
-        
-        return cls(provider_settings)
-    
     @property
     def session(self):
-        """Ленивое создание сессии"""
+        """Ленивая инициализация HTTP сессии"""
         if self._session is None:
-            self._session = self._create_session()
+            self._session = requests.Session()
+            
+            # Настройка retry стратегии
+            retry_strategy = Retry(
+                total=3,
+                backoff_factor=1,
+                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "OPTIONS"]
+            )
+            
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            self._session.mount("http://", adapter)
+            self._session.mount("https://", adapter)
+            
+            # Настройка заголовков
+            self._session.headers.update({
+                "Authorization": f"Bearer {self.api_token}",
+                "User-Agent": "CoffeeGrinder/1.0"
+            })
+        
         return self._session
     
     @property
     def logger(self):
-        """Ленивое создание логгера"""
+        """Ленивая инициализация логгера"""
         if self._logger is None:
             self._logger = setup_logger(__name__)
         return self._logger
     
-    def _create_session(self) -> requests.Session:
-        """Создает сессию с настройками retry"""
-        session = requests.Session()
-        
-        # Отключаем автоматический retry - делаем вручную
-        retry_strategy = Retry(
-            total=0,
-            backoff_factor=0,
-            status_forcelist=[]
-        )
-        
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-        
-        return session
-    
-    def _exponential_backoff(self, attempt: int) -> float:
-        """Вычисляет время задержки для экспоненциального backoff"""
-        base_delay = 1.0  # Базовая задержка в секундах
-        max_delay = 60.0  # Максимальная задержка
-        
-        delay = base_delay * (self.backoff_factor ** attempt) + random.uniform(0, 1)
-        return min(delay, max_delay)
-    
     def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Выполняет HTTP запрос с retry логикой"""
+        """
+        Выполняет HTTP запрос к API
+        
+        Args:
+            endpoint: Эндпоинт API
+            params: Параметры запроса
+            
+        Returns:
+            Dict с результатом или ошибкой
+        """
         url = f"{self.base_url}/{endpoint}"
         
-        # Добавляем API токен в параметры
-        params["api_token"] = self.api_token
-        
-        headers = {
-            "User-Agent": "coffee-grinder-news-service/1.0",
-            "Accept": "application/json"
-        }
-        
-        last_error = None
-        
-        for attempt in range(self.max_retries):
-            try:
-                self.logger.debug(f"Making request to {url}, attempt {attempt + 1}/{self.max_retries}")
-                
-                response = self.session.get(url, params=params, headers=headers, timeout=30)
-                
-                # Проверяем статус код
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    # Проверяем наличие ошибки в ответе
-                    if "error" in data:
-                        error_info = data["error"]
-                        error_msg = error_info.get("message", "Unknown API error")
-                        self.logger.error(f"API error: {error_msg}")
-                        last_error = NewsAPIError(error_msg, response.status_code, attempt + 1)
-                        return {"error": last_error}
-                    
-                    # Успешный ответ
-                    total_results = len(data.get("data", []))
-                    self.logger.info(f"Successfully fetched {total_results} items")
-                    return data
-                    
-                elif response.status_code == 429:
-                    # Rate limit exceeded
-                    self.logger.warning(f"Rate limit exceeded (429), attempt {attempt + 1}/{self.max_retries}")
-                    last_error = NewsAPIError("Rate limit exceeded", 429, attempt + 1)
-                    
-                    # Если это не последняя попытка, ждем
-                    if attempt < self.max_retries - 1:
-                        delay = self._exponential_backoff(attempt)
-                        self.logger.info(f"Waiting {delay:.2f} seconds before retry...")
-                        time.sleep(delay)
-                        continue
-                    else:
-                        # Последняя попытка - возвращаем ошибку
-                        self.logger.error(f"Rate limit exceeded after {self.max_retries} attempts")
-                        return {"error": last_error}
-                
-                else:
-                    # Другие HTTP ошибки
-                    try:
-                        error_data = response.json()
-                        if "error" in error_data:
-                            error_msg = error_data["error"].get("message", f"HTTP {response.status_code}")
-                        else:
-                            error_msg = f"HTTP {response.status_code}: {response.text}"
-                    except:
-                        error_msg = f"HTTP {response.status_code}: {response.text}"
-                    
-                    self.logger.error(error_msg)
-                    last_error = NewsAPIError(error_msg, response.status_code, attempt + 1)
-                    
-                    # Для серверных ошибок (5xx) пытаемся повторить
-                    if 500 <= response.status_code < 600 and attempt < self.max_retries - 1:
-                        delay = self._exponential_backoff(attempt)
-                        self.logger.info(f"Server error, waiting {delay:.2f} seconds before retry...")
-                        time.sleep(delay)
-                        continue
-                    else:
-                        return {"error": last_error}
-                        
-            except requests.exceptions.RequestException as e:
-                error_msg = f"Request failed: {str(e)}"
-                self.logger.error(error_msg)
-                last_error = NewsAPIError(error_msg, None, attempt + 1)
-                
-                # Для сетевых ошибок пытаемся повторить
-                if attempt < self.max_retries - 1:
-                    delay = self._exponential_backoff(attempt)
-                    self.logger.info(f"Network error, waiting {delay:.2f} seconds before retry...")
-                    time.sleep(delay)
-                    continue
-                else:
-                    return {"error": last_error}
+        try:
+            self.logger.debug(f"Making request to {url} with params: {params}")
             
-            except Exception as e:
-                error_msg = f"Unexpected error: {str(e)}"
-                self.logger.error(error_msg)
-                last_error = NewsAPIError(error_msg, None, attempt + 1)
-                
-                # Для неожиданных ошибок пытаемся повторить
-                if attempt < self.max_retries - 1:
-                    delay = self._exponential_backoff(attempt)
-                    self.logger.info(f"Unexpected error, waiting {delay:.2f} seconds before retry...")
-                    time.sleep(delay)
-                    continue
-                else:
-                    return {"error": last_error}
+            response = self.session.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Проверяем на ошибки API
+            if "error" in data:
+                error_msg = data["error"]
+                self.logger.error(f"API error: {error_msg}")
+                return {"error": NewsAPIError(error_msg, response.status_code, 1)}
+            
+            self.logger.debug(f"Request successful, got {len(data.get('data', []))} items")
+            return data
+            
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
+            self.logger.error(error_msg)
+            return {"error": NewsAPIError(error_msg, e.response.status_code, 1)}
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Request failed: {str(e)}"
+            self.logger.error(error_msg)
+            return {"error": NewsAPIError(error_msg, None, 1)}
+        except Exception as e:
+            error_msg = f"Unexpected error: {str(e)}"
+            self.logger.error(error_msg)
+            return {"error": NewsAPIError(error_msg, None, 1)}
+    
+    def _add_random_delay(self):
+        """Добавляет случайную задержку для предотвращения rate limiting"""
+        delay = random.uniform(0.1, 0.5)
+        time.sleep(delay)
+    
+    def check_health(self) -> Dict[str, Any]:
+        """
+        Проверка состояния провайдера
         
-        # Если дошли сюда, значит все попытки исчерпаны
-        return {"error": last_error}
+        Returns:
+            Dict[str, Any]: Результат проверки
+        """
+        try:
+            # Делаем минимальный запрос для проверки доступности API
+            result = self._make_request("news/sources", {})
+            
+            if "error" in result:
+                return {
+                    "status": "unhealthy",
+                    "provider": self.PROVIDER_NAME,
+                    "message": f"API error: {result['error']}"
+                }
+            
+            return {
+                "status": "healthy",
+                "provider": self.PROVIDER_NAME,
+                "message": "TheNewsAPI is accessible"
+            }
+            
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "provider": self.PROVIDER_NAME,
+                "message": f"Health check failed: {str(e)}"
+            }
+    
+    def get_categories(self) -> List[str]:
+        """
+        Получить поддерживаемые категории
+        
+        Returns:
+            List[str]: Список поддерживаемых категорий
+        """
+        return ["general", "business", "entertainment", "health", "science", "sports", "technology"]
+    
+    def get_languages(self) -> List[str]:
+        """
+        Получить поддерживаемые языки
+        
+        Returns:
+            List[str]: Список поддерживаемых языков
+        """
+        return ["en", "es", "fr", "de", "it", "pt", "ru", "ar", "zh"]
     
     def fetch_headlines(self, 
-                       locale: Optional[str] = "us",
-                       language: Optional[str] = "en",
+                       locale: Optional[str] = None,
+                       language: Optional[str] = None,
                        domains: Optional[str] = None,
                        exclude_domains: Optional[str] = None,
                        source_ids: Optional[str] = None,
                        exclude_source_ids: Optional[str] = None,
                        published_on: Optional[str] = None,
-                       headlines_per_category: int = 6,
+                       headlines_per_category: Optional[int] = None,
                        include_similar: bool = True) -> Dict[str, Any]:
         """
         Получает заголовки новостей по категориям
         
         Args:
-            locale: Коды стран через запятую (us, ca, etc.)
-            language: Коды языков через запятую (en, es, etc.)
+            locale: Коды стран через запятую (опционально)
+            language: Коды языков через запятую (опционально)
             domains: Домены для включения
             exclude_domains: Домены для исключения
             source_ids: ID источников для включения
@@ -230,10 +193,11 @@ class TheNewsAPIFetcher(BaseFetcher):
             Dict с результатами или ошибкой
         """
         params = {
-            "headlines_per_category": min(headlines_per_category, 10),
+            "headlines_per_category": min(headlines_per_category or self.headlines_per_category, 10),
             "include_similar": str(include_similar).lower()
         }
         
+        # Добавляем параметры только если они указаны
         if locale:
             params["locale"] = locale
         if language:
@@ -273,8 +237,8 @@ class TheNewsAPIFetcher(BaseFetcher):
         
         Args:
             search: Поисковый запрос с поддержкой операторов (+, -, |, скобки)
-            locale: Коды стран через запятую
-            language: Коды языков через запятую
+            locale: Коды стран через запятую (опционально)
+            language: Коды языков через запятую (опционально)
             domains: Домены для включения
             exclude_domains: Домены для исключения
             source_ids: ID источников для включения
@@ -299,6 +263,7 @@ class TheNewsAPIFetcher(BaseFetcher):
             "page": page
         }
         
+        # Добавляем параметры только если они указаны
         if search:
             params["search"] = search
         if locale:
@@ -327,8 +292,8 @@ class TheNewsAPIFetcher(BaseFetcher):
         return self._make_request("news/all", params)
     
     def fetch_top_stories(self,
-                         locale: Optional[str] = "us",
-                         language: Optional[str] = "en",
+                         locale: Optional[str] = None,
+                         language: Optional[str] = None,
                          domains: Optional[str] = None,
                          exclude_domains: Optional[str] = None,
                          source_ids: Optional[str] = None,
@@ -344,8 +309,8 @@ class TheNewsAPIFetcher(BaseFetcher):
         Получает топ новости
         
         Args:
-            locale: Коды стран через запятую
-            language: Коды языков через запятую
+            locale: Коды стран через запятую (опционально)
+            language: Коды языков через запятую (опционально)
             domains: Домены для включения
             exclude_domains: Домены для исключения
             source_ids: ID источников для включения
@@ -366,6 +331,7 @@ class TheNewsAPIFetcher(BaseFetcher):
             "page": page
         }
         
+        # Добавляем параметры только если они указаны
         if locale:
             params["locale"] = locale
         if language:
@@ -399,8 +365,8 @@ class TheNewsAPIFetcher(BaseFetcher):
         Получает список доступных источников
         
         Args:
-            locale: Коды стран через запятую
-            language: Коды языков через запятую
+            locale: Коды стран через запятую (опционально)
+            language: Коды языков через запятую (опционально)
             categories: Категории для фильтрации
             
         Returns:
@@ -408,6 +374,7 @@ class TheNewsAPIFetcher(BaseFetcher):
         """
         params = {}
         
+        # Добавляем параметры только если они указаны
         if locale:
             params["locale"] = locale
         if language:
@@ -417,32 +384,67 @@ class TheNewsAPIFetcher(BaseFetcher):
             
         return self._make_request("news/sources", params)
     
-    def fetch_recent_tech_news(self, days_back: int = 1) -> Dict[str, Any]:
+    def search_news(self, 
+                    query: str,
+                    language: Optional[str] = None,
+                    limit: int = 50,
+                    **kwargs) -> List[Dict[str, Any]]:
         """
-        Получает последние технологические новости за указанное количество дней
+        Поиск новостей по запросу
         
         Args:
-            days_back: Количество дней назад
+            query: Поисковый запрос
+            language: Язык новостей (опционально)
+            limit: Максимальное количество новостей
+            **kwargs: Дополнительные параметры
             
         Returns:
-            Dict с результатами или ошибкой
+            List[Dict[str, Any]]: Список новостей в стандартизованном формате
         """
-        published_after = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        params = {
+            "search": query,
+            "limit": min(limit, 100),
+            "sort": "relevance_score",
+            "sort_order": "desc"
+        }
         
-        return self.fetch_all_news(
-            search="technology + (AI | artificial intelligence | machine learning | startup)",
-            language="en",
-            categories="tech,business",
-            published_after=published_after,
-            sort="relevance_score",
-            sort_order="desc",
-            limit=100
-        )
+        # Добавляем язык только если он указан
+        if language:
+            params["language"] = language
+        
+        # Добавляем дополнительные параметры
+        params.update(kwargs)
+        
+        result = self.fetch_all_news(**params)
+        
+        if "error" in result:
+            return []
+        
+        # Стандартизируем формат каждой статьи
+        articles = []
+        for article in result.get("data", []):
+            standardized_article = {
+                "title": article.get("title", ""),
+                "description": article.get("description", ""),
+                "url": article.get("url", ""),
+                "published_at": article.get("published_at", ""),
+                "source": article.get("source", ""),
+                "category": article.get("categories", [None])[0] if article.get("categories") else None,
+                "language": article.get("language", language),
+                "uuid": article.get("uuid", ""),
+                "image_url": article.get("image_url", ""),
+                "keywords": article.get("keywords", ""),
+                "snippet": article.get("snippet", ""),
+                "relevance_score": article.get("relevance_score")
+            }
+            articles.append(standardized_article)
+        
+        return articles
     
     def fetch_news(self, 
                    query: Optional[str] = None,
                    category: Optional[str] = None,
-                   language: str = "en",
+                   language: Optional[str] = None,
                    limit: int = 50,
                    **kwargs) -> Dict[str, Any]:
         """
@@ -452,7 +454,7 @@ class TheNewsAPIFetcher(BaseFetcher):
         Args:
             query: Поисковый запрос
             category: Категория новостей (будет преобразована в categories)
-            language: Язык новостей (по умолчанию русский)
+            language: Язык новостей (опционально)
             limit: Максимальное количество новостей
             **kwargs: Дополнительные параметры для fetch_all_news
             
@@ -460,28 +462,26 @@ class TheNewsAPIFetcher(BaseFetcher):
             Dict в стандартном формате с полем 'articles'
         """
         try:
-            # Используем более широкий временной диапазон - последние 7 дней
-            week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-            
-            # Подготавливаем параметры для fetch_all_news с фиксированными значениями
+            # Подготавливаем параметры для fetch_all_news
             params = {
-                "language": language,
                 "limit": min(limit, 100),
                 "sort": "relevance_score",
-                "sort_order": "desc",
-                "categories": "general,politics,tech,business",
-                "published_after": week_ago
+                "sort_order": "desc"
             }
+            
+            # Добавляем язык только если он явно указан
+            if language:
+                params["language"] = language
             
             # Добавляем поисковый запрос если есть
             if query:
                 params["search"] = query
             
-            # Добавляем категорию если есть (перезапишет categories по умолчанию)
+            # Добавляем категорию если есть
             if category:
                 params["categories"] = category
             
-            # Добавляем дополнительные параметры (могут перезаписать defaults)
+            # Добавляем дополнительные параметры из kwargs
             params.update(kwargs)
             
             self.logger.debug(f"Calling fetch_all_news with params: {params}")
@@ -519,13 +519,16 @@ class TheNewsAPIFetcher(BaseFetcher):
             
             self.logger.info(f"Successfully standardized {len(articles)} articles")
             
+            meta = {
+                "total": len(articles),
+                "limit": limit
+            }
+            if language:
+                meta["language"] = language
+            
             return {
                 "articles": articles,
-                "meta": result.get("meta", {
-                    "total": len(articles),
-                    "limit": limit,
-                    "language": language
-                })
+                "meta": result.get("meta", meta)
             }
             
         except Exception as e:
@@ -534,26 +537,21 @@ class TheNewsAPIFetcher(BaseFetcher):
             error = NewsAPIError(error_msg, None, 1)
             return {"error": error}
     
-    def _extract_category(self, article: Dict[str, Any], requested_category: Optional[str]) -> str:
+    def _extract_category(self, article: Dict[str, Any], requested_category: Optional[str]) -> Optional[str]:
         """
         Извлекает категорию из статьи
         
         Args:
-            article: Статья из API
+            article: Статья от API
             requested_category: Запрошенная категория
             
         Returns:
-            Строка с категорией
+            Optional[str]: Категория статьи
         """
-        # TheNewsAPI возвращает categories как массив
-        api_categories = article.get("categories", [])
+        # Сначала пытаемся взять из categories массива
+        categories = article.get("categories", [])
+        if categories:
+            return categories[0]
         
-        if api_categories and isinstance(api_categories, list):
-            # Берем первую категорию из API
-            return api_categories[0]
-        elif requested_category:
-            # Используем запрошенную категорию
-            return requested_category
-        else:
-            # По умолчанию
-            return "general" 
+        # Если нет категорий в статье, возвращаем запрошенную
+        return requested_category 

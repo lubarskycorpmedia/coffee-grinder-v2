@@ -19,15 +19,7 @@ class TheNewsAPISettings(BaseProviderSettings):
     """Настройки для TheNewsAPI.com провайдера"""
     api_token: str = Field(..., description="API токен для TheNewsAPI")
     base_url: str = Field(default="https://api.thenewsapi.com/v1", description="Базовый URL API")
-    supported_languages: List[str] = Field(
-        default=["en", "es", "fr", "de", "it", "pt", "ru", "ar", "zh"], 
-        description="Поддерживаемые языки"
-    )
-    supported_categories: List[str] = Field(
-        default=["general", "business", "entertainment", "health", "science", "sports", "technology"],
-        description="Поддерживаемые категории"
-    )
-    default_locale: str = Field(default="us", description="Локаль по умолчанию")
+    # Убираем все дефолтные значения для языков и категорий
     headlines_per_category: int = Field(default=6, description="Количество заголовков на категорию")
 
 
@@ -35,15 +27,7 @@ class NewsAPISettings(BaseProviderSettings):
     """Настройки для NewsAPI.org провайдера"""
     api_key: str = Field(..., description="API ключ для NewsAPI.org")
     base_url: str = Field(default="https://newsapi.org/v2", description="Базовый URL API")
-    supported_languages: List[str] = Field(
-        default=["en", "ar", "de", "es", "fr", "he", "it", "nl", "no", "pt", "ru", "sv", "ud", "zh"],
-        description="Поддерживаемые языки"
-    )
-    supported_categories: List[str] = Field(
-        default=["business", "entertainment", "general", "health", "science", "sports", "technology"],
-        description="Поддерживаемые категории"
-    )
-    default_country: str = Field(default="us", description="Страна по умолчанию")
+    # Убираем все дефолтные значения для языков, стран и категорий
     page_size: int = Field(default=100, description="Размер страницы результатов")
 
 
@@ -115,11 +99,7 @@ class FAISSSettings(BaseModel):
 
 class PipelineSettings(BaseModel):
     """Настройки для pipeline обработки новостей"""
-    DEFAULT_LANGUAGE: str = Field(
-        default="en",
-        description="Язык по умолчанию для поиска новостей. "
-                   "Используется для API запросов к источникам новостей"
-    )
+    # Убираем дефолтный язык - пусть будет None
     DEFAULT_LIMIT: int = Field(
         default=100,
         description="Количество новостей по умолчанию для получения из API"

@@ -92,7 +92,7 @@ class BaseFetcher(ABC, metaclass=FetcherMeta):
     def fetch_news(self, 
                    query: Optional[str] = None,
                    category: Optional[str] = None,
-                   language: str = "en",
+                   language: Optional[str] = None,
                    limit: int = 50,
                    **kwargs) -> Dict[str, Any]:
         """
@@ -101,7 +101,7 @@ class BaseFetcher(ABC, metaclass=FetcherMeta):
         Args:
             query: Поисковый запрос
             category: Категория новостей  
-            language: Язык новостей
+            language: Язык новостей (опционально)
             limit: Максимальное количество новостей
             **kwargs: Дополнительные параметры специфичные для провайдера
             

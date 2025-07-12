@@ -79,7 +79,6 @@ class TestNewsAPIFetcher:
         mock_client.get_top_headlines.assert_called_once_with(
             category='business',
             language='en',
-            country='us',
             page_size=50
         )
     
@@ -102,7 +101,7 @@ class TestNewsAPIFetcher:
         result = fetcher.fetch_news()
         
         assert "error" in result
-        assert result["error"].message == "NewsAPI exception: API Exception"
+        assert result["error"].message == "NewsAPI fetch exception: API Exception"
     
     def test_search_news_success(self, fetcher, mock_client):
         """Тест успешного поиска новостей"""
@@ -218,7 +217,7 @@ class TestNewsAPIFetcher:
         """Тест получения списка языков"""
         languages = fetcher.get_languages()
         
-        expected_languages = ["en", "ru", "fr"]
+        expected_languages = ["en", "ar", "de", "es", "fr", "he", "it", "nl", "no", "pt", "ru", "sv", "ud", "zh"]
         assert languages == expected_languages
     
     def test_check_health_success(self, fetcher, mock_client):
@@ -260,8 +259,8 @@ class TestNewsAPIFetcher:
         assert fetcher._map_rubric_to_category("business") == "business"
         assert fetcher._map_rubric_to_category("TECHNOLOGY") == "technology"
         
-        # Неизвестная рубрика
-        assert fetcher._map_rubric_to_category("unknown") == "general"
+        # Неизвестная рубрика возвращает None
+        assert fetcher._map_rubric_to_category("unknown") is None
         
         # None
         assert fetcher._map_rubric_to_category(None) is None
@@ -320,15 +319,15 @@ class TestNewsAPIFetcher:
         assert result['category'] == 'business'
     
     def test_language_fallback(self, fetcher, mock_client):
-        """Тест fallback на английский для неподдерживаемого языка"""
+        """Тест передачи неподдерживаемого языка как есть"""
         mock_client.get_top_headlines.return_value = {'status': 'ok', 'articles': []}
         
         fetcher.fetch_news(language="unsupported")
         
-        # Проверяем что использовался английский
+        # Проверяем что язык передается как есть (API сам разберется)
         mock_client.get_top_headlines.assert_called_once()
         call_args = mock_client.get_top_headlines.call_args[1]
-        assert call_args['language'] == 'en'
+        assert call_args['language'] == 'unsupported'
     
     def test_limit_enforcement(self, fetcher, mock_client):
         """Тест ограничения лимита по page_size"""

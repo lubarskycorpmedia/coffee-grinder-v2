@@ -1070,6 +1070,21 @@ files = [
 ]
 
 [[package]]
+name = "newsapi-python"
+version = "0.2.7"
+description = "An unofficial Python client for the News API"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "newsapi-python-0.2.7.tar.gz", hash = "sha256:a4b66d5dd9892198cdaa476f7542f2625cdd218e5e3121c8f880b2ace717a3c2"},
+    {file = "newsapi_python-0.2.7-py2.py3-none-any.whl", hash = "sha256:11d34013a24d92ca7b7cbdac84ed2d504862b1e22467bc2a9a6913a70962318e"},
+]
+
+[package.dependencies]
+requests = "<3.0.0"
+
+[[package]]
 name = "nodeenv"
 version = "1.9.1"
 description = "Node.js virtual environment builder"
@@ -2393,4 +2408,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "b71625a7c0493169d9d9f9d1884489f03780941c2736fc9bba48537fc4ccdca3"
+content-hash = "ce710fd49dfc18e3f1a3859c6a6d9b32f1bf176c1d690a179d5960c02a35cf89"

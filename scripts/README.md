@@ -516,4 +516,21 @@ poetry run python scripts/get_categories.py
 - **Документация API**: [TheNewsAPI Docs](https://www.thenewsapi.com/documentation)
 - **Тарифные планы**: [TheNewsAPI Pricing](https://www.thenewsapi.com/pricing)
 - **Поддержка**: Создайте issue в репозитории проекта
-- **Статус API**: [TheNewsAPI Status](https://status.thenewsapi.com/) 
+- **Статус API**: [TheNewsAPI Status](https://status.thenewsapi.com/)
+
+---
+
+## Другие провайдеры
+
+### NewsAPI.org
+
+Подробная документация для провайдера NewsAPI.org доступна в отдельном файле: [README_newsapi.md](README_newsapi.md)
+
+**Быстрый старт:**
+```bash
+# Настройка
+echo "NEWSAPI_ORG_API_KEY=your_api_key" >> .env
+
+# Тестирование
+poetry run python scripts/test_newsapi_quick.py
+``` 

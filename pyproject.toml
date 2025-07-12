@@ -28,6 +28,7 @@ uvicorn = "^0.32.1"
 structlog = "^24.4.0"
 tenacity = "^9.0.0"
 pydantic-settings = "^2.10.1"
+newsapi-python = "^0.2.7"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"

@@ -3,6 +3,7 @@
 import sys
 import os
 import time
+import argparse
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
@@ -17,52 +18,50 @@ from dotenv import load_dotenv
 
 # Массив доменов для тестирования
 DOMAINS_TO_TEST = [
-    "ground.news",
+    # "ground.news",
     "nytimes.com", 
-    "washingtonpost.com",
+    # "washingtonpost.com",
     "bloomberg.com",
-    "thehill.com",
-    "reuters.com",
-    "wsj.com",
-    "newsnationnow.com",
-    "breitbart.com",
-    "ft.com",
-    "axios.com",
-    "foxnews.com",
-    "newsmax.com",
-    "nypost.com",
-    "washingtontimes.com",
-    "washingtonexaminer.com",
-    "dailywire.com",
-    "dailysignal.com",
-    "time.com",
-    "msnbc.com",
-    "newsweek.com",
-    "cnn.com",
-    "politico.com",
-    "theguardian.com",
-    "theatlantic.com",
-    "forbes.com",
-    "understandingwar.org"
+    # "thehill.com",
+    # "reuters.com",
+    # "wsj.com",
+    # "newsnationnow.com",
+    # "breitbart.com",
+    # "ft.com",
+    # "axios.com",
+    # "foxnews.com",
+    # "newsmax.com",
+    # "nypost.com",
+    # "washingtontimes.com",
+    # "washingtonexaminer.com",
+    # "dailywire.com",
+    # "dailysignal.com",
+    # "time.com",
+    # "msnbc.com",
+    # "newsweek.com",
+    # "cnn.com",
+    # "politico.com",
+    # "theguardian.com",
+    # "theatlantic.com",
+    # "forbes.com",
+    # "understandingwar.org"
 ]
 
-def test_source_availability(fetcher, domain: str, published_after: str) -> str:
+def test_source_availability(fetcher, domain: str, provider_name: str) -> str:
     """
-    Тестирует доступность источника в TheNewsAPI
+    Тестирует доступность источника в провайдере новостей
     
     Args:
-        fetcher: Экземпляр TheNewsAPIFetcher
+        fetcher: Экземпляр fetcher'а
         domain: Домен для проверки
-        published_after: Дата начала поиска (YYYY-MM-DD)
+        provider_name: Название провайдера
     
     Returns:
         Результат проверки: "да", "нет" или код ошибки
     """
     try:
-        response = fetcher.fetch_all_news(
-            # search="news",
-            domains=domain
-        )
+        # Используем единый универсальный метод fetch_news для всех провайдеров
+        response = fetcher.fetch_news(domains=domain)
         
         # Проверяем на ошибку
         if "error" in response:
@@ -72,8 +71,8 @@ def test_source_availability(fetcher, domain: str, published_after: str) -> str:
             else:
                 return "error"
         
-        # Проверяем наличие статей
-        articles = response.get("data", [])
+        # Проверяем наличие статей в стандартизированном формате
+        articles = response.get("articles", [])
         return "да" if articles else "нет"
         
     except Exception as e:
@@ -110,7 +109,7 @@ def update_google_sheets(results: Dict[str, str], provider_name: str):
         from src.services.news.pipeline import create_news_pipeline_orchestrator
         
         orchestrator = create_news_pipeline_orchestrator(
-            provider="thenewsapi",
+            provider=provider_name,  # Используем переданный провайдер
             worksheet_name="Источники"
         )
         
@@ -217,6 +216,16 @@ def update_google_sheets(results: Dict[str, str], provider_name: str):
 
 def main():
     """Основная функция скрипта"""
+    # Парсим аргументы командной строки
+    parser = argparse.ArgumentParser(description="Тестирование доступности источников новостей")
+    parser.add_argument(
+        "--provider", 
+        type=str, 
+        choices=["thenewsapi", "newsapi"],
+        help="Провайдер новостей для тестирования (по умолчанию из config.py)"
+    )
+    args = parser.parse_args()
+    
     # Загружаем переменные окружения как в test_real_pipeline.py
     load_dotenv()
     
@@ -230,13 +239,15 @@ def main():
     
     logger = setup_logger(__name__)
     
-    print("🔍 Тестирование доступности источников в TheNewsAPI")
-    print("=" * 60)
-    
     try:
         # Получаем настройки
         providers_settings = get_news_providers_settings()
-        provider_name = providers_settings.default_provider
+        
+        # Определяем провайдер: из аргументов или дефолтный
+        provider_name = args.provider if args.provider else providers_settings.default_provider
+        
+        print(f"🔍 Тестирование доступности источников в {provider_name.upper()}")
+        print("=" * 60)
         
         # Создаем fetcher
         from src.services.news.fetcher_fabric import create_news_fetcher_from_config
@@ -256,7 +267,7 @@ def main():
         for i, domain in enumerate(DOMAINS_TO_TEST, 1):
             print(f"[{i:2d}/{len(DOMAINS_TO_TEST)}] Проверяю {domain}...", end=" ", flush=True)
             
-            result = test_source_availability(fetcher, domain, thirty_days_ago)
+            result = test_source_availability(fetcher, domain, provider_name)
             results[domain] = result
             
             print(f"→ {result}")

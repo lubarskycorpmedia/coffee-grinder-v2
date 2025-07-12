@@ -14,7 +14,7 @@
    THENEWSAPI_API_TOKEN=your_actual_token_here
    
    # Заглушки для других компонентов (не используются в тестах fetcher'а)
-   GOOGLE_GSHEET_ID=test-sheet-id
+   GOOGLE_SHEET_ID=test-sheet-id
    GOOGLE_ACCOUNT_EMAIL=test@example.com
    GOOGLE_ACCOUNT_KEY=test-key
    OPENAI_API_KEY=sk-test-key

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from src.config import get_pipeline_settings, get_faiss_settings
 from src.logger import setup_logger
-from src.services.news.fetcher_fabric import create_news_fetcher_with_config
+from src.services.news.fetcher_fabric import create_news_fetcher_from_config
 from src.langchain.news_chain import NewsProcessingChain, NewsItem, create_news_processing_chain
 from src.services.news.exporter import GoogleSheetsExporter, create_google_sheets_exporter
 from src.services.news.rubrics_config import get_active_rubrics
@@ -104,7 +104,7 @@ class NewsPipelineOrchestrator:
     def fetcher(self):
         """Ленивое создание fetcher'а"""
         if self._fetcher is None:
-            self._fetcher = create_news_fetcher_with_config(provider=self.provider)
+            self._fetcher = create_news_fetcher_from_config(self.provider)
             self.logger.info(f"Created fetcher for provider: {self.provider}")
         return self._fetcher
     

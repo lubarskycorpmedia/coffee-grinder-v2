@@ -4,7 +4,7 @@ import sys
 import argparse
 from typing import Optional
 from src.logger import setup_logger
-from src.config import get_news_settings, get_ai_settings, get_google_settings
+from src.config import get_news_providers_settings, get_ai_settings, get_google_settings
 
 
 def check_configuration() -> bool:
@@ -17,13 +17,16 @@ def check_configuration() -> bool:
     logger = setup_logger(__name__)
     
     try:
-        # Проверяем настройки новостей
+        # Проверяем настройки новостных провайдеров
         try:
-            news_settings = get_news_settings()
-            if not news_settings.THENEWSAPI_API_TOKEN:
-                logger.error("THENEWSAPI_API_TOKEN не настроен")
+            providers_settings = get_news_providers_settings()
+            enabled_providers = providers_settings.get_enabled_providers()
+            
+            if not enabled_providers:
+                logger.error("Нет включенных провайдеров новостей")
                 return False
-            logger.info("✓ Настройки новостей корректны")
+            
+            logger.info(f"✓ Настройки новостей корректны. Включенные провайдеры: {list(enabled_providers.keys())}")
         except Exception as e:
             logger.error(f"Ошибка настроек новостей: {e}")
             return False
@@ -42,8 +45,8 @@ def check_configuration() -> bool:
         # Проверяем настройки Google (опционально)
         try:
             google_settings = get_google_settings()
-            if not google_settings.GOOGLE_GSHEET_ID:
-                logger.warning("GOOGLE_GSHEET_ID не настроен - экспорт будет недоступен")
+            if not google_settings.GOOGLE_SHEET_ID:
+                logger.warning("GOOGLE_SHEET_ID не настроен - экспорт будет недоступен")
             elif not google_settings.GOOGLE_ACCOUNT_KEY:
                 logger.warning("GOOGLE_ACCOUNT_KEY не настроен - экспорт будет недоступен")
             else:

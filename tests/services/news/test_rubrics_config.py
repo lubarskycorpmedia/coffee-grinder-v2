@@ -26,7 +26,7 @@ class TestRubricsConfig:
         config = get_rubrics_config()
         
         # Проверяем что в конфигурации есть ожидаемые рубрики
-        assert len(config) == 12
+        assert len(config) == 2  # Только активные рубрики в тестовом режиме
         
         # Проверяем структуру каждой рубрики
         for rubric in config:
@@ -98,7 +98,7 @@ class TestRubricsConfig:
         assert isinstance(rubric, dict)
         assert rubric["rubric"] == "02. Trump"
         assert rubric["category"] == "politics"
-        assert rubric["query"] == "Trump | Mask"
+        assert rubric["query"] == "Trump"
     
     def test_get_rubric_by_name_non_existing(self):
         """Тест получения рубрики по несуществующему имени"""
@@ -119,19 +119,10 @@ class TestRubricsConfig:
         config = get_rubrics_config()
         rubric_names = [rubric["rubric"] for rubric in config]
         
+        # Только активные рубрики в тестовом режиме
         expected_rubrics = [
             "01. Big picture",
-            "02. Trump", 
-            "03. US",
-            "04. Left reaction",
-            "05. Ukraine",
-            "06. Coffee grounds",
-            "07. World",
-            "08. Marasmus",
-            "09. Blitz",
-            "10. Tech",
-            "11. Crazy",
-            "other"
+            "02. Trump"
         ]
         
         for expected_rubric in expected_rubrics:

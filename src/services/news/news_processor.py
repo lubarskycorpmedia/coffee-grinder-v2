@@ -3,11 +3,11 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 
-from src.services.news.fetcher_fabric import create_news_fetcher_with_config
+from src.services.news.fetcher_fabric import create_news_fetcher_from_config
 from src.services.news.exporter import GoogleSheetsExporter, create_google_sheets_exporter
 from src.langchain.news_chain import NewsProcessingChain, create_news_processing_chain, NewsItem
 from src.openai_client import OpenAIClient
-from src.config import get_news_settings, get_ai_settings, get_google_settings
+from src.config import get_news_providers_settings, get_ai_settings, get_google_settings
 from src.logger import setup_logger
 
 
@@ -65,10 +65,15 @@ class NewsProcessor:
     def _validate_settings(self):
         """Проверяет наличие всех необходимых настроек"""
         try:
-            # Проверяем настройки новостей
-            news_settings = get_news_settings()
-            if not news_settings.THENEWSAPI_API_TOKEN:
-                raise NewsProcessingError("THENEWSAPI_API_TOKEN is required")
+            # Проверяем настройки новостных провайдеров
+            providers_settings = get_news_providers_settings()
+            provider_settings = providers_settings.get_provider_settings(self.news_provider)
+            
+            if provider_settings is None:
+                raise NewsProcessingError(f"Provider '{self.news_provider}' not found in configuration")
+            
+            if not provider_settings.enabled:
+                raise NewsProcessingError(f"Provider '{self.news_provider}' is disabled")
             
             # Проверяем настройки AI
             ai_settings = get_ai_settings()
@@ -78,8 +83,8 @@ class NewsProcessor:
             # Проверяем настройки Google (опционально)
             try:
                 google_settings = get_google_settings()
-                if not google_settings.GOOGLE_GSHEET_ID:
-                    self.logger.warning("GOOGLE_GSHEET_ID not configured - export to Google Sheets will be disabled")
+                if not google_settings.GOOGLE_SHEET_ID:
+                    self.logger.warning("GOOGLE_SHEET_ID not configured - export to Google Sheets will be disabled")
                 if not google_settings.GOOGLE_ACCOUNT_KEY:
                     self.logger.warning("GOOGLE_ACCOUNT_KEY not configured - export to Google Sheets will be disabled")
             except Exception as e:
@@ -91,7 +96,7 @@ class NewsProcessor:
     def _get_news_fetcher(self):
         """Получает фетчер новостей"""
         if self._news_fetcher is None:
-            self._news_fetcher = create_news_fetcher_with_config(self.news_provider)
+            self._news_fetcher = create_news_fetcher_from_config(self.news_provider)
         return self._news_fetcher
     
     def _get_openai_client(self):

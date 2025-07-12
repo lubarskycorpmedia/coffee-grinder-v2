@@ -10,63 +10,78 @@ RUBRICS_CONFIG = [
     {
         "rubric": "01. Big picture",
         "category": "general",
-        "query": ""
+        "query": "Big picture"
     },
     {
         "rubric": "02. Trump",
         "category": "politics",
-        "query": "Trump | Mask"
+        "query": "Trump"
     },
-    {
-        "rubric": "03. US",
-        "category": "general", 
-        "query": "USA"
-    },
-    {
-        "rubric": "04. Left reaction",
-        "category": "general",
-        "query": ""
-    },
-    {
-        "rubric": "05. Ukraine",
-        "category": "politics",
-        "query": "Ukraine | war | Zelensky"
-    },
-    {
-        "rubric": "06. Coffee grounds",
-        "category": "general",
-        "query": ""
-    },
-    {
-        "rubric": "07. World",
-        "category": "general",
-        "query": "World | Israil | Iran | "
-    },
-    {
-        "rubric": "08. Marasmus",
-        "category": "entertainment",
-        "query": "Marasmus"
-    },
-    {
-        "rubric": "09. Blitz",
-        "category": "general",
-        "query": "Blitz"
-    },
-    {
-        "rubric": "10. Tech",
-        "category": "tech",
-        "query": "tech | AI"
-    },
-    {
-        "rubric": "11. Crazy",
-        "category": "general",
-        "query": "Crazy"
-    },
-    {
-        "rubric": "other",
-        "category": "general",
-        "query": ""
-    }
+    # {
+    #     "rubric": "02. Trump",
+    #     "category": "politics",
+    #     "query": "Mask"
+    # },
+    # {
+    #     "rubric": "03. US",
+    #     "category": "general", 
+    #     "query": "USA"
+    # },
+    # {
+    #     "rubric": "04. Left reaction",
+    #     "category": "general",
+    #     "query": ""
+    # },
+    # {
+    #     "rubric": "05. Ukraine",
+    #     "category": "politics",
+    #     "query": "Ukraine"
+    # },
+    # {
+    #     "rubric": "05. Ukraine",
+    #     "category": "politics",
+    #     "query": "war"
+    # },
+    # {
+    #     "rubric": "05. Ukraine",
+    #     "category": "general",
+    #     "query": "war"
+    # },
+    # {
+    #     "rubric": "06. Coffee grounds",
+    #     "category": "politics",
+    #     "query": "Zelensky"
+    # },
+    # {
+    #     "rubric": "07. World",
+    #     "category": "general",
+    #     "query": "World | Israil | Iran | "
+    # },
+    # {
+    #     "rubric": "08. Marasmus",
+    #     "category": "entertainment",
+    #     "query": "Marasmus"
+    # },
+    # {
+    #     "rubric": "09. Blitz",
+    #     "category": "general",
+    #     "query": "Blitz"
+    # },
+    # {
+    #     "rubric": "10. Tech",
+    #     "category": "tech",
+    #     "query": "tech | AI"
+    # },
+    # {
+    #     "rubric": "11. Crazy",
+    #     "category": "general",
+    #     "query": "Crazy"
+    # },
+    # {
+    #     "rubric": "other",
+    #     "category": "general",
+    #     "query": "Rubio"
+    # }
 ]
 
 

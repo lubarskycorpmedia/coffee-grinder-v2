@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 
 from src.services.news.news_processor import NewsProcessor, create_news_processor
-from src.config import get_news_settings, get_ai_settings, get_google_settings
+from src.config import get_news_providers_settings, get_ai_settings, get_google_settings
 from src.logger import setup_logger
 
 
@@ -60,9 +60,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--provider",
         type=str,
-        default="thenewsapi",
-        choices=["thenewsapi"],
-        help="Провайдер новостей (по умолчанию: thenewsapi)"
+        default=None,
+        help="Провайдер новостей (по умолчанию: из конфигурации)"
     )
     
     parser.add_argument(
@@ -88,14 +87,16 @@ def validate_environment() -> Dict[str, Any]:
         "warnings": []
     }
     
-    # Проверяем настройки новостей
+    # Проверяем настройки новостных провайдеров
     try:
-        news_settings = get_news_settings()
-        if not news_settings.THENEWSAPI_API_TOKEN:
-            validation_results["errors"].append("THENEWSAPI_API_TOKEN не настроен")
+        providers_settings = get_news_providers_settings()
+        enabled_providers = providers_settings.get_enabled_providers()
+        
+        if not enabled_providers:
+            validation_results["errors"].append("Нет включенных провайдеров новостей")
             validation_results["valid"] = False
         else:
-            logger.info("✓ News API настройки корректны")
+            logger.info(f"✓ News API настройки корректны. Включенные провайдеры: {list(enabled_providers.keys())}")
     except Exception as e:
         validation_results["errors"].append(f"Ошибка настроек новостей: {str(e)}")
         validation_results["valid"] = False
@@ -115,8 +116,8 @@ def validate_environment() -> Dict[str, Any]:
     # Проверяем настройки Google (опционально для dry-run)
     try:
         google_settings = get_google_settings()
-        if not google_settings.GOOGLE_GSHEET_ID:
-            validation_results["warnings"].append("GOOGLE_GSHEET_ID не настроен - экспорт будет недоступен")
+        if not google_settings.GOOGLE_SHEET_ID:
+            validation_results["warnings"].append("GOOGLE_SHEET_ID не настроен - экспорт будет недоступен")
         elif not google_settings.GOOGLE_ACCOUNT_KEY:
             validation_results["warnings"].append("GOOGLE_ACCOUNT_KEY не настроен - экспорт будет недоступен")
         else:
@@ -158,8 +159,14 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     logger.info(f"🚀 Запуск pipeline (dry-run: {args.dry_run})")
     
     try:
+        # Определяем провайдера
+        provider = args.provider
+        if provider is None:
+            providers_settings = get_news_providers_settings()
+            provider = providers_settings.default_provider
+        
         processor = create_news_processor(
-            news_provider=args.provider,
+            news_provider=provider,
             max_news_items=args.limit,
             fail_on_errors=False  # Продолжаем работу при ошибках
         )

@@ -26,7 +26,7 @@ class TestNewsModuleIsolation:
             assert fetcher is not None
             assert fetcher.api_token == "test_token"
             assert fetcher.max_retries == 3  # дефолт
-            assert fetcher.backoff_factor == 0.5  # дефолт
+            assert fetcher.backoff_factor == 2.0  # дефолт
     
     def test_create_news_fetcher_without_google_openai_vars(self):
         """Тест что модуль новостей не зависит от Google/OpenAI переменных"""

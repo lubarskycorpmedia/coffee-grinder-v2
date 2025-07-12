@@ -68,13 +68,17 @@ class TestNewsProcessor:
             )
         ]
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    def test_init_success(self, mock_get_google_settings, mock_get_ai_settings, mock_get_news_settings, 
+    def test_init_success(self, mock_get_google_settings, mock_get_ai_settings, mock_get_news_providers_settings, 
                          mock_news_settings, mock_ai_settings, mock_google_settings):
         """Тест успешной инициализации процессора"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -91,41 +95,49 @@ class TestNewsProcessor:
         assert processor.similarity_threshold == 0.9
         assert processor.fail_on_errors is False
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
-    def test_init_missing_news_token(self, mock_get_ai_settings, mock_get_news_settings, 
+    def test_init_missing_news_token(self, mock_get_ai_settings, mock_get_news_providers_settings, 
                                    mock_ai_settings):
         """Тест инициализации без токена новостей"""
-        mock_news_settings_no_token = Mock()
-        mock_news_settings_no_token.THENEWSAPI_API_TOKEN = None
-        mock_get_news_settings.return_value = mock_news_settings_no_token
+        mock_providers_settings_no_token = Mock()
+        mock_providers_settings_no_token.get_provider_settings.return_value = None
+        mock_get_news_providers_settings.return_value = mock_providers_settings_no_token
         mock_get_ai_settings.return_value = mock_ai_settings
         
-        with pytest.raises(NewsProcessingError, match="THENEWSAPI_API_TOKEN is required"):
+        with pytest.raises(NewsProcessingError, match="Provider .* not found in configuration"):
             NewsProcessor()
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
-    def test_init_missing_openai_key(self, mock_get_ai_settings, mock_get_news_settings, 
+    def test_init_missing_openai_key(self, mock_get_ai_settings, mock_get_news_providers_settings, 
                                    mock_news_settings):
         """Тест инициализации без OpenAI ключа"""
         mock_ai_settings_no_key = Mock()
         mock_ai_settings_no_key.OPENAI_API_KEY = None
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings_no_key
         
         with pytest.raises(NewsProcessingError, match="OPENAI_API_KEY is required"):
             NewsProcessor()
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    @patch('src.services.news.news_processor.create_news_fetcher_with_config')
+    @patch('src.services.news.news_processor.create_news_fetcher_from_config')
     def test_fetch_news_success(self, mock_create_fetcher, mock_get_google_settings, 
-                               mock_get_ai_settings, mock_get_news_settings,
+                               mock_get_ai_settings, mock_get_news_providers_settings,
                                mock_news_settings, mock_ai_settings, mock_google_settings):
         """Тест успешного получения новостей"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -158,15 +170,19 @@ class TestNewsProcessor:
             limit=10
         )
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    @patch('src.services.news.news_processor.create_news_fetcher_with_config')
+    @patch('src.services.news.news_processor.create_news_fetcher_from_config')
     def test_fetch_news_error_no_fail(self, mock_create_fetcher, mock_get_google_settings,
-                                     mock_get_ai_settings, mock_get_news_settings,
+                                     mock_get_ai_settings, mock_get_news_providers_settings,
                                      mock_news_settings, mock_ai_settings, mock_google_settings):
         """Тест ошибки получения новостей без прерывания"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -180,15 +196,19 @@ class TestNewsProcessor:
         
         assert news_items == []
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    @patch('src.services.news.news_processor.create_news_fetcher_with_config')
+    @patch('src.services.news.news_processor.create_news_fetcher_from_config')
     def test_fetch_news_error_with_fail(self, mock_create_fetcher, mock_get_google_settings,
-                                       mock_get_ai_settings, mock_get_news_settings,
+                                       mock_get_ai_settings, mock_get_news_providers_settings,
                                        mock_news_settings, mock_ai_settings, mock_google_settings):
         """Тест ошибки получения новостей с прерыванием"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -202,16 +222,20 @@ class TestNewsProcessor:
         with pytest.raises(NewsProcessingError, match="Failed to fetch news"):
             processor.fetch_news()
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
     @patch('src.services.news.news_processor.create_news_processing_chain')
     @patch('src.services.news.news_processor.OpenAIClient')
     def test_process_news_success(self, mock_openai_client, mock_create_chain, mock_get_google_settings,
-                                 mock_get_ai_settings, mock_get_news_settings, 
+                                 mock_get_ai_settings, mock_get_news_providers_settings, 
                                  mock_news_settings, mock_ai_settings, mock_google_settings, sample_news_items):
         """Тест успешной обработки новостей"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -237,13 +261,17 @@ class TestNewsProcessor:
             fail_on_errors=False
         )
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    def test_process_news_empty_list(self, mock_get_google_settings, mock_get_ai_settings, mock_get_news_settings,
+    def test_process_news_empty_list(self, mock_get_google_settings, mock_get_ai_settings, mock_get_news_providers_settings,
                                    mock_news_settings, mock_ai_settings, mock_google_settings):
         """Тест обработки пустого списка новостей"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -252,15 +280,19 @@ class TestNewsProcessor:
         
         assert result == []
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
     @patch('src.services.news.news_processor.create_google_sheets_exporter')
     def test_export_to_sheets_success(self, mock_create_exporter, mock_get_google_settings,
-                                     mock_get_ai_settings, mock_get_news_settings, 
+                                     mock_get_ai_settings, mock_get_news_providers_settings, 
                                      mock_news_settings, mock_ai_settings, mock_google_settings, sample_news_items):
         """Тест успешного экспорта в Google Sheets"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -275,19 +307,23 @@ class TestNewsProcessor:
         assert result is True
         mock_exporter.export_news.assert_called_once_with(sample_news_items, append=True)
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    @patch('src.services.news.news_processor.create_news_fetcher_with_config')
+    @patch('src.services.news.news_processor.create_news_fetcher_from_config')
     @patch('src.services.news.news_processor.create_news_processing_chain')
     @patch('src.services.news.news_processor.create_google_sheets_exporter')
     @patch('src.services.news.news_processor.OpenAIClient')
     def test_run_full_pipeline_success(self, mock_openai_client, mock_create_exporter, mock_create_chain, 
                                       mock_create_fetcher, mock_get_google_settings,
-                                      mock_get_ai_settings, mock_get_news_settings,
+                                      mock_get_ai_settings, mock_get_news_providers_settings,
                                       mock_news_settings, mock_ai_settings, mock_google_settings):
         """Тест успешного выполнения полного пайплайна"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -361,15 +397,19 @@ class TestNewsProcessor:
         mock_chain.process_news.assert_called_once()
         mock_exporter.export_news.assert_called_once()
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    @patch('src.services.news.news_processor.create_news_fetcher_with_config')
+    @patch('src.services.news.news_processor.create_news_fetcher_from_config')
     def test_run_full_pipeline_no_news(self, mock_create_fetcher, mock_get_google_settings,
-                                      mock_get_ai_settings, mock_get_news_settings,
+                                      mock_get_ai_settings, mock_get_news_providers_settings,
                                       mock_news_settings, mock_ai_settings, mock_google_settings):
         """Тест выполнения пайплайна без новостей"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -390,15 +430,19 @@ class TestNewsProcessor:
         assert "start_time" in result
         assert "end_time" in result
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
     @patch('src.services.news.news_processor.create_google_sheets_exporter')
     def test_get_export_summary(self, mock_create_exporter, mock_get_google_settings,
-                               mock_get_ai_settings, mock_get_news_settings,
+                               mock_get_ai_settings, mock_get_news_providers_settings,
                                mock_news_settings, mock_ai_settings, mock_google_settings):
         """Тест получения сводки экспорта"""
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -425,10 +469,10 @@ class TestNewsProcessor:
 class TestCreateNewsProcessor:
     """Тесты для функции create_news_processor"""
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    def test_create_processor_defaults(self, mock_get_google_settings, mock_get_ai_settings, mock_get_news_settings):
+    def test_create_processor_defaults(self, mock_get_google_settings, mock_get_ai_settings, mock_get_news_providers_settings):
         """Тест создания процессора с настройками по умолчанию"""
         mock_news_settings = Mock()
         mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
@@ -447,7 +491,11 @@ class TestCreateNewsProcessor:
         mock_google_settings.GOOGLE_ACCOUNT_KEY = '{"type": "service_account"}'
         mock_google_settings.GOOGLE_ACCOUNT_EMAIL = "test@example.com"
         
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         
@@ -459,10 +507,10 @@ class TestCreateNewsProcessor:
         assert processor.similarity_threshold == 0.85
         assert processor.fail_on_errors is False
     
-    @patch('src.services.news.news_processor.get_news_settings')
+    @patch('src.services.news.news_processor.get_news_providers_settings')
     @patch('src.services.news.news_processor.get_ai_settings')
     @patch('src.services.news.news_processor.get_google_settings')
-    def test_create_processor_custom_params(self, mock_get_google_settings, mock_get_ai_settings, mock_get_news_settings):
+    def test_create_processor_custom_params(self, mock_get_google_settings, mock_get_ai_settings, mock_get_news_providers_settings):
         """Тест создания процессора с пользовательскими параметрами"""
         mock_news_settings = Mock()
         mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
@@ -481,7 +529,11 @@ class TestCreateNewsProcessor:
         mock_google_settings.GOOGLE_ACCOUNT_KEY = '{"type": "service_account"}'
         mock_google_settings.GOOGLE_ACCOUNT_EMAIL = "test@example.com"
         
-        mock_get_news_settings.return_value = mock_news_settings
+        mock_providers_settings = Mock()
+        mock_provider_settings = Mock()
+        mock_provider_settings.enabled = True
+        mock_providers_settings.get_provider_settings.return_value = mock_provider_settings
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         mock_get_ai_settings.return_value = mock_ai_settings
         mock_get_google_settings.return_value = mock_google_settings
         

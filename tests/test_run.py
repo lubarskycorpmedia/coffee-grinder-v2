@@ -29,18 +29,18 @@ class TestOrchestrator:
         assert args.query == 'test'
         assert args.limit == 10
         assert args.language == 'en'  # default
-        assert args.provider == 'thenewsapi'  # default
+        assert args.provider is None  # default - из конфигурации
     
-    @patch('src.run.get_news_settings')
+    @patch('src.run.get_news_providers_settings')
     @patch('src.run.get_ai_settings')
     @patch('src.run.get_google_settings')
     def test_validate_environment_success(self, mock_get_google_settings,
-                                         mock_get_ai_settings, mock_get_news_settings):
+                                         mock_get_ai_settings, mock_get_news_providers_settings):
         """Тест успешной валидации окружения"""
-        # Мокаем настройки
-        mock_news_settings = Mock()
-        mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_get_news_settings.return_value = mock_news_settings
+        # Мокаем настройки новостных провайдеров
+        mock_providers_settings = Mock()
+        mock_providers_settings.get_enabled_providers.return_value = {"thenewsapi": Mock(), "newsapi": Mock()}
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         
         mock_ai_settings = Mock()
         mock_ai_settings.OPENAI_API_KEY = "test_openai_key"
@@ -57,16 +57,16 @@ class TestOrchestrator:
         assert len(result["errors"]) == 0
         assert len(result["warnings"]) == 0
     
-    @patch('src.run.get_news_settings')
+    @patch('src.run.get_news_providers_settings')
     @patch('src.run.get_ai_settings')
     @patch('src.run.get_google_settings')
     def test_validate_environment_missing_keys(self, mock_get_google_settings,
-                                              mock_get_ai_settings, mock_get_news_settings):
+                                              mock_get_ai_settings, mock_get_news_providers_settings):
         """Тест валидации с отсутствующими ключами"""
-        # Мокаем настройки с отсутствующими ключами
-        mock_news_settings = Mock()
-        mock_news_settings.THENEWSAPI_API_TOKEN = None
-        mock_get_news_settings.return_value = mock_news_settings
+        # Мокаем настройки с отсутствующими провайдерами
+        mock_providers_settings = Mock()
+        mock_providers_settings.get_enabled_providers.return_value = {}
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         
         mock_ai_settings = Mock()
         mock_ai_settings.OPENAI_API_KEY = None
@@ -82,13 +82,19 @@ class TestOrchestrator:
         assert result["valid"] is False
         assert len(result["errors"]) == 2  # news and ai errors
         assert len(result["warnings"]) == 1  # google warning
-        assert "THENEWSAPI_API_TOKEN не настроен" in result["errors"]
+        assert "Нет включенных провайдеров новостей" in result["errors"]
         assert "OPENAI_API_KEY не настроен" in result["errors"]
     
+    @patch('src.run.get_news_providers_settings')
     @patch('src.run.validate_environment')
     @patch('src.run.create_news_processor')
-    def test_run_pipeline_success(self, mock_create_processor, mock_validate_env):
+    def test_run_pipeline_success(self, mock_create_processor, mock_validate_env, mock_get_providers_settings):
         """Тест успешного выполнения pipeline"""
+        # Мокаем настройки провайдеров
+        mock_providers_settings = Mock()
+        mock_providers_settings.default_provider = "thenewsapi"
+        mock_get_providers_settings.return_value = mock_providers_settings
+        
         # Мокаем валидацию
         mock_validate_env.return_value = {
             "valid": True,
@@ -116,7 +122,7 @@ class TestOrchestrator:
             category="tech",
             language="en",
             limit=10,
-            provider="thenewsapi"
+            provider=None  # будет использован дефолтный провайдер
         )
         
         result = run_pipeline(args)
@@ -143,10 +149,16 @@ class TestOrchestrator:
             append_to_sheets=True
         )
     
+    @patch('src.run.get_news_providers_settings')
     @patch('src.run.validate_environment')
     @patch('src.run.create_news_processor')
-    def test_run_pipeline_dry_run(self, mock_create_processor, mock_validate_env):
+    def test_run_pipeline_dry_run(self, mock_create_processor, mock_validate_env, mock_get_providers_settings):
         """Тест выполнения pipeline в dry-run режиме"""
+        # Мокаем настройки провайдеров
+        mock_providers_settings = Mock()
+        mock_providers_settings.default_provider = "thenewsapi"
+        mock_get_providers_settings.return_value = mock_providers_settings
+        
         # Мокаем валидацию
         mock_validate_env.return_value = {
             "valid": True,
@@ -174,7 +186,7 @@ class TestOrchestrator:
             category=None,
             language="en",
             limit=50,
-            provider="thenewsapi"
+            provider=None  # будет использован дефолтный провайдер
         )
         
         result = run_pipeline(args)
@@ -198,7 +210,7 @@ class TestOrchestrator:
         # Мокаем валидацию с ошибками
         mock_validate_env.return_value = {
             "valid": False,
-            "errors": ["THENEWSAPI_API_TOKEN не настроен"],
+            "errors": ["Нет включенных провайдеров новостей"],
             "warnings": []
         }
         
@@ -208,13 +220,13 @@ class TestOrchestrator:
             category=None,
             language="en",
             limit=50,
-            provider="thenewsapi"
+            provider=None
         )
         
         result = run_pipeline(args)
         
         assert result["success"] is False
-        assert "THENEWSAPI_API_TOKEN не настроен" in result["errors"]
+        assert "Нет включенных провайдеров новостей" in result["errors"]
     
     @patch('src.run.validate_environment')
     @patch('src.run.create_news_processor')
@@ -280,7 +292,7 @@ class TestOrchestrator:
         assert args.category is None
         assert args.language == "en"
         assert args.limit == 50
-        assert args.provider == "thenewsapi"
+        assert args.provider is None
         assert args.verbose is False
     
     def test_argument_parser_all_options(self):

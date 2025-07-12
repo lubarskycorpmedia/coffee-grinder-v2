@@ -20,13 +20,13 @@ class TestCheckConfiguration:
     
     @patch('src.healthcheck.get_google_settings')
     @patch('src.healthcheck.get_ai_settings')
-    @patch('src.healthcheck.get_news_settings')
-    def test_check_configuration_success(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
+    @patch('src.healthcheck.get_news_providers_settings')
+    def test_check_configuration_success(self, mock_get_news_providers_settings, mock_get_ai_settings, mock_get_google_settings):
         """Тест успешной проверки конфигурации."""
-        # Мокаем настройки новостей
-        mock_news_settings = MagicMock()
-        mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_get_news_settings.return_value = mock_news_settings
+        # Мокаем настройки новостных провайдеров
+        mock_providers_settings = MagicMock()
+        mock_providers_settings.get_enabled_providers.return_value = {"thenewsapi": MagicMock(), "newsapi": MagicMock()}
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         
         # Мокаем настройки AI
         mock_ai_settings = MagicMock()
@@ -44,13 +44,13 @@ class TestCheckConfiguration:
     
     @patch('src.healthcheck.get_google_settings')
     @patch('src.healthcheck.get_ai_settings')
-    @patch('src.healthcheck.get_news_settings')
-    def test_check_configuration_missing_vars(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
+    @patch('src.healthcheck.get_news_providers_settings')
+    def test_check_configuration_missing_vars(self, mock_get_news_providers_settings, mock_get_ai_settings, mock_get_google_settings):
         """Тест проверки конфигурации с отсутствующими переменными."""
-        # Мокаем настройки новостей с пустым токеном
-        mock_news_settings = MagicMock()
-        mock_news_settings.THENEWSAPI_API_TOKEN = ""
-        mock_get_news_settings.return_value = mock_news_settings
+        # Мокаем настройки новостных провайдеров с пустым списком
+        mock_providers_settings = MagicMock()
+        mock_providers_settings.get_enabled_providers.return_value = {}
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         
         # Мокаем настройки AI
         mock_ai_settings = MagicMock()
@@ -68,13 +68,13 @@ class TestCheckConfiguration:
     
     @patch('src.healthcheck.get_google_settings')
     @patch('src.healthcheck.get_ai_settings')
-    @patch('src.healthcheck.get_news_settings')
-    def test_check_configuration_missing_ai_key(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
+    @patch('src.healthcheck.get_news_providers_settings')
+    def test_check_configuration_missing_ai_key(self, mock_get_news_providers_settings, mock_get_ai_settings, mock_get_google_settings):
         """Тест проверки конфигурации с отсутствующим AI ключом."""
-        # Мокаем настройки новостей
-        mock_news_settings = MagicMock()
-        mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_get_news_settings.return_value = mock_news_settings
+        # Мокаем настройки новостных провайдеров
+        mock_providers_settings = MagicMock()
+        mock_providers_settings.get_enabled_providers.return_value = {"thenewsapi": MagicMock()}
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         
         # Мокаем настройки AI с пустым ключом
         mock_ai_settings = MagicMock()
@@ -92,23 +92,23 @@ class TestCheckConfiguration:
     
     @patch('src.healthcheck.get_google_settings')
     @patch('src.healthcheck.get_ai_settings')
-    @patch('src.healthcheck.get_news_settings')
-    def test_check_configuration_news_exception(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
+    @patch('src.healthcheck.get_news_providers_settings')
+    def test_check_configuration_news_exception(self, mock_get_news_providers_settings, mock_get_ai_settings, mock_get_google_settings):
         """Тест обработки исключения в настройках новостей."""
-        mock_get_news_settings.side_effect = Exception("News settings error")
+        mock_get_news_providers_settings.side_effect = Exception("News settings error")
         
         result = check_configuration()
         assert result is False
     
     @patch('src.healthcheck.get_google_settings')
     @patch('src.healthcheck.get_ai_settings')
-    @patch('src.healthcheck.get_news_settings')
-    def test_check_configuration_ai_exception(self, mock_get_news_settings, mock_get_ai_settings, mock_get_google_settings):
+    @patch('src.healthcheck.get_news_providers_settings')
+    def test_check_configuration_ai_exception(self, mock_get_news_providers_settings, mock_get_ai_settings, mock_get_google_settings):
         """Тест обработки исключения в настройках AI."""
-        # Мокаем настройки новостей
-        mock_news_settings = MagicMock()
-        mock_news_settings.THENEWSAPI_API_TOKEN = "test_token"
-        mock_get_news_settings.return_value = mock_news_settings
+        # Мокаем настройки новостных провайдеров
+        mock_providers_settings = MagicMock()
+        mock_providers_settings.get_enabled_providers.return_value = {"thenewsapi": MagicMock()}
+        mock_get_news_providers_settings.return_value = mock_providers_settings
         
         # AI настройки выбрасывают исключение
         mock_get_ai_settings.side_effect = Exception("AI settings error")

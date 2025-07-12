@@ -1,17 +1,79 @@
 # src/config.py
 import os
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Dict, List
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic_settings import BaseSettings
 
 
-class NewsSettings(BaseModel):
-    """Настройки для модуля новостей"""
-    NEWS_API_PROVIDER: str = Field(default="thenewsapi", description="Провайдер новостей")
-    THENEWSAPI_API_TOKEN: str = Field(..., description="API токен для TheNewsAPI")
-    MAX_RETRIES: int = Field(default=3, description="Максимальное количество попыток")
-    BACKOFF_FACTOR: float = Field(default=0.5, description="Коэффициент backoff для повторных попыток")
+class BaseProviderSettings(BaseModel):
+    """Базовые настройки для всех провайдеров новостей"""
+    enabled: bool = Field(default=True, description="Включен ли провайдер")
+    priority: int = Field(default=1, description="Приоритет провайдера (1 - высший)")
+    max_retries: int = Field(default=3, description="Максимальное количество попыток")
+    backoff_factor: float = Field(default=2.0, description="Коэффициент backoff для повторных попыток")
+    timeout: int = Field(default=30, description="Таймаут запроса в секундах")
+
+
+class TheNewsAPISettings(BaseProviderSettings):
+    """Настройки для TheNewsAPI.com провайдера"""
+    api_token: str = Field(..., description="API токен для TheNewsAPI")
+    base_url: str = Field(default="https://api.thenewsapi.com/v1", description="Базовый URL API")
+    supported_languages: List[str] = Field(
+        default=["en", "es", "fr", "de", "it", "pt", "ru", "ar", "zh"], 
+        description="Поддерживаемые языки"
+    )
+    supported_categories: List[str] = Field(
+        default=["general", "business", "entertainment", "health", "science", "sports", "technology"],
+        description="Поддерживаемые категории"
+    )
+    default_locale: str = Field(default="us", description="Локаль по умолчанию")
+    headlines_per_category: int = Field(default=6, description="Количество заголовков на категорию")
+
+
+class NewsAPISettings(BaseProviderSettings):
+    """Настройки для NewsAPI.org провайдера"""
+    api_key: str = Field(..., description="API ключ для NewsAPI.org")
+    base_url: str = Field(default="https://newsapi.org/v2", description="Базовый URL API")
+    supported_languages: List[str] = Field(
+        default=["en", "ar", "de", "es", "fr", "he", "it", "nl", "no", "pt", "ru", "sv", "ud", "zh"],
+        description="Поддерживаемые языки"
+    )
+    supported_categories: List[str] = Field(
+        default=["business", "entertainment", "general", "health", "science", "sports", "technology"],
+        description="Поддерживаемые категории"
+    )
+    default_country: str = Field(default="us", description="Страна по умолчанию")
+    page_size: int = Field(default=100, description="Размер страницы результатов")
+
+
+class NewsProvidersSettings(BaseModel):
+    """Настройки всех новостных провайдеров"""
+    providers: Dict[str, BaseProviderSettings] = Field(
+        default_factory=dict,
+        description="Словарь провайдеров новостей"
+    )
+    default_provider: str = Field(
+        default="thenewsapi",
+        description="Провайдер по умолчанию"
+    )
+    fallback_providers: List[str] = Field(
+        default_factory=list,
+        description="Список провайдеров для fallback в порядке приоритета"
+    )
+    
+    def get_provider_settings(self, provider_name: str) -> Optional[BaseProviderSettings]:
+        """Получить настройки конкретного провайдера"""
+        return self.providers.get(provider_name)
+    
+    def get_enabled_providers(self) -> Dict[str, BaseProviderSettings]:
+        """Получить только включенные провайдеры"""
+        return {name: settings for name, settings in self.providers.items() if settings.enabled}
+    
+    def get_providers_by_priority(self) -> List[tuple[str, BaseProviderSettings]]:
+        """Получить провайдеры отсортированные по приоритету"""
+        enabled = self.get_enabled_providers()
+        return sorted(enabled.items(), key=lambda x: x[1].priority)
 
 
 class AISettings(BaseModel):
@@ -86,6 +148,7 @@ class Settings(BaseSettings):
     
     # Секретные токены и ключи (только эти берутся из .env)
     THENEWSAPI_API_TOKEN: str = Field(..., description="API токен для TheNewsAPI")
+    NEWSAPI_API_KEY: str = Field(..., description="API ключ для NewsAPI.org")
     OPENAI_API_KEY: str = Field(..., description="API ключ OpenAI")
     GOOGLE_SHEET_ID: str = Field(..., description="ID Google Sheets документа")
     GOOGLE_SERVICE_ACCOUNT_PATH: str = Field(..., description="Путь к файлу с Google service account JSON")
@@ -107,19 +170,58 @@ def get_settings() -> Settings:
 
 
 @lru_cache()
-def get_news_settings() -> NewsSettings:
-    """Получить настройки для модуля новостей"""
+def get_news_providers_settings() -> NewsProvidersSettings:
+    """Получить настройки всех новостных провайдеров"""
     try:
-        # Получаем секретные данные из Settings, остальное берем из дефолтов класса
+        # Получаем секретные данные из Settings
         settings = get_settings()
-        return NewsSettings(
-            THENEWSAPI_API_TOKEN=settings.THENEWSAPI_API_TOKEN,
-            # Остальные параметры используют дефолтные значения из класса NewsSettings
+        
+        # Создаем настройки провайдеров
+        providers = {}
+        
+        # TheNewsAPI провайдер
+        providers["thenewsapi"] = TheNewsAPISettings(
+            api_token=settings.THENEWSAPI_API_TOKEN,
+            priority=1,
+            enabled=True
         )
-    except Exception:
-        # Если не удается получить общие настройки, пытаемся получить только нужные
-        return NewsSettings(
-            THENEWSAPI_API_TOKEN=os.getenv("THENEWSAPI_API_TOKEN"),
+        
+        # NewsAPI провайдер
+        providers["newsapi"] = NewsAPISettings(
+            api_key=settings.NEWSAPI_API_KEY,
+            priority=2,
+            enabled=True
+        )
+        
+        return NewsProvidersSettings(
+            providers=providers,
+            default_provider="thenewsapi",
+            fallback_providers=["newsapi"]
+        )
+    except Exception as e:
+        # Fallback конфигурация с переменными окружения
+        providers = {}
+        
+        thenewsapi_token = os.getenv("THENEWSAPI_API_TOKEN")
+        if thenewsapi_token:
+            providers["thenewsapi"] = TheNewsAPISettings(
+                api_token=thenewsapi_token,
+                priority=1,
+                enabled=True
+            )
+        
+        newsapi_key = os.getenv("NEWSAPI_API_KEY")
+        if newsapi_key:
+            providers["newsapi"] = NewsAPISettings(
+                api_key=newsapi_key,
+                priority=2,
+                enabled=True
+            )
+        
+        return NewsProvidersSettings(
+            providers=providers,
+            default_provider="thenewsapi" if "thenewsapi" in providers else "newsapi",
+            fallback_providers=list(providers.keys())
         )
 
 

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from src.services.news.fetcher_fabric import FetcherFactory, create_news_fetcher, create_news_fetcher_with_config
+from src.services.news.fetcher_fabric import FetcherFactory, create_news_fetcher, create_news_fetcher_from_config, create_default_news_fetcher, create_news_fetcher_with_fallback
 from src.services.news.fetchers.base import BaseFetcher
 from src.services.news.fetchers.thenewsapi_com import TheNewsAPIFetcher
 from src.services.news.fetchers.newsapi_org import NewsAPIFetcher
@@ -38,7 +38,7 @@ class TestFetcherFactory:
         assert isinstance(fetcher, TheNewsAPIFetcher)
         assert fetcher.api_token == "test_token"
         assert fetcher.max_retries == 3  # дефолт
-        assert fetcher.backoff_factor == 0.5  # дефолт
+        assert fetcher.backoff_factor == 2.0  # дефолт
     
     def test_create_thenewsapi_fetcher_missing_token(self):
         """Тест создания TheNewsAPI fetcher без токена"""
@@ -126,59 +126,95 @@ class TestFetcherFactory:
         assert isinstance(fetcher, TheNewsAPIFetcher)
         assert fetcher.api_token == "test_token"
     
-    def test_create_news_fetcher_with_config(self):
-        """Тест create_news_fetcher_with_config с настройками из config"""
-        with patch('src.config.get_news_settings') as mock_get_settings:
-            mock_settings = MagicMock()
-            mock_settings.NEWS_API_PROVIDER = "thenewsapi"
-            mock_settings.THENEWSAPI_API_TOKEN = "config_token"
-            mock_settings.MAX_RETRIES = 4
-            mock_settings.BACKOFF_FACTOR = 3.0
-            mock_get_settings.return_value = mock_settings
+    def test_create_news_fetcher_from_config(self):
+        """Тест create_news_fetcher_from_config с настройками из config"""
+        with patch('src.config.get_news_providers_settings') as mock_get_providers_settings:
+            from src.config import TheNewsAPISettings
             
-            fetcher = create_news_fetcher_with_config()
+            mock_thenewsapi_settings = TheNewsAPISettings(
+                api_token="config_token",
+                max_retries=4,
+                backoff_factor=3.0
+            )
+            
+            mock_providers_settings = MagicMock()
+            mock_providers_settings.get_provider_settings.return_value = mock_thenewsapi_settings
+            mock_get_providers_settings.return_value = mock_providers_settings
+            
+            fetcher = create_news_fetcher_from_config("thenewsapi")
             
             assert isinstance(fetcher, TheNewsAPIFetcher)
             assert fetcher.api_token == "config_token"
             assert fetcher.max_retries == 4
             assert fetcher.backoff_factor == 3.0
     
-    def test_create_fetcher_with_config_settings(self):
+    def test_create_fetcher_from_config_settings(self):
         """Тест создания fetcher с настройками из config"""
-        with patch('src.config.get_news_settings') as mock_get_settings:
-            mock_settings = MagicMock()
-            mock_settings.NEWS_API_PROVIDER = "thenewsapi"
-            mock_settings.THENEWSAPI_API_TOKEN = "config_token"
-            mock_settings.MAX_RETRIES = 4
-            mock_settings.BACKOFF_FACTOR = 3.0
-            mock_get_settings.return_value = mock_settings
+        with patch('src.config.get_news_providers_settings') as mock_get_providers_settings:
+            from src.config import TheNewsAPISettings
             
-            fetcher = FetcherFactory.create_fetcher_with_config()
+            mock_thenewsapi_settings = TheNewsAPISettings(
+                api_token="config_token",
+                max_retries=4,
+                backoff_factor=3.0
+            )
+            
+            mock_providers_settings = MagicMock()
+            mock_providers_settings.get_provider_settings.return_value = mock_thenewsapi_settings
+            mock_get_providers_settings.return_value = mock_providers_settings
+            
+            fetcher = FetcherFactory.create_fetcher_from_config("thenewsapi")
             
             assert isinstance(fetcher, TheNewsAPIFetcher)
             assert fetcher.api_token == "config_token"
             assert fetcher.max_retries == 4
             assert fetcher.backoff_factor == 3.0
     
-    def test_create_fetcher_with_config_settings_error(self):
-        """Тест обработки ошибки при получении настроек"""
-        with patch('src.config.get_news_settings') as mock_get_settings:
-            mock_get_settings.side_effect = Exception("Settings error")
+    def test_create_fetcher_from_config_provider_not_found(self):
+        """Тест обработки ошибки при отсутствии провайдера в настройках"""
+        with patch('src.config.get_news_providers_settings') as mock_get_providers_settings:
+            mock_providers_settings = MagicMock()
+            mock_providers_settings.get_provider_settings.return_value = None
+            mock_get_providers_settings.return_value = mock_providers_settings
             
             with pytest.raises(ValueError) as exc_info:
-                FetcherFactory.create_fetcher_with_config(provider="thenewsapi")
+                FetcherFactory.create_fetcher_from_config("thenewsapi")
             
-            assert "Cannot get news settings for thenewsapi" in str(exc_info.value)
+            assert "Provider 'thenewsapi' not found in configuration" in str(exc_info.value)
     
-    def test_create_fetcher_with_config_fallback_provider(self):
-        """Тест использования fallback провайдера при ошибке настроек"""
-        with patch('src.config.get_news_settings') as mock_get_settings:
-            # При получении провайдера - ошибка, используется fallback
-            mock_get_settings.side_effect = [
-                Exception("Settings error"),  # Первый вызов для провайдера
-                Exception("Settings error"),  # Второй вызов для токена
-            ]
+    def test_create_default_fetcher(self):
+        """Тест создания дефолтного fetcher"""
+        with patch('src.config.get_news_providers_settings') as mock_get_providers_settings:
+            from src.config import TheNewsAPISettings
             
-            # Должен использовать fallback "thenewsapi" но без настроек вызовет ошибку
-            with pytest.raises(ValueError):
-                FetcherFactory.create_fetcher_with_config() 
+            mock_thenewsapi_settings = TheNewsAPISettings(api_token="default_token")
+            
+            mock_providers_settings = MagicMock()
+            mock_providers_settings.default_provider = "thenewsapi"
+            mock_providers_settings.get_provider_settings.return_value = mock_thenewsapi_settings
+            mock_get_providers_settings.return_value = mock_providers_settings
+            
+            fetcher = create_default_news_fetcher()
+            
+            assert isinstance(fetcher, TheNewsAPIFetcher)
+            assert fetcher.api_token == "default_token"
+    
+    def test_create_fetcher_with_fallback(self):
+        """Тест создания fetcher с fallback логикой"""
+        with patch('src.config.get_news_providers_settings') as mock_get_providers_settings:
+            from src.config import NewsAPISettings
+            
+            mock_newsapi_settings = NewsAPISettings(api_key="fallback_key")
+            
+            mock_providers_settings = MagicMock()
+            mock_providers_settings.default_provider = "thenewsapi"
+            mock_providers_settings.fallback_providers = ["newsapi"]
+            mock_providers_settings.get_provider_settings.side_effect = [
+                None,  # thenewsapi не найден
+                mock_newsapi_settings  # newsapi найден
+            ]
+            mock_get_providers_settings.return_value = mock_providers_settings
+            
+            fetcher = create_news_fetcher_with_fallback("thenewsapi")
+            
+            assert isinstance(fetcher, NewsAPIFetcher) 

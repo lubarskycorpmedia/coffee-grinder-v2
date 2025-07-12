@@ -1,9 +1,11 @@
 # tests/services/news/fetchers/test_base.py
 
 import pytest
+from unittest.mock import Mock
 from datetime import datetime
 
-from src.services.news.fetchers.base import NewsAPIError, BaseFetcher
+from src.services.news.fetchers.base import BaseFetcher, NewsAPIError
+from src.config import BaseProviderSettings
 
 
 class TestNewsAPIError:
@@ -53,22 +55,18 @@ class TestNewsAPIError:
 class TestBaseFetcher:
     """Тесты для BaseFetcher"""
     
-    def test_base_fetcher_is_abstract(self):
-        """Тест что BaseFetcher является абстрактным классом"""
-        with pytest.raises(TypeError):
-            BaseFetcher()
-    
-    def test_base_fetcher_methods_are_abstract(self):
-        """Тест что методы BaseFetcher являются абстрактными"""
-        class IncompleteFetcher(BaseFetcher):
-            pass
-        
-        with pytest.raises(TypeError):
-            IncompleteFetcher()
-    
     def test_complete_fetcher_implementation(self):
         """Тест полной реализации BaseFetcher"""
+        # Создаем mock настройки
+        mock_settings = Mock(spec=BaseProviderSettings)
+        mock_settings.max_retries = 3
+        mock_settings.backoff_factor = 2.0
+        mock_settings.timeout = 30
+        mock_settings.enabled = True
+        
         class CompleteFetcher(BaseFetcher):
+            PROVIDER_NAME = "test"
+            
             def fetch_headlines(self, **kwargs):
                 return {"data": []}
             
@@ -85,10 +83,28 @@ class TestBaseFetcher:
                 return {"data": []}
         
         # Не должно вызвать исключение
-        fetcher = CompleteFetcher()
+        fetcher = CompleteFetcher(mock_settings)
         
-        # Проверяем что методы работают
-        assert fetcher.fetch_headlines() == {"data": []}
-        assert fetcher.fetch_all_news() == {"data": []}
-        assert fetcher.fetch_top_stories() == {"data": []}
-        assert fetcher.get_sources() == {"data": []} 
+        # Проверяем что настройки были установлены
+        assert fetcher.max_retries == 3
+        assert fetcher.backoff_factor == 2.0
+        assert fetcher.timeout == 30
+        assert fetcher.enabled is True
+    
+    def test_abstract_methods_enforcement(self):
+        """Тест что абстрактные методы действительно абстрактные"""
+        # Создаем mock настройки
+        mock_settings = Mock(spec=BaseProviderSettings)
+        mock_settings.max_retries = 3
+        mock_settings.backoff_factor = 2.0
+        mock_settings.timeout = 30
+        mock_settings.enabled = True
+        
+        class IncompleteFetcher(BaseFetcher):
+            PROVIDER_NAME = "incomplete"
+            # Не реализуем все абстрактные методы
+            pass
+        
+        # Должно вызвать TypeError при попытке создания экземпляра
+        with pytest.raises(TypeError):
+            IncompleteFetcher(mock_settings) 

@@ -15,21 +15,46 @@ from src.logger import setup_logger
 class TheNewsAPIFetcher(BaseFetcher):
     """Fetcher для thenewsapi.com с поддержкой всех эндпоинтов"""
     
-    def __init__(self, api_token: str, max_retries: int = 3, backoff_factor: float = 2.0):
+    PROVIDER_NAME = "thenewsapi"
+    
+    def __init__(self, provider_settings):
         """
         Инициализация fetcher'а
         
         Args:
-            api_token: API токен для thenewsapi.com
-            max_retries: Максимальное количество попыток при ошибках
-            backoff_factor: Коэффициент для экспоненциального backoff
+            provider_settings: Настройки провайдера TheNewsAPISettings
         """
-        self.api_token = api_token
-        self.max_retries = max_retries
-        self.backoff_factor = backoff_factor
-        self.base_url = "https://api.thenewsapi.com/v1"
+        super().__init__(provider_settings)
+        
+        # Получаем специфичные настройки для TheNewsAPI
+        self.api_token = provider_settings.api_token
+        self.base_url = provider_settings.base_url
+        self.supported_languages = provider_settings.supported_languages
+        self.supported_categories = provider_settings.supported_categories
+        self.default_locale = provider_settings.default_locale
+        self.headlines_per_category = provider_settings.headlines_per_category
+        
+        # Инициализируем сессию и логгер лениво
         self._session = None
         self._logger = None
+    
+    @classmethod
+    def create_from_config(cls, provider_settings) -> 'TheNewsAPIFetcher':
+        """
+        Создает экземпляр fetcher'а из настроек
+        
+        Args:
+            provider_settings: Настройки провайдера TheNewsAPISettings
+            
+        Returns:
+            Экземпляр TheNewsAPIFetcher
+        """
+        from src.config import TheNewsAPISettings
+        
+        if not isinstance(provider_settings, TheNewsAPISettings):
+            raise ValueError(f"Invalid settings type for TheNewsAPI provider. Expected TheNewsAPISettings, got {type(provider_settings)}")
+        
+        return cls(provider_settings)
     
     @property
     def session(self):
@@ -155,6 +180,20 @@ class TheNewsAPIFetcher(BaseFetcher):
                 if attempt < self.max_retries - 1:
                     delay = self._exponential_backoff(attempt)
                     self.logger.info(f"Network error, waiting {delay:.2f} seconds before retry...")
+                    time.sleep(delay)
+                    continue
+                else:
+                    return {"error": last_error}
+            
+            except Exception as e:
+                error_msg = f"Unexpected error: {str(e)}"
+                self.logger.error(error_msg)
+                last_error = NewsAPIError(error_msg, None, attempt + 1)
+                
+                # Для неожиданных ошибок пытаемся повторить
+                if attempt < self.max_retries - 1:
+                    delay = self._exponential_backoff(attempt)
+                    self.logger.info(f"Unexpected error, waiting {delay:.2f} seconds before retry...")
                     time.sleep(delay)
                     continue
                 else:

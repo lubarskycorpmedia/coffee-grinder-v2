@@ -1,73 +1,12 @@
 # src/services/news/fetcher_fabric.py
 
 from typing import Dict, Type, Optional
-from .fetchers.base import BaseFetcher
-from .fetchers.thenewsapi_com import TheNewsAPIFetcher
-from .fetchers.newsapi_org import NewsAPIFetcher
+from .fetchers.base import BaseFetcher, FetcherRegistry
 from src.logger import setup_logger
 
 
 class FetcherFactory:
-    """Фабрика для создания fetcher'ов новостей"""
-    
-    # Регистр доступных fetcher'ов
-    _fetchers: Dict[str, Type[BaseFetcher]] = {
-        "thenewsapi": TheNewsAPIFetcher,
-        "newsapi": NewsAPIFetcher,
-    }
-    
-    @classmethod
-    def create_fetcher(cls, 
-                      provider: str,
-                      api_token: Optional[str] = None,
-                      max_retries: Optional[int] = None,
-                      backoff_factor: Optional[float] = None) -> BaseFetcher:
-        """
-        Создает fetcher на основе переданных параметров
-        
-        Args:
-            provider: Название провайдера (обязательно)
-            api_token: API токен (обязательно для thenewsapi)
-            max_retries: Максимальное количество попыток (опционально, по умолчанию 3)
-            backoff_factor: Коэффициент backoff (опционально, по умолчанию 2.0)
-            
-        Returns:
-            Экземпляр fetcher'а
-            
-        Raises:
-            ValueError: Если провайдер не поддерживается или отсутствуют обязательные параметры
-        """
-        if provider not in cls._fetchers:
-            available_providers = ", ".join(cls._fetchers.keys())
-            raise ValueError(
-                f"Unsupported news provider: {provider}. "
-                f"Available providers: {available_providers}"
-            )
-        
-        fetcher_class = cls._fetchers[provider]
-        
-        # Создаем fetcher с нужными параметрами
-        if provider == "thenewsapi":
-            if api_token is None:
-                raise ValueError("api_token is required for thenewsapi provider")
-            
-            # Используем дефолтные значения если не переданы
-            max_retries = max_retries or 3
-            backoff_factor = backoff_factor or 2.0
-            
-            return fetcher_class(
-                api_token=api_token,
-                max_retries=max_retries,
-                backoff_factor=backoff_factor
-            )
-        
-        elif provider == "newsapi":
-            # NewsAPI fetcher пока не требует параметров
-            return fetcher_class()
-        
-        else:
-            # Для других fetcher'ов пока используем базовый конструктор
-            return fetcher_class()
+    """Фабрика для создания fetcher'ов новостей с автоматической регистрацией"""
     
     @classmethod
     def create_fetcher_from_config(cls, provider: str) -> BaseFetcher:
@@ -85,6 +24,16 @@ class FetcherFactory:
         """
         from src.config import get_news_providers_settings
         
+        # Получаем класс fetcher'а из реестра
+        fetcher_class = FetcherRegistry.get_fetcher_class(provider)
+        if fetcher_class is None:
+            available_providers = ", ".join(FetcherRegistry.get_available_providers())
+            raise ValueError(
+                f"Unsupported news provider: {provider}. "
+                f"Available providers: {available_providers}"
+            )
+        
+        # Получаем настройки провайдера
         providers_settings = get_news_providers_settings()
         provider_settings = providers_settings.get_provider_settings(provider)
         
@@ -94,29 +43,8 @@ class FetcherFactory:
         if not provider_settings.enabled:
             raise ValueError(f"Provider '{provider}' is disabled in configuration")
         
-        # Создаем fetcher с настройками из конфига
-        if provider == "thenewsapi":
-            from src.config import TheNewsAPISettings
-            if isinstance(provider_settings, TheNewsAPISettings):
-                return cls.create_fetcher(
-                    provider=provider,
-                    api_token=provider_settings.api_token,
-                    max_retries=provider_settings.max_retries,
-                    backoff_factor=provider_settings.backoff_factor
-                )
-            else:
-                raise ValueError(f"Invalid settings type for provider '{provider}'")
-        
-        elif provider == "newsapi":
-            from src.config import NewsAPISettings
-            if isinstance(provider_settings, NewsAPISettings):
-                # NewsAPI fetcher пока не требует параметров
-                return cls.create_fetcher(provider=provider)
-            else:
-                raise ValueError(f"Invalid settings type for provider '{provider}'")
-        
-        else:
-            return cls.create_fetcher(provider=provider)
+        # Создаем fetcher используя метод create_from_config
+        return fetcher_class.create_from_config(provider_settings)
     
     @classmethod
     def create_default_fetcher(cls) -> BaseFetcher:
@@ -178,7 +106,7 @@ class FetcherFactory:
     @classmethod
     def get_available_providers(cls) -> list[str]:
         """Возвращает список доступных провайдеров"""
-        return list(cls._fetchers.keys())
+        return FetcherRegistry.get_available_providers()
     
     @classmethod
     def get_enabled_providers(cls) -> list[str]:
@@ -187,43 +115,9 @@ class FetcherFactory:
         
         providers_settings = get_news_providers_settings()
         return list(providers_settings.get_enabled_providers().keys())
-    
-    @classmethod
-    def register_fetcher(cls, name: str, fetcher_class: Type[BaseFetcher]) -> None:
-        """
-        Регистрирует новый fetcher
-        
-        Args:
-            name: Название провайдера
-            fetcher_class: Класс fetcher'а
-        """
-        cls._fetchers[name] = fetcher_class
 
 
-def create_news_fetcher(provider: str,
-                       api_token: Optional[str] = None,
-                       max_retries: Optional[int] = None,
-                       backoff_factor: Optional[float] = None) -> BaseFetcher:
-    """
-    Удобная функция для создания fetcher'а без зависимости от настроек
-    
-    Args:
-        provider: Название провайдера (обязательно)
-        api_token: API токен (обязательно для thenewsapi)
-        max_retries: Максимальное количество попыток (опционально)
-        backoff_factor: Коэффициент backoff (опционально)
-        
-    Returns:
-        Экземпляр fetcher'а
-    """
-    return FetcherFactory.create_fetcher(
-        provider=provider,
-        api_token=api_token,
-        max_retries=max_retries,
-        backoff_factor=backoff_factor
-    )
-
-
+# Удобные функции для создания fetcher'ов
 def create_news_fetcher_from_config(provider: str) -> BaseFetcher:
     """
     Удобная функция для создания fetcher'а с настройками из конфига

@@ -1,9 +1,12 @@
 from abc import ABC, ABCMeta, abstractmethod
-from typing import Dict, Any, Optional, Type, ClassVar
+from typing import Dict, Any, Optional, Type, ClassVar, TYPE_CHECKING
 from datetime import datetime
 import time
 import random
 import requests
+
+if TYPE_CHECKING:
+    from src.config import BaseProviderSettings
 
 
 class NewsAPIError(Exception):
@@ -24,7 +27,7 @@ class FetcherRegistry:
     _fetchers: Dict[str, Type['BaseFetcher']] = {}
     
     @classmethod
-    def register(cls, provider_name: str, fetcher_class: Type['BaseFetcher']):
+    def register(cls, provider_name: str, fetcher_class: Type['BaseFetcher']) -> None:
         """Регистрирует fetcher для провайдера"""
         cls._fetchers[provider_name] = fetcher_class
     
@@ -41,13 +44,13 @@ class FetcherRegistry:
 
 class FetcherMeta(ABCMeta):
     """Метакласс для автоматической регистрации fetcher'ов, наследующий от ABCMeta"""
-    def __new__(mcs, name, bases, namespace, **kwargs):
+    def __new__(mcs, name: str, bases: tuple, namespace: dict, **kwargs: Any) -> Type:
         cls = super().__new__(mcs, name, bases, namespace)
         
         # Регистрируем только конкретные fetcher'ы (не базовый класс)
         if bases and hasattr(cls, 'PROVIDER_NAME') and cls.PROVIDER_NAME:
             provider_name = cls.PROVIDER_NAME
-            FetcherRegistry.register(provider_name, cls)
+            FetcherRegistry.register(provider_name, cls)  # type: ignore
         
         return cls
 
@@ -184,27 +187,27 @@ class BaseFetcher(ABC, metaclass=FetcherMeta):
                 return {"error": NewsAPIError(error_msg, None, attempt + 1)}
         
         # Если дошли сюда, значит все попытки исчерпаны
-        return {"error": last_error}
+        return {"error": last_error or NewsAPIError("All retry attempts exhausted")}
     
     @abstractmethod
     def fetch_headlines(self, **kwargs) -> Dict[str, Any]:
         """Получает заголовки новостей"""
-        pass
+        ...
     
     @abstractmethod
     def fetch_all_news(self, **kwargs) -> Dict[str, Any]:
         """Получает все новости по поиску"""
-        pass
+        ...
     
     @abstractmethod
     def fetch_top_stories(self, **kwargs) -> Dict[str, Any]:
         """Получает топ новости"""
-        pass
+        ...
     
     @abstractmethod
     def get_sources(self, **kwargs) -> Dict[str, Any]:
         """Получает список доступных источников"""
-        pass
+        ...
     
     @abstractmethod
     def fetch_news(self, 
@@ -240,7 +243,7 @@ class BaseFetcher(ABC, metaclass=FetcherMeta):
             }
             или {"error": NewsAPIError} в случае ошибки
         """
-        pass
+        ...
     
     @classmethod
     def create_from_config(cls, provider_settings: 'BaseProviderSettings') -> 'BaseFetcher':

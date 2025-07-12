@@ -5,7 +5,7 @@ import logging
 import sys
 from logging.handlers import RotatingFileHandler
 from typing import Optional
-from src.config import get_settings
+from src.config import get_log_level
 
 
 def setup_logger(
@@ -30,8 +30,8 @@ def setup_logger(
     
     # Пытаемся получить настройки, если не получается - используем дефолтные
     try:
-        settings = get_settings()
-        log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+        log_level_str = get_log_level()
+        log_level = getattr(logging, log_level_str.upper(), logging.INFO)
     except Exception:
         # Если не можем получить настройки (например, в тестах), используем INFO
         log_level = logging.INFO

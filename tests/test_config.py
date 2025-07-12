@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from src.config import (
     get_settings, get_news_providers_settings, get_ai_settings, get_google_settings,
     get_log_level, is_debug_mode,
-    Settings, BaseProviderSettings, TheNewsAPISettings, NewsAPISettings, 
+    Settings, BaseProviderSettings, TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings,
     NewsProvidersSettings, AISettings, GoogleSettings
 )
 
@@ -20,6 +20,7 @@ class TestSettings:
         with patch.dict(os.environ, {
             'THENEWSAPI_API_TOKEN': 'test_news_token',
             'NEWSAPI_API_KEY': 'test_newsapi_key',
+            'NEWSDATA_API_KEY': 'test_newsdata_key',
             'OPENAI_API_KEY': 'test_openai_key',
             'GOOGLE_SHEET_ID': 'test_sheet_id',
             'GOOGLE_SERVICE_ACCOUNT_PATH': '/test/path',
@@ -30,6 +31,7 @@ class TestSettings:
 
             assert settings.THENEWSAPI_API_TOKEN == 'test_news_token'
             assert settings.NEWSAPI_API_KEY == 'test_newsapi_key'
+            assert settings.NEWSDATA_API_KEY == 'test_newsdata_key'
             assert settings.OPENAI_API_KEY == 'test_openai_key'
             assert settings.GOOGLE_SHEET_ID == 'test_sheet_id'
             assert settings.GOOGLE_SERVICE_ACCOUNT_PATH == '/test/path'
@@ -41,6 +43,7 @@ class TestSettings:
         with patch.dict(os.environ, {
             'THENEWSAPI_API_TOKEN': 'test_token',
             'NEWSAPI_API_KEY': 'test_newsapi_key',
+            'NEWSDATA_API_KEY': 'test_newsdata_key',
             'OPENAI_API_KEY': 'test_key',
             'GOOGLE_SHEET_ID': 'test_id',
             'GOOGLE_SERVICE_ACCOUNT_PATH': '/test/path',
@@ -52,6 +55,7 @@ class TestSettings:
             # Settings класс содержит только секретные поля
             assert settings.THENEWSAPI_API_TOKEN == "test_token"
             assert settings.NEWSAPI_API_KEY == "test_newsapi_key"
+            assert settings.NEWSDATA_API_KEY == "test_newsdata_key"
             assert settings.OPENAI_API_KEY == "test_key"
             assert settings.GOOGLE_SHEET_ID == "test_id"
             assert settings.GOOGLE_SERVICE_ACCOUNT_PATH == "/test/path"
@@ -309,15 +313,17 @@ class TestSettingsGetters:
         mock_settings = MagicMock()
         mock_settings.THENEWSAPI_API_TOKEN = "test_token"
         mock_settings.NEWSAPI_API_KEY = "test_key"
+        mock_settings.NEWSDATA_API_KEY = "test_newsdata_key"
         mock_get_settings.return_value = mock_settings
         
         providers_settings = get_news_providers_settings()
         
         assert providers_settings.default_provider == "thenewsapi"
-        assert providers_settings.fallback_providers == ["newsapi"]
-        assert len(providers_settings.providers) == 2
+        assert providers_settings.fallback_providers == ["thenewsapi", "newsapi", "newsdata"]
+        assert len(providers_settings.providers) == 3
         assert "thenewsapi" in providers_settings.providers
         assert "newsapi" in providers_settings.providers
+        assert "newsdata" in providers_settings.providers
         
         thenewsapi_settings = providers_settings.get_provider_settings("thenewsapi")
         assert isinstance(thenewsapi_settings, TheNewsAPISettings)
@@ -326,6 +332,10 @@ class TestSettingsGetters:
         newsapi_settings = providers_settings.get_provider_settings("newsapi")
         assert isinstance(newsapi_settings, NewsAPISettings)
         assert newsapi_settings.api_key == "test_key"
+        
+        newsdata_settings = providers_settings.get_provider_settings("newsdata")
+        assert isinstance(newsdata_settings, NewsDataIOSettings)
+        assert newsdata_settings.api_key == "test_newsdata_key"
     
     @patch('src.config.get_settings')
     def test_get_news_providers_settings_fallback_to_env(self, mock_get_settings):
@@ -337,19 +347,24 @@ class TestSettingsGetters:
         
         with patch.dict(os.environ, {
             'THENEWSAPI_API_TOKEN': 'env_token',
-            'NEWSAPI_API_KEY': 'env_key'
+            'NEWSAPI_API_KEY': 'env_key',
+            'NEWSDATA_API_KEY': 'env_newsdata_key'
         }, clear=True):
             providers_settings = get_news_providers_settings()
             
-            assert len(providers_settings.providers) == 2
+            assert len(providers_settings.providers) == 3
             assert "thenewsapi" in providers_settings.providers
             assert "newsapi" in providers_settings.providers
+            assert "newsdata" in providers_settings.providers
             
             thenewsapi_settings = providers_settings.get_provider_settings("thenewsapi")
             assert thenewsapi_settings.api_token == "env_token"
             
             newsapi_settings = providers_settings.get_provider_settings("newsapi")
             assert newsapi_settings.api_key == "env_key"
+            
+            newsdata_settings = providers_settings.get_provider_settings("newsdata")
+            assert newsdata_settings.api_key == "env_newsdata_key"
     
     @patch('src.config.get_settings')
     def test_get_ai_settings_from_main_settings(self, mock_get_settings):
@@ -444,6 +459,7 @@ class TestGetSettings:
         with patch.dict(os.environ, {
             'THENEWSAPI_API_TOKEN': 'test_token',
             'NEWSAPI_API_KEY': 'test_key',
+            'NEWSDATA_API_KEY': 'test_newsdata_key',
             'OPENAI_API_KEY': 'test_openai_key',
             'GOOGLE_SHEET_ID': 'test_sheet_id',
             'GOOGLE_SERVICE_ACCOUNT_PATH': '/test/path',

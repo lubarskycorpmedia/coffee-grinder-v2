@@ -1085,6 +1085,21 @@ files = [
 requests = "<3.0.0"
 
 [[package]]
+name = "newsdataapi"
+version = "0.1.25"
+description = "Python library for newsdata client-API Call"
+optional = false
+python-versions = ">=3.5"
+groups = ["main"]
+files = [
+    {file = "newsdataapi-0.1.25-py3-none-any.whl", hash = "sha256:5913b19e4e484018a959d89a3a66e2e01c6d511f99bfcbe5ff1c27789d06a230"},
+    {file = "newsdataapi-0.1.25.tar.gz", hash = "sha256:13c2853b4db033df2d31a2f3ea866591fc09c4076ef8243a447406c0e59bc51c"},
+]
+
+[package.dependencies]
+requests = "<3.0.0"
+
+[[package]]
 name = "nodeenv"
 version = "1.9.1"
 description = "Node.js virtual environment builder"
@@ -2208,6 +2223,21 @@ slack = ["slack-sdk"]
 telegram = ["requests"]
 
 [[package]]
+name = "types-requests"
+version = "2.32.4.20250611"
+description = "Typing stubs for requests"
+optional = false
+python-versions = ">=3.9"
+groups = ["dev"]
+files = [
+    {file = "types_requests-2.32.4.20250611-py3-none-any.whl", hash = "sha256:ad2fe5d3b0cb3c2c902c8815a70e7fb2302c4b8c1f77bdcd738192cdb3878072"},
+    {file = "types_requests-2.32.4.20250611.tar.gz", hash = "sha256:741c8777ed6425830bf51e54d6abe245f79b4dcb9019f1622b773463946bf826"},
+]
+
+[package.dependencies]
+urllib3 = ">=2"
+
+[[package]]
 name = "typing-extensions"
 version = "4.14.1"
 description = "Backported and Experimental Type Hints for Python 3.9+"
@@ -2408,4 +2438,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "ce710fd49dfc18e3f1a3859c6a6d9b32f1bf176c1d690a179d5960c02a35cf89"
+content-hash = "3b104586cd3ece12c18424cca00f4bf22a30d0944fb2d0d459cb72e519c7cb6d"

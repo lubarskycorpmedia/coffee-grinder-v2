@@ -48,12 +48,10 @@ class TestSetupLogger:
         assert logger1 is logger2
         assert len(logger2.handlers) == initial_handlers_count
     
-    @patch('src.logger.get_settings')
-    def test_setup_logger_different_log_levels(self, mock_get_settings):
+    @patch('src.logger.get_log_level')
+    def test_setup_logger_different_log_levels(self, mock_get_log_level):
         """Тест настройки разных уровней логирования."""
-        mock_settings = MagicMock()
-        mock_settings.LOG_LEVEL = "DEBUG"
-        mock_get_settings.return_value = mock_settings
+        mock_get_log_level.return_value = "DEBUG"
         
         logger = setup_logger("test_debug")
         
@@ -113,8 +111,8 @@ class TestSetupLogger:
     
     def test_setup_logger_without_settings(self):
         """Тест настройки логгера когда настройки недоступны."""
-        # Симулируем ситуацию когда get_settings() недоступен
-        with patch('src.logger.get_settings', side_effect=Exception("Settings not available")):
+        # Симулируем ситуацию когда get_log_level() недоступен
+        with patch('src.logger.get_log_level', side_effect=Exception("Settings not available")):
             logger = setup_logger("test_no_settings")
             
             assert logger.name == "test_no_settings"

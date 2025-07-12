@@ -29,6 +29,7 @@ structlog = "^24.4.0"
 tenacity = "^9.0.0"
 pydantic-settings = "^2.10.1"
 newsapi-python = "^0.2.7"
+newsdataapi = "^0.1.23"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
@@ -41,6 +42,7 @@ ruff = "^0.6.0"
 pre-commit = "^3.8.0"
 pytest-mock = "^3.14.0"
 responses = "^0.25.0"
+types-requests = "^2.32.4.20250611"
 
 [build-system]
 requires = ["poetry-core"]
@@ -110,6 +112,7 @@ module = [
     "openai.*",
     "structlog.*",
     "tenacity.*",
+    "newsdataapi.*",
 ]
 ignore_missing_imports = true
 

@@ -13,7 +13,7 @@ from typing import Dict, Any
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from src.services.news.fetcher_fabric import create_news_fetcher_with_config
+from src.services.news.fetcher_fabric import create_news_fetcher_from_config
 from src.logger import setup_logger
 
 # ============================================================================
@@ -139,7 +139,7 @@ def test_fetcher_with_real_api():
     
     try:
         # Создаем fetcher с получением настроек из конфига
-        fetcher = create_news_fetcher_with_config("thenewsapi")
+        fetcher = create_news_fetcher_from_config("thenewsapi")
         logger.info("✅ Fetcher создан успешно")
         
         # Тестируем получение заголовков (может не работать на бесплатном плане)

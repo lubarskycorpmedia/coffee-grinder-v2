@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
-from src.services.news.fetcher_fabric import create_news_fetcher_with_config
+from src.services.news.fetcher_fabric import create_news_fetcher_from_config
 from src.logger import setup_logger
 from dotenv import load_dotenv
 
@@ -51,7 +51,7 @@ def test_updated_fetch_news():
     
     try:
         # Создаем fetcher
-        fetcher = create_news_fetcher_with_config("thenewsapi")
+        fetcher = create_news_fetcher_from_config("thenewsapi")
         logger.info("✅ Fetcher создан успешно")
         
         # Тест 1: Проверка параметров по умолчанию

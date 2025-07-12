@@ -43,6 +43,36 @@ class NewsDataIOFetcher(BaseFetcher):
         # Инициализируем логгер
         self.logger = setup_logger(__name__)
 
+    def _call_with_timeout(self, func, *args, **kwargs):
+        """
+        Вызывает функцию с таймаутом используя signal (только для Unix-систем)
+        """
+        import signal
+        import platform
+        
+        # Проверяем, что мы на Unix-системе
+        if platform.system() == 'Windows':
+            # На Windows просто вызываем функцию без таймаута
+            return func(*args, **kwargs)
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"Request timed out after {self.timeout} seconds")
+        
+        # Устанавливаем обработчик сигнала
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(self.timeout)
+        
+        try:
+            result = func(*args, **kwargs)
+            signal.alarm(0)  # Отключаем таймаут
+            return result
+        except TimeoutError:
+            signal.alarm(0)  # Отключаем таймаут
+            raise
+        finally:
+            # Восстанавливаем старый обработчик
+            signal.signal(signal.SIGALRM, old_handler)
+
     def fetch_headlines(self, **kwargs: Any) -> dict[str, Any]:
         """
         Получает топ заголовки (для совместимости с базовым классом)
@@ -128,13 +158,23 @@ class NewsDataIOFetcher(BaseFetcher):
             # Добавляем дополнительные параметры из kwargs
             if "country" in kwargs and kwargs["country"]:
                 params["country"] = str(kwargs["country"])
-            if "domain" in kwargs and kwargs["domain"]:
-                params["domain"] = str(kwargs["domain"])
+            
+            # Обработка доменов: определяем тип (domain vs domainurl)
+            domain_value = kwargs.get("domain") or kwargs.get("domains")
+            if domain_value:
+                domain_str = str(domain_value)
+                # Если содержит точки, то это URL домены (domainurl)
+                if "." in domain_str:
+                    params["domainurl"] = domain_str
+                else:
+                    # Иначе это имена доменов (domain)
+                    params["domain"] = domain_str
+            
             if "timeframe" in kwargs and kwargs["timeframe"]:
                 params["timeframe"] = str(kwargs["timeframe"])
 
-            # Выполняем запрос через библиотеку
-            response = self.client.news_api(**params)
+            # Выполняем запрос через библиотеку с таймаутом
+            response = self._call_with_timeout(self.client.news_api, **params)
 
             if response.get("status") != "success":
                 logger.error(
@@ -154,6 +194,11 @@ class NewsDataIOFetcher(BaseFetcher):
             ]
             return {"articles": standardized_articles}
 
+        except TimeoutError as e:
+            logger.error(f"NewsData.io fetch timeout: {e}")
+            from .base import NewsAPIError
+
+            return {"error": NewsAPIError(f"NewsData.io fetch timeout: {e}")}
         except Exception as e:
             logger.error(f"NewsData.io fetch exception: {e}")
             from .base import NewsAPIError
@@ -200,12 +245,22 @@ class NewsDataIOFetcher(BaseFetcher):
             # Добавляем дополнительные параметры
             if "country" in kwargs and kwargs["country"]:
                 params["country"] = str(kwargs["country"])
-            if "domain" in kwargs and kwargs["domain"]:
-                params["domain"] = str(kwargs["domain"])
+            
+            # Обработка доменов: определяем тип (domain vs domainurl)
+            domain_value = kwargs.get("domain") or kwargs.get("domains")
+            if domain_value:
+                domain_str = str(domain_value)
+                # Если содержит точки, то это URL домены (domainurl)
+                if "." in domain_str:
+                    params["domainurl"] = domain_str
+                else:
+                    # Иначе это имена доменов (domain)
+                    params["domain"] = domain_str
+            
             if "category" in kwargs and kwargs["category"]:
                 params["category"] = str(kwargs["category"])
 
-            response = self.client.news_api(**params)
+            response = self._call_with_timeout(self.client.news_api, **params)
 
             if response.get("status") != "success":
                 logger.error(
@@ -216,6 +271,9 @@ class NewsDataIOFetcher(BaseFetcher):
             articles = response.get("results", [])
             return [self._standardize_article(article) for article in articles]
 
+        except TimeoutError as e:
+            logger.error(f"NewsData.io search timeout: {e}")
+            return []
         except Exception as e:
             logger.error(f"NewsData.io search exception: {e}")
             return []
@@ -228,6 +286,7 @@ class NewsDataIOFetcher(BaseFetcher):
             language: Язык источников (опционально)
             category: Категория источников (опционально)
             country: Страна источников (опционально)
+
 
         Returns:
             Dict[str, Any]: Результат в формате базового класса
@@ -247,8 +306,11 @@ class NewsDataIOFetcher(BaseFetcher):
                 params["category"] = category
             if country:
                 params["country"] = country
+            
+            # Примечание: sources_api не поддерживает фильтрацию по доменам
+            # в базовых планах NewsData.io, поэтому параметры domain/domains игнорируются
 
-            response = self.client.sources_api(**params)
+            response = self._call_with_timeout(self.client.sources_api, **params)
 
             if response.get("status") != "success":
                 logger.error(
@@ -262,6 +324,11 @@ class NewsDataIOFetcher(BaseFetcher):
             ]
             return {"sources": standardized_sources}
 
+        except TimeoutError as e:
+            logger.error(f"NewsData.io sources timeout: {e}")
+            from .base import NewsAPIError
+
+            return {"error": NewsAPIError(f"NewsData.io sources timeout: {e}")}
         except Exception as e:
             logger.error(f"NewsData.io sources exception: {e}")
             from .base import NewsAPIError
@@ -277,7 +344,7 @@ class NewsDataIOFetcher(BaseFetcher):
         """
         try:
             # Делаем минимальный запрос для проверки доступности API
-            response = self.client.sources_api()
+            response = self._call_with_timeout(self.client.sources_api)
 
             if response.get("status") == "success":
                 return {
@@ -292,6 +359,12 @@ class NewsDataIOFetcher(BaseFetcher):
                     "message": f"NewsData.io error: {response.get('message', 'Unknown error')}",
                 }
 
+        except TimeoutError as e:
+            return {
+                "status": "unhealthy",
+                "provider": self.PROVIDER_NAME,
+                "message": f"NewsData.io timeout: {e}",
+            }
         except Exception as e:
             return {
                 "status": "unhealthy",

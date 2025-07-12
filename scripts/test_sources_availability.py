@@ -130,16 +130,16 @@ def update_google_sheets(results: Dict[str, str], provider_name: str):
                 # Это лист с заголовками новостей - очищаем его
                 worksheet.clear()
                 headers = ["Источники"]
-                worksheet.update('A1', [headers])
+                worksheet.update(values=[headers], range_name='A1')
             elif not headers:
                 # Пустой лист - создаем заголовки
                 headers = ["Источники"]
-                worksheet.update('A1', [headers])
+                worksheet.update(values=[headers], range_name='A1')
             # Если headers содержит только ["Источники"] или ["Источники", "provider"], то всё в порядке
         except:
             # Создаем заголовки если лист пустой
             headers = ["Источники"]
-            worksheet.update('A1', [headers])
+            worksheet.update(values=[headers], range_name='A1')
         
         # Находим колонку для текущего провайдера или создаем новую
         provider_col = None
@@ -153,7 +153,7 @@ def update_google_sheets(results: Dict[str, str], provider_name: str):
             provider_col = len(headers) + 1
             # Обновляем заголовок
             cell_address = f"{chr(64 + provider_col)}1"  # A, B, C, etc.
-            worksheet.update(cell_address, [[provider_name]])
+            worksheet.update(values=[[provider_name]], range_name=cell_address)
         
         # Получаем существующие источники из колонки A (пропускаем пустые строки)
         existing_sources_raw = []
@@ -184,7 +184,7 @@ def update_google_sheets(results: Dict[str, str], provider_name: str):
         sources_data = [[source] for source in ordered_sources]
         if sources_data:
             range_to_update = f"A2:A{len(sources_data) + 1}"
-            worksheet.update(range_to_update, sources_data)
+            worksheet.update(values=sources_data, range_name=range_to_update)
         
         # Записываем результаты в колонку провайдера
         provider_col_letter = chr(64 + provider_col)
@@ -209,7 +209,7 @@ def update_google_sheets(results: Dict[str, str], provider_name: str):
                     formatted_result = f"⚠️ {found_result}"  # для ошибок и других статусов
                 
                 cell_address = f"{provider_col_letter}{i}"
-                worksheet.update(cell_address, [[formatted_result]])
+                worksheet.update(values=[[formatted_result]], range_name=cell_address)
         
         print(f"✅ Результаты записаны в Google Sheets на лист 'Источники'")
         

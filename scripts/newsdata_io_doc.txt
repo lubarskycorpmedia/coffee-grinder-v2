@@ -1,0 +1,5584 @@
+About NewsData API
+NewsData.io is a News API that provides access to news articles from all over the world. To get started with the platform, you can sign up for a free trial account at https://newsdata.io/register.
+
+NewsData.io gathers news from more than 84770 news sources which cover around 206 countries in 89 languages. As of now, NewsData.io has access to over 100 million news articles which are gathered from 2018 till today.
+
+Once you have an account, you can access the news data by using the provided API. The API allows you to search for news articles based on keywords, phrases, date range, language, location, publisher and other criteria.
+
+Once you have the API key, you can start making requests to the API to retrieve news articles. The API documentation provides detailed information on how to use the API and the different parameters that can be used in the requests.
+
+Additionally, the platform offers a range of tools to analyze and visualize the data. These tools include sentiment analysis, entity extraction, and topic modeling. However, these text analysis modules are not part of the NewsData.io API.
+
+It's also worth noting that NewsData.io offers different subscription plans, so be sure to check which one best suits your needs before getting started. You can upgrade or cancel your plan anytime.
+
+Plan	Free	Basic	Professional	Corporate
+Getting Access				
+Price	Free	USD $199.99/month	USD $349.99/month	USD $1299.99/month
+API Credits	200/day	20000/month	50000/month	1000000/month
+Articles per credit	10	50	50	50
+Latest News API	Yes	Yes	Yes	Yes
+Crypto News API	No	Yes	Yes	Yes
+News Archive API	No	Yes	Yes	Yes
+Historical data	No	6 months	2 Year	5 Years
+AI Tags	No	No	Yes	Yes
+Sentiment Analysis	No	No	Yes	Yes
+AI Region	No	No	No	Yes
+Real-time article availability	No	Yes	Yes	Yes
+AI Summary (Coming soon)	No	Yes	Yes	Yes
+AI Content (Coming soon)	No	No	Yes	Yes
+Query Limit	100	100	256	512
+Support	Basic	Basic	Dedicated Support	Dedicated Support
+How to get the NewsData.io API key
+To get access to an API key, you will first need to sign up. Once your email is verified, you can access the dashboard by logging in. On the dashboard, you will find the API key.
+
+Once you have the API key, you can start making requests to the API to retrieve news articles. It's also important to keep your API key secure and not share it with anyone.
+
+For a comprehensive look, visit our detailed article - How to Get Your NewsData.io News API Key
+
+How to make your first request
+Once you get the access of the API key, you can fetch the data using the API key in the request URL.
+
+You can use platforms like HTTP REST clients (such as Postman) or Curl to fetch the data in JSON format.
+
+Here is an example of a request to retrieve news articles:
+
+Get URL
+
+https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY&q=pizza
+
+This request will search for the latest news articles that contain the keyword "pizza". The apikey parameter is used to authenticate your account and is required in all requests.
+
+You can also use additional parameters to refine your search, such as specifying a language, category, domain name etc.
+
+Get URL
+
+https://newsdata.io/api/1/archive?apikey=YOUR_API_KEY&q=example&language=en&from_date=2025-07-06&to_date=2025-07-13
+
+This request will search for English language news articles published between July 6, 2025 and July 13, 2025 that contain the keyword "pizza".
+
+Once you've made a request, you will receive a response in JSON format containing the news articles that match your search criteria.
+
+For practical understanding visit - How to Make Your First Request With NewsData.io
+
+Authentication
+NewsData.io uses API key authentication to access the platform's features and data. An API key is a unique string of characters that is generated for each account, and it is required in all requests to the API.
+
+When making requests to the API, you need to include the API key in the request URL. The API key can be passed as a request header as X-ACCESS-KEY or as a query parameter apikey.
+
+If the API key is not included in the request headers or it is invalid, the API will return a 403 Unauthorized error and the request will be denied.
+
+Response Object
+You will get the following data points in JSON response while requesting the API.
+
+Object	Description
+Status
+Status shows the status of your request. If the request was successful then it shows “success”, in case of error it shows “error”. In the case of error a code and message property will be displayed.
+totalResults
+The total number of results available for your request.
+article_id
+A unique id for each news article.
+title
+The title of the news article.
+link
+URL of the news article.
+source_id
+The name of the source this article came from.
+source_url
+The URL of the source from which a specific news article originated.
+source_icon
+URL of the logo associated with the news source.
+source_priority
+Shows the rank of news domains on the basis of their traffic and authenticity. The lower the source priority, the more authentic the domain.
+keywords
+Related keywords of the news article.
+creator
+The author of the news article
+image_url
+URL of image present in the news articles
+video_url
+URL of video present in the news articles
+description
+A small description of the news article
+pubDate
+The published date of the news article
+pubDateTZ
+The 'pubDateTZ' field will provide the time zone of the publication date mentioned in the news article. This is available in the Latest/News, Crypto, and Archive endpoints.
+content
+Full content of the news article
+country
+The country of the publisher
+category
+The category assigned to the news article by NewsData.io
+language
+The language of the news article
+ai_tag
+AI-classified tags or categories for a better understanding of the article. (Available only for Professional and Corporate users)
+sentiment
+The overall sentiment of the news article (positive, negative, neutral). (Available only for Professional and Corporate users)
+sentiment_stats
+Statistics on the distribution of positive, negative, and neutral sentiments of the news article. (Available only for Professional and Corporate users)
+ai_region
+AI-classified geographical region associated with a news article. ai_region could be a city, district, state, country, or continent. (Available only for corporate users)
+ai_org
+AI-classified organization to extract the name of the organization mentioned in the new article to offer a new level of detail and enhanced insights. (Available only for corporate users)
+duplicate
+This response object will help identify whether the article is duplicate or not. duplicate = False: This indicates that the article is recognized as unique duplicate = True: This signifies that the article is identified as a duplicate of an article already present(The duplicate response object is defined on the basis of Newsdata.io's internal algorithm . It doesn't imply that the article which has a duplicate=true response object is actually a duplicate article.)
+Coin
+The 'coin' field will provide the symbol of the cryptocurrencies mentioned in the article. It is exclusively available in the Crypto endpoint.
+nextPage
+To go to the next page, copy the next page code (without quotes), which can be found at the bottom of the page, and add a new parameter with page and paste the next page code in the API URL: https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY&q=pizza%20OR%20social&page=Your_next_page_id
+Sample Response
+
+{
+status: "success"
+totalResults: 1495
+results: [
+0: {
+article_id: "465ed7ead13ab7aad6b95bb0471feae7"
+title: "You won’t believe what Kangana Ranaut said about politics, calls it..."
+link: "https://www.india.com/entertainment/you-wont-believe-what-kangana-ranaut-said-about-politics-calls-..."
+keywords: [
+0: "milind soman"
+1: "kangana ranaut"
+2: "entertainment"
+3: "anupam kher"
+4: "emergency"
+5: "shreyas talpade"
+]
+creator: null
+description: "In a recent interview, Kangana Ranaut has shared some of her thoughts related to politics and also ..."
+content: "In a recent interview, Kangana Ranaut has shared some of her thoughts related to politics and also ..."
+pubDate: "2025-07-12 06:55:30"
+pubDateTZ: "UTC"
+image_url: "https://static.india.com/wp-content/uploads/2025/07/Thumbnail-2025-07-12T113558.557-1.png"
+video_url: null
+source_id: "india"
+source_name: "India"
+source_priority: 8067
+source_url: "https://www.india.com"
+source_icon: "https://n.bytvi.com/india.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "entertainment"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 1.89
+neutral: 86.69
+negative: 11.42
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+1: {
+article_id: "ef86782de4de0f42c6cff012658db837"
+title: "Union Home Minister Amit Shah inaugurates BJP''s new state committee office in Kerala"
+link: "https://www.moneycontrol.com/news/india/union-home-minister-amit-shah-inaugurates-bjp-s-new-state-c..."
+keywords: [
+0: "amit shah, union minister amit shah, kerela office"
+]
+creator: [
+0: "Moneycontrol"
+]
+description: null
+content: "Union Home Minister Amit Shah Union Home Minister Amit Shah on Saturday inaugurated the new BJP sta..."
+pubDate: "2025-07-12 06:40:55"
+pubDateTZ: "UTC"
+image_url: "https://images.moneycontrol.com/static-mcnews/2025/04/20250425063754_amit-shah-1.jpeg"
+video_url: null
+source_id: "moneycontrol"
+source_name: "Moneycontrol"
+source_priority: 1039
+source_url: "https://www.moneycontrol.com"
+source_icon: "https://n.bytvi.com/moneycontrol.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+1: "business"
+2: "world"
+3: "politics"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 47.81
+neutral: 51.51
+negative: 0.68
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "kerala,india,asia"
+1: "kerala,gujarat,india,asia"
+]
+ai_org: [
+0: "bjp"
+]
+duplicate: true
+}
+2: {
+article_id: "53518c94378b09ca766ae0ed0acae298"
+title: "Maldives: Is a reunified MDP a threat to President Muizzu’s second-term ambitions?"
+link: "https://www.firstpost.com/opinion/maldives-is-a-reunified-mdp-a-threat-to-president-muizzus-second-..."
+keywords: [
+0: "opinion"
+]
+creator: [
+0: "Firstpost"
+]
+description: "The main challenge to Mohamed Muizzu's bid for a second term as Maldivian president comes from a re..."
+content: "The fast-tracked reunification of the Opposition Maldivian Democratic Party (MDP), the first pro-de..."
+pubDate: "2025-07-12 06:31:07"
+pubDateTZ: "UTC"
+image_url: "https://images.firstpost.com/uploads/2025/05/AFP__20250504__44EB4CP__v1__HighRes__MaldivesPoliticsM..."
+video_url: null
+source_id: "firstpost"
+source_name: "Firstpost"
+source_priority: 5906
+source_url: "https://www.firstpost.com"
+source_icon: "https://n.bytvi.com/firstpost.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "politics"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.1
+negative: 99.79
+}
+ai_tag: [
+0: "elections"
+1: "government"
+]
+ai_region: [
+0: "maldives,asia"
+]
+ai_org: [
+0: "mdp"
+1: "maldivia"
+]
+duplicate: false
+}
+3: {
+article_id: "4c49f0dfa5290e97c6eac989a45220fb"
+title: "Peter Obi Declares Loyalty To Labour Party, Reaffirms 2027 Presidential Ambition"
+link: "https://www.naijanews.com/2025/07/12/peter-obi-declares-loyalty-to-labour-party-reaffirms-2027-pres..."
+keywords: [
+0: "lp"
+1: "labour party"
+2: "politics"
+3: "peter obi"
+4: "adc"
+]
+creator: [
+0: "Enioluwa Adeniyi"
+]
+description: "The 2023 presidential candidate of the Labour Party, Peter Obi, has reaffirmed his membership of th..."
+content: "The 2023 presidential candidate of the Labour Party, Peter Obi, has reaffirmed his membership of th..."
+pubDate: "2025-07-12 06:27:14"
+pubDateTZ: "UTC"
+image_url: "https://www.naijanews.com/wp-content/uploads/2025/01/PETER-OBI1.jpg"
+video_url: null
+source_id: "naijanews"
+source_name: "Naija News"
+source_priority: 9385
+source_url: "https://www.naijanews.com"
+source_icon: "https://n.bytvi.com/naijanews.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 1.78
+neutral: 97.85
+negative: 0.37
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: [
+0: "reaffirms 2027 presidential ambition"
+1: "labour party"
+]
+duplicate: false
+}
+4: {
+article_id: "87d7bdca0f6d1edfbfe134839b8d9d96"
+title: "Iran poses 'rising threat' to UK residents and 'willing to use assassination'"
+link: "https://www.the-express.com/news/world-news/177205/iran-poses-rising-threat-uk-residents-may-use-as..."
+keywords: [
+0: "world news"
+]
+creator: [
+0: "Patrick Hill,John O'Sullivan"
+]
+description: "The warning was contained in a concerning report by Parliament's Intelligence and Security Committe..."
+content: "Iran presents an "escalating" danger to Britain and its people, both within and beyond UK borders, ..."
+pubDate: "2025-07-12 06:18:00"
+pubDateTZ: "UTC"
+image_url: "https://cdn-images.the-express.com/img/dynamic/12/590x/177205_1.jpg"
+video_url: null
+source_id: "express"
+source_name: "Daily Express Us"
+source_priority: 1139
+source_url: "https://www.the-express.com"
+source_icon: "https://n.bytvi.com/express.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.1
+neutral: 0.09
+negative: 99.81
+}
+ai_tag: [
+0: "national security"
+]
+ai_region: [
+0: "united kingdom,europe"
+1: "iran,asia"
+]
+ai_org: [
+0: "parliament intelligence and security committee"
+]
+duplicate: false
+}
+5: {
+article_id: "ecd90eaaedf4d69e8e565007b47a1bd6"
+title: "Poilievre criticizes Canada’s trade deadline with US as he seeks political comeback"
+link: "https://economictimes.indiatimes.com/news/international/canada/poilievre-criticizes-canadas-trade-d..."
+keywords: null
+creator: null
+description: "Pierre Poilievre is questioning Canada's approach to trade talks with the United States. He believe..."
+content: "Conservative Leader Pierre Poilievre, currently working to regain a seat in Parliament, is warning ..."
+pubDate: "2025-07-12 06:10:06"
+pubDateTZ: "UTC"
+image_url: "https://img.etimg.com/thumb/msid-122400763,width-1200,height-630,imgsize-134420,overlay-economictim..."
+video_url: null
+source_id: "economictimes_indiatimes"
+source_name: "The Economic Times"
+source_priority: 231
+source_url: "https://economictimes.indiatimes.com"
+source_icon: "https://n.bytvi.com/economictimes_indiatimes.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+1: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.13
+negative: 99.77
+}
+ai_tag: [
+0: "government"
+]
+ai_region: [
+0: "united states of america,north america"
+1: "canada,kentucky,united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+6: {
+article_id: "02b655c6633353584f68f69c3a4b9bb5"
+title: "Viral Photo Claiming Obasanjo Prostrated For Ladoja Proven To Be Fake"
+link: "https://www.naijanews.com/2025/07/12/viral-photo-claiming-obasanjo-prostrated-for-ladoja-proven-to-..."
+keywords: [
+0: "olusegun obasanjo"
+1: "gist"
+2: "rashidi ladoja"
+]
+creator: [
+0: "Enioluwa Adeniyi"
+]
+description: "A doctored image circulating on social media alleging that former President Olusegun Obasanjo prost..."
+content: "A doctored image circulating on social media alleging that former President Olusegun Obasanjo prost..."
+pubDate: "2025-07-12 06:07:46"
+pubDateTZ: "UTC"
+image_url: "https://www.naijanews.com/wp-content/uploads/2025/07/Ladoja-and-Obasanjo.jpeg"
+video_url: null
+source_id: "naijanews"
+source_name: "Naija News"
+source_priority: 9385
+source_url: "https://www.naijanews.com"
+source_icon: "https://n.bytvi.com/naijanews.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.08
+neutral: 0.11
+negative: 99.81
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+7: {
+article_id: "421bef2301b4c6cb23caa9f6ed0c9e85"
+title: "No Holiday Respite in Sight From This Economic Heat"
+link: "https://ng.investing.com/analysis/no-holiday-respite-in-sight-from-this-economic-heat-209684"
+keywords: null
+creator: [
+0: "ING Economic and Financial Analysis"
+]
+description: null
+content: "There’ll be no relief from the summer heat and storms this summer, both actual and those originatin..."
+pubDate: "2025-07-12 05:54:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "investing_ng"
+source_name: "Investing Nigeria"
+source_priority: 1205
+source_url: "https://ng.investing.com"
+source_icon: "https://n.bytvi.com/investing_ng.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.87
+neutral: 0.76
+negative: 98.37
+}
+ai_tag: [
+0: "climate and weather"
+]
+ai_region: [
+0: "white house,tennessee,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+8: {
+article_id: "b2f1f915e34bb23482c3cfd5c364981f"
+title: "No Holiday Respite in Sight From This Economic Heat"
+link: "https://au.investing.com/analysis/no-holiday-respite-in-sight-from-this-economic-heat-200607475"
+keywords: null
+creator: [
+0: "ING Economic and Financial Analysis"
+]
+description: null
+content: "There’ll be no relief from the summer heat and storms this summer, both actual and those originatin..."
+pubDate: "2025-07-12 05:54:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "investing_au"
+source_name: "Investing Australia"
+source_priority: 1205
+source_url: "https://au.investing.com"
+source_icon: "https://n.bytvi.com/investing_au.jpg"
+language: "english"
+country: [
+0: "australia"
+]
+category: [
+0: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.87
+neutral: 0.76
+negative: 98.37
+}
+ai_tag: [
+0: "climate and weather"
+]
+ai_region: [
+0: "white house,tennessee,united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+9: {
+article_id: "adc0328dbebc837342cf4a30a2820397"
+title: "No Holiday Respite in Sight From This Economic Heat"
+link: "https://uk.investing.com/analysis/no-holiday-respite-in-sight-from-this-economic-heat-200617556"
+keywords: null
+creator: [
+0: "ING Economic and Financial Analysis"
+]
+description: null
+content: "There’ll be no relief from the summer heat and storms this summer, both actual and those originatin..."
+pubDate: "2025-07-12 05:54:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "investing_uk"
+source_name: "Investing Uk"
+source_priority: 1205
+source_url: "https://uk.investing.com"
+source_icon: "https://n.bytvi.com/investing_uk.jpg"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.87
+neutral: 0.76
+negative: 98.37
+}
+ai_tag: [
+0: "climate and weather"
+]
+ai_region: [
+0: "white house,tennessee,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+10: {
+article_id: "1fcc84871c398f896a42835b47e10de1"
+title: "No Holiday Respite in Sight From This Economic Heat"
+link: "https://www.investing.com/analysis/no-holiday-respite-in-sight-from-this-economic-heat-200663474"
+keywords: null
+creator: [
+0: "ING Economic and Financial Analysis"
+]
+description: null
+content: "There’ll be no relief from the summer heat and storms this summer, both actual and those originatin..."
+pubDate: "2025-07-12 05:54:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "investing_us"
+source_name: "Investing Us"
+source_priority: 1205
+source_url: "https://www.investing.com"
+source_icon: "https://n.bytvi.com/investing_us.jpg"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.87
+neutral: 0.76
+negative: 98.37
+}
+ai_tag: [
+0: "climate and weather"
+]
+ai_region: [
+0: "white house,tennessee,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+11: {
+article_id: "8b2251ff10f4a7ffa45748b58eaded4a"
+title: "Dr Peter Boylan: Portiuncula hospital is not safe for women giving birth"
+link: "https://www.irishtimes.com/opinion/2025/07/12/dr-peter-boylan-portiuncula-hospital-is-not-safe-for-..."
+keywords: [
+0: "opinion"
+]
+creator: [
+0: "Peter Boylan"
+]
+description: "What the Portiuncula situation tells us is that smaller maternity units are no longer able to deliv..."
+content: "What does the latest report on serious problems in maternity services at Portiuncula University Hos..."
+pubDate: "2025-07-12 05:53:00"
+pubDateTZ: "UTC"
+image_url: "https://www.irishtimes.com/resizer/v2/XMZZ6RZNWRLYHFD46CKGMJRHPM.jpg?auth=cd2febb04731022e02f7c528c..."
+video_url: null
+source_id: "irishtimes"
+source_name: "The Irish Times"
+source_priority: 9425
+source_url: "https://www.irishtimes.com"
+source_icon: "https://n.bytvi.com/irishtimes.png"
+language: "english"
+country: [
+0: "ireland"
+]
+category: [
+0: "politics"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.17
+neutral: 0.25
+negative: 99.58
+}
+ai_tag: [
+0: "diseases"
+]
+ai_region: [
+0: "portiuncula"
+]
+ai_org: null
+duplicate: false
+}
+12: {
+article_id: "9640848ac8c98aaf3db366eeadea4c5f"
+title: "Tension As 13 Political Parties Reject Peace Accord As Lagos Residents Vote In LG Polls Today"
+link: "https://www.naijanews.com/2025/07/12/tension-as-13-political-parties-reject-peace-accord-as-lagos-r..."
+keywords: [
+0: "nigeria news"
+1: "lasiec"
+2: "lagos state"
+]
+creator: [
+0: "Enioluwa Adeniyi"
+]
+description: "Lagos residents are heading to the polls today, Saturday, July 12, to elect chairmen and councillor..."
+content: "Lagos residents are heading to the polls today, Saturday, July 12, to elect chairmen and councillor..."
+pubDate: "2025-07-12 05:43:03"
+pubDateTZ: "UTC"
+image_url: "https://www.naijanews.com/wp-content/uploads/2024/05/elections-in-Nigeria-636x323-1.png"
+video_url: null
+source_id: "naijanews"
+source_name: "Naija News"
+source_priority: 9385
+source_url: "https://www.naijanews.com"
+source_icon: "https://n.bytvi.com/naijanews.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.18
+neutral: 0.5
+negative: 99.32
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: [
+0: "lagos,lagos,nigeria,africa"
+1: "lagos,nigeria,africa"
+]
+ai_org: null
+duplicate: false
+}
+13: {
+article_id: "4a281464b9df30e8b2edef082513c069"
+title: "A Trump tariff letter is the best news this Southeast Asian junta has had in a while"
+link: "https://www.cnn.com/2025/07/12/asia/myanmar-us-tariffs-intl-hnk"
+keywords: null
+creator: null
+description: null
+content: "For most world leaders, tariff letters from US President Donald Trump mean a big headache. But one ..."
+pubDate: "2025-07-12 05:35:32"
+pubDateTZ: "UTC"
+image_url: "https://media.cnn.com/api/v1/images/stellar/prod/gettyimages-2206547747.jpg?c=16x9&q=w_800%2Cc_fill"
+video_url: null
+source_id: "cnn"
+source_name: "Cnn"
+source_priority: 165
+source_url: "https://edition.cnn.com"
+source_icon: "https://n.bytvi.com/cnn.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+1: "sports"
+2: "technology"
+3: "business"
+4: "science"
+5: "entertainment"
+6: "health"
+7: "world"
+8: "politics"
+9: "environment"
+10: "tourism"
+11: "education"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.51
+neutral: 0.44
+negative: 99.05
+}
+ai_tag: [
+0: "government"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+14: {
+article_id: "6782bf728c271e6fee9f24ea9cd72526"
+title: "A Trump tariff letter is the best news this Southeast Asian junta has had in a while"
+link: "https://sg.news.yahoo.com/trump-tariff-letter-best-news-053532069.html"
+keywords: null
+creator: [
+0: "CNN"
+]
+description: null
+content: "For most world leaders, tariff letters from US President Donald Trump mean a big headache. But one ..."
+pubDate: "2025-07-12 05:35:32"
+pubDateTZ: "UTC"
+image_url: "https://s.yimg.com/ny/api/res/1.2/GHvgTeoxfbZvq2WkMlAbTQ--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyNDI7aD02OTk-..."
+video_url: null
+source_id: "yahoo_sg"
+source_name: "Yahoo!news"
+source_priority: 17
+source_url: "https://sg.news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo_sg.png"
+language: "english"
+country: [
+0: "singapore"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.51
+neutral: 0.44
+negative: 99.05
+}
+ai_tag: [
+0: "government"
+]
+ai_region: [
+0: "united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+15: {
+article_id: "4c7573c46320588c9918f4268b7d7635"
+title: "Oil and gas community announces their preferred 2027 presidential aspirant"
+link: "https://www.legit.ng/politics/1663991-atiku-obi-amaechi-top-coalition-leader-strong-endorsement/"
+keywords: null
+creator: null
+description: "The oil and gas communities have announced their preferred aspirant for the 2027 presidency between..."
+content: "Rotimi Amaechi, the former Rivers governor, has been endorsed for the 2027 presidency by the oil an..."
+pubDate: "2025-07-12 05:31:47"
+pubDateTZ: "UTC"
+image_url: "https://cdn.legit.ng/images/1120/0e11e767b6e2b58e.jpeg?v=1"
+video_url: null
+source_id: "legit"
+source_name: "Legit Nigeria"
+source_priority: 1192
+source_url: "https://www.legit.ng"
+source_icon: "https://n.bytvi.com/legit.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.06
+neutral: 99.85
+negative: 0.09
+}
+ai_tag: [
+0: "energy"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+16: {
+article_id: "90f776424843b663dc78140fc34d219a"
+title: "From ‘Hindu Hriday Samrat’ to BJP rebel: T Raja Singh’s rise, rifts and road ahead in Telangana Pol..."
+link: "https://timesofindia.indiatimes.com/city/hyderabad/from-hindu-hriday-samrat-to-bjp-rebel-t-raja-sin..."
+keywords: null
+creator: null
+description: "T Raja Singh, a controversial figure in Telangana politics, embodies hardline Hindutva. Revered by ..."
+content: "HYDERABAD: Suspended BJP MLA T Raja Singh , often dismissed by critics as a rabble-rouser, remains ..."
+pubDate: "2025-07-12 05:30:56"
+pubDateTZ: "UTC"
+image_url: "https://static.toiimg.com/thumb/msid-122400196,imgsize-1057378,width-400,height-225,resizemode-72/1..."
+video_url: null
+source_id: "toi"
+source_name: "The Times Of India"
+source_priority: 239
+source_url: "https://timesofindia.indiatimes.com"
+source_icon: "https://n.bytvi.com/toi.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.15
+neutral: 0.16
+negative: 99.69
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "telangana,india,asia"
+]
+ai_org: [
+0: "bjp"
+1: "hindu hriday samrat’"
+]
+duplicate: false
+}
+17: {
+article_id: "c6254ea535a83c576b8059f5e743b9e8"
+title: "ISL On Hold, I-League In Ruins - Is This The Breaking Point For Indian Football?"
+link: "https://www.timesnownews.com/sports/football/isl-on-hold-i-league-in-ruins-is-this-the-breaking-poi..."
+keywords: null
+creator: [
+0: "Sudipta Biswas"
+]
+description: "The AIFF continues to be a mute spectator as FSDL put the ISL - India's top-flight league - on hold..."
+content: "Indian football, once hailed as the “sleeping giant of Asia,” is now a shadow of its former promise..."
+pubDate: "2025-07-12 05:29:49"
+pubDateTZ: "UTC"
+image_url: "https://images.timesnownews.com/thumb/msid-152267830,thumbsize-181348,width-1280,height-720,resizem..."
+video_url: null
+source_id: "timesnownews"
+source_name: "Times Now News"
+source_priority: 2243
+source_url: "https://www.timesnownews.com"
+source_icon: "https://n.bytvi.com/timesnownews.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.23
+neutral: 0.15
+negative: 99.62
+}
+ai_tag: [
+0: "soccer"
+]
+ai_region: [
+0: "india,asia"
+]
+ai_org: [
+0: "aiff"
+1: "isl"
+2: "fsdl"
+]
+duplicate: false
+}
+18: {
+article_id: "ad68b8d9cc2b8e5b6aacaf865a6d93c9"
+title: "Judge Blocks ICE From Randomly Stopping Suspected Migrants"
+link: "https://www.livemint.com/news/us-news/judge-blocks-ice-from-randomly-stopping-suspected-migrants-11..."
+keywords: null
+creator: null
+description: "A federal judge in Los Angeles issued a temporary order barring US immigration authorities from sto..."
+content: "(Bloomberg) -- A federal judge in Los Angeles issued a temporary order barring US immigration autho..."
+pubDate: "2025-07-12 05:14:43"
+pubDateTZ: "UTC"
+image_url: "https://www.livemint.com/lm-img/img/2024/12/06/1600x900/news_3_1733464427658_1733464446564.jpg"
+video_url: null
+source_id: "livemint"
+source_name: "Mint"
+source_priority: 7134
+source_url: "https://www.livemint.com"
+source_icon: "https://n.bytvi.com/livemint.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.13
+negative: 99.77
+}
+ai_tag: [
+0: "immigration and migrant issues"
+]
+ai_region: [
+0: "united states of america,north america"
+1: "los angeles,california,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+19: {
+article_id: "ab5b0b075e22b507fa74ceb0481c91af"
+title: "What Kangana Ranaut Was Told Before Becoming An MP: 'Attend Parliament For 60 Days'"
+link: "https://www.news18.com/movies/bollywood/what-kangana-ranaut-was-told-before-becoming-an-mp-attend-p..."
+keywords: [
+0: "movies"
+]
+creator: null
+description: "It should also be noted that Kangana Ranaut's comment comes days after the actress also admitted th..."
+content: "It should also be noted that Kangana Ranaut's comment comes days after the actress also admitted th..."
+pubDate: "2025-07-12 05:09:52"
+pubDateTZ: "UTC"
+image_url: "https://images.news18.com/ibnlive/uploads/2025/04/%E2%80%98Nature-Art-And-Fashion-We-Just-Described..."
+video_url: null
+source_id: "news18"
+source_name: "News 18"
+source_priority: 1063
+source_url: "https://www.news18.com"
+source_icon: "https://n.bytvi.com/news18.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "entertainment"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.37
+neutral: 79.05
+negative: 20.58
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+20: {
+article_id: "b788ff73181d3e7d51d51a3e651cf8e7"
+title: "Rosie O’Donnell: ‘I Look At America, And I Feel Overwhelmingly Depressed’"
+link: "https://ca.news.yahoo.com/rosie-o-donnell-look-america-050017816.html"
+keywords: [
+0: "celebrity"
+]
+creator: [
+0: "HuffPost UK"
+]
+description: "The US screen legend opens up about her fresh start after moving to Ireland, Donald Trump’s preside..."
+content: "Type Rosie O’Donnell ’s name into Google, and the first autocorrect suggestion is just one word. Th..."
+pubDate: "2025-07-12 05:00:17"
+pubDateTZ: "UTC"
+image_url: "https://media.zenfs.com/en/huffpost_uk_744/1900bf51b0d4e00e3eaeb31ae7d7e8ac"
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "canada"
+]
+category: [
+0: "sports"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 95.82
+neutral: 3.25
+negative: 0.93
+}
+ai_tag: [
+0: "television"
+]
+ai_region: [
+0: "ireland,indiana,united states of america,north america"
+1: "united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+21: {
+article_id: "5e1cd0dd3502dafe6bd989be3f05265d"
+title: "MPs and political candidates face ‘industrial’ levels of abuse, minister says"
+link: "https://ca.news.yahoo.com/mps-political-candidates-face-industrial-050004312.html"
+keywords: [
+0: "news"
+]
+creator: [
+0: "The Guardian"
+]
+description: "Exclusive: Young people deterred from politics, Rushanara Ali warns, as government plans stricter p..."
+content: "MPs and political candidates are facing “industrial” levels of intimidation and harassment, a minis..."
+pubDate: "2025-07-12 05:00:04"
+pubDateTZ: "UTC"
+image_url: "https://media.zenfs.com/en/theguardian_763/b31876e54c22cfd22fad9ae01d4ebf39"
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "canada"
+]
+category: [
+0: "sports"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.1
+neutral: 0.09
+negative: 99.81
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: true
+}
+22: {
+article_id: "47cf7adea4b7acdc60ff426ef44315b2"
+title: "MPs and political candidates face ‘industrial’ levels of abuse, minister says"
+link: "https://www.theguardian.com/politics/2025/jul/12/mps-political-candidates-intimidation-harassment-a..."
+keywords: [
+0: "local elections"
+1: "local politics"
+2: "online abuse"
+3: "politics"
+4: "uk news"
+5: "house of commons"
+6: "society"
+7: "women in politics"
+8: "labour"
+]
+creator: [
+0: "Kiran Stacey Political correspondent"
+]
+description: "Exclusive: Young people deterred from politics, Rushanara Ali warns, as government plans stricter p..."
+content: "MPs and political candidates are facing “industrial” levels of intimidation and harassment, a minis..."
+pubDate: "2025-07-12 05:00:04"
+pubDateTZ: "UTC"
+image_url: "https://i.guim.co.uk/img/media/f6f3377e75bc6d4c7f28a243ceee6f61c9f85204/688_0_6157_4929/master/6157..."
+video_url: null
+source_id: "theguardiantheguardian"
+source_name: "Theguardiantheguardian"
+source_priority: 184
+source_url: "https://www.theguardian.com/theguardian"
+source_icon: "https://n.bytvi.com/theguardiantheguardian.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.08
+negative: 99.82
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+23: {
+article_id: "a53315054ff69257ce62a5e1bbbf9320"
+title: "Pat Leahy: ‘Don’t call us, Mick Wallace, we’ll call you’: The presidential contest fails to ignite"
+link: "https://www.irishtimes.com/opinion/2025/07/12/pat-leahy-dont-call-us-mick-wallace-well-call-you-who..."
+keywords: [
+0: "opinion"
+]
+creator: [
+0: "Pat Leahy"
+]
+description: "Catherine Connolly is now in the running, and Fine Gael has a name for the ballot paper. None of th..."
+content: "It was starting to look like we might have no candidates for the presidency at all. The list of the..."
+pubDate: "2025-07-12 05:00:01"
+pubDateTZ: "UTC"
+image_url: "https://www.irishtimes.com/resizer/v2/4SUUFM7JAJAT7GROVDWZEYRBIQ.jpg?auth=6b9de53e67630ea4f7579da45..."
+video_url: null
+source_id: "irishtimes"
+source_name: "The Irish Times"
+source_priority: 9425
+source_url: "https://www.irishtimes.com"
+source_icon: "https://n.bytvi.com/irishtimes.png"
+language: "english"
+country: [
+0: "ireland"
+]
+category: [
+0: "politics"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.36
+neutral: 1.04
+negative: 98.6
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+24: {
+article_id: "b965af0d348db0c0aef2cc57c68a10fb"
+title: "In years to come, we will ask: ‘So, where were you the day you heard that Pat the Cope was willing ..."
+link: "https://www.irishtimes.com/politics/2025/07/12/in-years-to-come-we-will-ask-so-where-were-you-the-d..."
+keywords: [
+0: "politics"
+]
+creator: [
+0: "Miriam Lord"
+]
+description: "At the Irish embassy bash in London, guests were focused on the all-consuming question of who will ..."
+content: "Summer garden parties are a big thing on the Westminster political scene. The annual seasonal gathe..."
+pubDate: "2025-07-12 05:00:00"
+pubDateTZ: "UTC"
+image_url: "https://www.irishtimes.com/resizer/v2/BQRTHGOKGZEMRBGGLSEX4OSIV4.jpg?auth=3727d6abbbaf6af6b71b6ecee..."
+video_url: null
+source_id: "irishtimes"
+source_name: "The Irish Times"
+source_priority: 9425
+source_url: "https://www.irishtimes.com"
+source_icon: "https://n.bytvi.com/irishtimes.png"
+language: "english"
+country: [
+0: "ireland"
+]
+category: [
+0: "top"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 97.47
+neutral: 1.38
+negative: 1.15
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: [
+0: "london,kentucky,united states of america,north america"
+1: "london,california,united states of america,north america"
+2: "london,england,united kingdom,europe"
+3: "london,arkansas,united states of america,north america"
+4: "london,ontario,canada,north america"
+5: "london,ohio,united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+25: {
+article_id: "ef0d13432f28fce9b1530e3128e63514"
+title: "Blood, Votes, and Bibi: How Gaza war allowed Benjamin Netanyahu to stage a comeback - and save his ..."
+link: "https://timesofindia.indiatimes.com/world/middle-east/blood-votes-and-bibi-how-gaza-war-allowed-ben..."
+keywords: null
+creator: [
+0: "TOI World Desk"
+]
+description: "​There was a moment — brief, hushed, and deliberately unrecorded — in April 2024 when Benjamin Neta..."
+content: "FILE - President Donald Trump, left, stands with Israel's Prime Minister Benjamin Netanyahu at the ..."
+pubDate: "2025-07-12 04:49:43"
+pubDateTZ: "UTC"
+image_url: "https://static.toiimg.com/thumb/msid-122399697,imgsize-1455714,width-400,resizemode-4/122399697.jpg"
+video_url: null
+source_id: "toi"
+source_name: "The Times Of India"
+source_priority: 239
+source_url: "https://timesofindia.indiatimes.com"
+source_icon: "https://n.bytvi.com/toi.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.28
+neutral: 0.23
+negative: 99.49
+}
+ai_tag: [
+0: "conflicts & war"
+]
+ai_region: [
+0: "gaza,west bengal,india,asia"
+]
+ai_org: null
+duplicate: false
+}
+26: {
+article_id: "e7cbb2141969b4e49e18fda7a2484e49"
+title: "France opens criminal case against Musk’s X"
+link: "https://www.rt.com/news/621372-france-investigates-musk-x/"
+keywords: null
+creator: [
+0: "RT"
+]
+description: "A French prosecutor has launched a probe into Elon Musk’s X platform following complaints about its..."
+content: "Politicians claim that the platform’s algorithms boost hate speech and threaten democracy France ha..."
+pubDate: "2025-07-12 04:44:19"
+pubDateTZ: "UTC"
+image_url: "https://mf.b37mrtl.ru/files/2025.07/thumbnail/6871e77b85f540690758f39b.jpg"
+video_url: null
+source_id: "rt"
+source_name: "Rt"
+source_priority: 3123
+source_url: "https://www.rt.com/rss"
+source_icon: "https://n.bytvi.com/rt.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+1: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.33
+neutral: 10.6
+negative: 89.08
+}
+ai_tag: [
+0: "government"
+]
+ai_region: [
+0: "france,europe"
+]
+ai_org: [
+0: "elon musk’s x"
+]
+duplicate: false
+}
+27: {
+article_id: "4588c163e6a144d90148b189352f7967"
+title: "Federal funding cuts, cost of living dominate questions as Democrats end town hall series in Utah"
+link: "https://www.yahoo.com/news/federal-funding-cuts-cost-living-043346477.html"
+keywords: null
+creator: [
+0: "Utah News Dispatch"
+]
+description: null
+content: "Panelists at "The People's Townhall," Rep. Sara Jacobs, R-California, Brian King, Rep. Grant Miller..."
+pubDate: "2025-07-12 04:33:46"
+pubDateTZ: "UTC"
+image_url: "https://s.yimg.com/ny/api/res/1.2/lSI1IgzB3zF8Tsfl5UmEgA--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyNDI7aD05MzI7..."
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.13
+neutral: 99.48
+negative: 0.39
+}
+ai_tag: [
+0: "real estate"
+1: "politics"
+]
+ai_region: [
+0: "r-california"
+1: "utah,united states of america,north america"
+2: "utah,utah,united states of america,north america"
+]
+ai_org: [
+0: "the people townhall"
+]
+duplicate: false
+}
+28: {
+article_id: "6fad84098989d4180a53045afe9d37f3"
+title: "Garry Hynes: ‘My wife was taken from me in the blink of an eye. My whole life’s changed’"
+link: "https://www.irishtimes.com/culture/stage/2025/07/12/garry-hynes-my-wife-was-taken-from-me-in-the-bl..."
+keywords: [
+0: "stage"
+]
+creator: [
+0: "Deirdre Falvey"
+]
+description: "The Druid founder has a reputation as a demanding director. But she has mellowed – and theatre is a..."
+content: "Have you mellowed, Garry? “I probably have mellowed, to even be able to talk like this, although I ..."
+pubDate: "2025-07-12 04:18:00"
+pubDateTZ: "UTC"
+image_url: "https://www.irishtimes.com/resizer/v2/D7QRXOUE4NCKXNF3QKSJ2TAS74.JPG?auth=2eab13b841788e87a2c52b386..."
+video_url: null
+source_id: "irishtimes"
+source_name: "The Irish Times"
+source_priority: 9425
+source_url: "https://www.irishtimes.com"
+source_icon: "https://n.bytvi.com/irishtimes.png"
+language: "english"
+country: [
+0: "ireland"
+]
+category: [
+0: "entertainment"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 27.02
+neutral: 25.89
+negative: 47.09
+}
+ai_tag: [
+0: "entertainment"
+1: "movies"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+29: {
+article_id: "bd00a79eb2b60e3104069e5cf8f19a58"
+title: "Young Democrats have called for a rebrand. They're vying to replace the party's old guard"
+link: "https://abcnews.go.com/US/wireStory/young-democrats-called-rebrand-vying-replace-partys-guard-12369..."
+keywords: [
+0: "us"
+]
+creator: null
+description: "Younger Democratic candidates across the country are running to replace party elders"
+content: "PHOENIX -- Deja Foxx celebrated her April birthday in a way most 25-year-olds don’t. The extra cand..."
+pubDate: "2025-07-12 04:14:29"
+pubDateTZ: "UTC"
+image_url: "https://s.abcnews.com/images/US/wirestory_0f28087cd65118ebd6c0cc9a0fe030bb_4x3_384.jpg"
+video_url: null
+source_id: "abcnews"
+source_name: "Abc News"
+source_priority: 313
+source_url: "http://www.abcnews.go.com"
+source_icon: "https://n.bytvi.com/abcnews.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 4.07
+neutral: 3.2
+negative: 92.73
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: null
+ai_org: [
+0: "theyre"
+]
+duplicate: true
+}
+30: {
+article_id: "7071ae36c53091c33b849a4d476fa968"
+title: "History Today: When the first steam engine ship was launched in India"
+link: "https://www.firstpost.com/explainers/history-today-when-the-first-steam-engine-ship-was-launched-in..."
+keywords: [
+0: "explainers"
+]
+creator: [
+0: "Firstpost"
+]
+description: "The first steam engine ship, Diana, was launched on July 12, 1863, and became one of the earliest i..."
+content: "The British gave some of the most modern facilities and innovations of the time during their rule i..."
+pubDate: "2025-07-12 04:02:10"
+pubDateTZ: "UTC"
+image_url: "https://images.firstpost.com/uploads/2025/07/History-1-47-2025-07-1eae2273ea55e159f4af3905feaa25a9...."
+video_url: null
+source_id: "firstpost"
+source_name: "Firstpost"
+source_priority: 5906
+source_url: "https://www.firstpost.com"
+source_icon: "https://n.bytvi.com/firstpost.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 2.25
+neutral: 97.55
+negative: 0.2
+}
+ai_tag: [
+0: "energy"
+]
+ai_region: [
+0: "india,asia"
+]
+ai_org: null
+duplicate: false
+}
+31: {
+article_id: "b7652a7708e8e2feef6a0622ece8e85e"
+title: "Young Democrats have called for a rebrand. They're vying to replace the party's old guard"
+link: "https://www.yahoo.com/news/young-democrats-called-rebrand-theyre-040045984.html"
+keywords: null
+creator: [
+0: "Associated Press"
+]
+description: null
+content: "PHOENIX (AP) — Deja Foxx celebrated her April birthday in a way most 25-year-olds don’t. The extra ..."
+pubDate: "2025-07-12 04:00:45"
+pubDateTZ: "UTC"
+image_url: "https://s.yimg.com/ny/api/res/1.2/TBuJp7_aCbWgwbppWstlNg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyNDI7aD04Mjg7..."
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "politics"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 33.96
+neutral: 4.1
+negative: 61.94
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "phoenix,new york,united states of america,north america"
+1: "phoenix,illinois,united states of america,north america"
+2: "phoenix,arizona,united states of america,north america"
+3: "phoenix,oregon,united states of america,north america"
+]
+ai_org: [
+0: "theyre"
+]
+duplicate: true
+}
+32: {
+article_id: "b0729ee94b206cfc817b63652cad14e2"
+title: "Young Democrats have called for a rebrand. They're vying to replace the party's old guard"
+link: "https://www.clickondetroit.com/news/politics/2025/07/12/young-democrats-have-called-for-a-rebrand-t..."
+keywords: null
+creator: [
+0: "Charlotte Kramon And Sejal Govindarao, Associated Press"
+]
+description: "Younger Democratic candidates across the country are running to replace party elders."
+content: "PHOENIX – Deja Foxx celebrated her April birthday in a way most 25-year-olds don’t. The extra candl..."
+pubDate: "2025-07-12 04:00:45"
+pubDateTZ: "UTC"
+image_url: "https://res.cloudinary.com/graham-media-group/image/upload/f_auto/q_auto/c_thumb,w_700/v1/media/gmg..."
+video_url: null
+source_id: "clickondetroit"
+source_name: "Clickondetroit"
+source_priority: 3621
+source_url: "https://www.clickondetroit.com"
+source_icon: "https://n.bytvi.com/clickondetroit.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 49.44
+neutral: 5.97
+negative: 44.59
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: [
+0: "theyre"
+]
+duplicate: true
+}
+33: {
+article_id: "e417cde84c796bd654fcfac29e84bf1a"
+title: "Young Democrats Have Called for a Rebrand. They're Vying to Replace the Party's Old Guard"
+link: "https://www.usnews.com/news/best-states/arizona/articles/2025-07-12/young-democrats-have-called-for..."
+keywords: null
+creator: [
+0: "Associated Press"
+]
+description: "Younger Democratic candidates across the country are running to replace party elders"
+content: "PHOENIX (AP) — Deja Foxx celebrated her April birthday in a way most 25-year-olds don’t. The extra ..."
+pubDate: "2025-07-12 04:00:45"
+pubDateTZ: "UTC"
+image_url: "https://www.usnews.com/object/image/00000197-fccb-d582-a9f7-fcef29120000/c6531d1638d0487cba487f186d..."
+video_url: null
+source_id: "usnews"
+source_name: "Usnews"
+source_priority: 80
+source_url: "https://www.usnews.com"
+source_icon: "https://n.bytvi.com/usnews.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 1.67
+neutral: 1.13
+negative: 97.21
+}
+ai_tag: [
+0: "politics"
+1: "elections"
+]
+ai_region: [
+0: "phoenix,new york,united states of america,north america"
+1: "phoenix,illinois,united states of america,north america"
+2: "phoenix,arizona,united states of america,north america"
+3: "phoenix,oregon,united states of america,north america"
+]
+ai_org: [
+0: "party old guard"
+]
+duplicate: true
+}
+34: {
+article_id: "1952b244bb215db6e0e3cdfcb335fd5e"
+title: "North America's Longest Coaster Is In Upstate New York"
+link: "https://nj1015.com/ixp/854/p/longest-outdoor-mountain-coaster-found-in-upstate-new-york/"
+keywords: [
+0: "new york news"
+1: "news in new york"
+]
+creator: [
+0: "Bobby Welber"
+]
+description: "Did you know that the longest outdoor mountain coaster in North America is located in a historic pa..."
+content: "Did you know that the longest outdoor mountain coaster in North America is located in a historic pa..."
+pubDate: "2025-07-12 04:00:35"
+pubDateTZ: "UTC"
+image_url: "https://townsquare.media/site/854/files/2024/09/attachment-Screenshot-Capture-2024-09-05-09-11-48.j..."
+video_url: null
+source_id: "nj1015"
+source_name: "New Jersey 101.5"
+source_priority: 9819
+source_url: "https://nj1015.com"
+source_icon: "https://n.bytvi.com/nj1015.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.11
+neutral: 99.79
+negative: 0.1
+}
+ai_tag: [
+0: "sports"
+1: "tourism"
+]
+ai_region: [
+0: "north america"
+1: "upstate new york"
+]
+ai_org: null
+duplicate: false
+}
+35: {
+article_id: "2a9c21b017a5b291a3c53694cded023a"
+title: "Young people don’t feel part of the EU – and they’re right | Francesco Grillo"
+link: "https://www.theguardian.com/commentisfree/2025/jul/12/young-people-eu-citizen-digital-age-erasmus-s..."
+keywords: [
+0: "european parliamentary elections 2024"
+1: "europe"
+2: "young people"
+3: "european commission"
+4: "european union"
+]
+creator: [
+0: "Francesco Grillo"
+]
+description: "Its remote, top-down structures need a fresh, citizen-led approach fit for the digital age. Let’s s..."
+content: "T he former Italian prime minister Mario Draghi produced his much-awaited prescription for how to r..."
+pubDate: "2025-07-12 04:00:00"
+pubDateTZ: "UTC"
+image_url: "https://i.guim.co.uk/img/media/38e30e9782803a483f87fb381e9252fc179c810d/414_0_4100_3280/master/4100..."
+video_url: null
+source_id: "theguardiantheguardian"
+source_name: "Theguardiantheguardian"
+source_priority: 184
+source_url: "https://www.theguardian.com/theguardian"
+source_icon: "https://n.bytvi.com/theguardiantheguardian.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 98.96
+neutral: 0.76
+negative: 0.28
+}
+ai_tag: [
+0: "social media and internet"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+36: {
+article_id: "77cf81218b763475433350f5dc799fb7"
+title: "Ceasefire, Sanctions, Or...What Are 'Frustrated' Trump's Next Options With 'Belligerent' Putin? | 4..."
+link: "https://www.news18.com/videos/world/ceasefire-sanctions-or-what-are-frustrated-trump-s-next-options..."
+keywords: [
+0: "world"
+]
+creator: null
+description: "While campaigning for re-election, US President Donald Trump had promised to end the war in Ukraine..."
+content: "While campaigning for re-election, US President Donald Trump had promised to end the war in Ukraine..."
+pubDate: "2025-07-12 03:30:35"
+pubDateTZ: "UTC"
+image_url: "https://images.news18.com/ibnlive/uploads/2025/07/1752291783_fa43f38a-3bce-40eb-93ff-c00e743dc67b-3..."
+video_url: null
+source_id: "news18"
+source_name: "News 18"
+source_priority: 1063
+source_url: "https://www.news18.com"
+source_icon: "https://n.bytvi.com/news18.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.1
+negative: 99.79
+}
+ai_tag: [
+0: "government"
+]
+ai_region: [
+0: "ukrain"
+1: "united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+37: {
+article_id: "659e24cadf2c3f0eff2710ef3b256aaf"
+title: "Obama is back on the fundraising circuit trying to help Democrats rebound for upcoming elections"
+link: "https://ca.news.yahoo.com/obama-back-fundraising-circuit-trying-031241301.html"
+keywords: [
+0: "politics"
+]
+creator: [
+0: "The Independent"
+]
+description: "Obama raised $85 million for the Democrats last cycle"
+content: "Former President Barack Obama has returned to the fundraising circuit, attending an event in Red Ba..."
+pubDate: "2025-07-12 03:12:41"
+pubDateTZ: "UTC"
+image_url: "https://media.zenfs.com/en/the_independent_577/cd7e52084cd7959dea7f17127da35353"
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "canada"
+]
+category: [
+0: "sports"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 98.85
+neutral: 0.89
+negative: 0.26
+}
+ai_tag: [
+0: "corporate news"
+]
+ai_region: null
+ai_org: null
+duplicate: true
+}
+38: {
+article_id: "c75e00e3ad7f66b55a5c1526c883be93"
+title: "Obama is back on the fundraising circuit trying to help Democrats rebound for upcoming elections"
+link: "https://www.independent.co.uk/news/world/americas/us-politics/barack-obama-fundraising-democrats-el..."
+keywords: [
+0: "americas"
+1: "world"
+2: "us politics"
+]
+creator: [
+0: "Gustaf Kilander"
+]
+description: "Obama raised $85 million for the Democrats last cycle"
+content: "Former President Barack Obama has returned to the fundraising circuit, attending an event in Red Ba..."
+pubDate: "2025-07-12 03:12:41"
+pubDateTZ: "UTC"
+image_url: "https://static.independent.co.uk/2025/07/07/10/35430906bb5e0882cefa449bde84c7c0Y29udGVudHNlYXJjaGFw..."
+video_url: null
+source_id: "independentuk"
+source_name: "The Independent"
+source_priority: 290
+source_url: "https://www.independent.co.uk"
+source_icon: "https://n.bytvi.com/independentuk.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 99.3
+neutral: 0.46
+negative: 0.24
+}
+ai_tag: [
+0: "corporate news"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+39: {
+article_id: "ee25e94fc14fc9c96612284131c5aa3b"
+title: "Top Nigerian Newspaper Headlines For Today, Saturday, 12th July, 2025"
+link: "https://www.naijanews.com/2025/07/12/top-nigerian-newspaper-headlines-for-today-saturday-12th-july-..."
+keywords: [
+0: "latest nigerian newspaper headlines"
+1: "nigerian newspapers"
+2: "breaking news"
+3: "major nigerian newspaper headlines today"
+4: "top nigerian newspaper headlines"
+5: "top nigerian newspaper headlines today"
+6: "major nigerian newspaper headlines"
+7: "latest nigerian newspaper headlines today"
+8: "nigeria breaking news today"
+9: "naija news"
+10: "headlines"
+]
+creator: [
+0: "Richard Ogunsile"
+]
+description: "Good morning, Nigeria. Welcome to the Naija News roundup of top newspaper headlines in Nigeria for ..."
+content: "Good morning, Nigeria. Welcome to the Naija News roundup of top newspaper headlines in Nigeria for ..."
+pubDate: "2025-07-12 03:00:19"
+pubDateTZ: "UTC"
+image_url: "https://www.naijanews.com/wp-content/uploads/2024/08/Nigerian-Newspaper-Headlines.png"
+video_url: null
+source_id: "naijanews"
+source_name: "Naija News"
+source_priority: 9385
+source_url: "https://www.naijanews.com"
+source_icon: "https://n.bytvi.com/naijanews.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.23
+neutral: 99.67
+negative: 0.1
+}
+ai_tag: [
+0: "awards and recognitions"
+]
+ai_region: [
+0: "nigeria,africa"
+]
+ai_org: [
+0: "naija news"
+]
+duplicate: false
+}
+40: {
+article_id: "309318e4cd65741cbc167e1ee11a5eb7"
+title: "Powers to help the West Midlands take back control is a 'turning point'"
+link: "https://www.birminghammail.co.uk/news/midlands-news/powers-help-west-midlands-take-32034860"
+keywords: [
+0: "midlands news"
+]
+creator: [
+0: "newsdesk@birminghamlive.co.uk (Gurdip Thandi)"
+]
+description: "The English Devolution and Community Empowerment Bill has been introduced to Parliament"
+content: "The English Devolution and Community Empowerment Bill has been introduced to Parliament New devolut..."
+pubDate: "2025-07-12 03:00:00"
+pubDateTZ: "UTC"
+image_url: "https://i2-prod.birminghammail.co.uk/incoming/article31595523.ece/ALTERNATES/s615/0_Mayor.jpg"
+video_url: null
+source_id: "birminghammail"
+source_name: "Birmingham Live"
+source_priority: 8610
+source_url: "https://www.birminghammail.co.uk"
+source_icon: "https://n.bytvi.com/birminghammail.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 17.310000000000002
+neutral: 82.32
+negative: 0.38
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "west midlands"
+]
+ai_org: [
+0: "english devolution and community empowerment bill"
+]
+duplicate: false
+}
+41: {
+article_id: "10a509593fd74107e15e064f39bab3e3"
+title: "LA Mayor Karen Bass signs order to provide cash payments to immigrants affected by ICE raids"
+link: "https://nypost.com/2025/07/11/us-news/la-mayor-karen-bass-signs-order-to-provide-cash-payments-to-i..."
+keywords: null
+creator: [
+0: "Fox News"
+]
+description: "Los Angeles Mayor Karen Bass signed an executive order Friday to bolster protocols and support immi..."
+content: "Los Angeles Mayor Karen Bass signed an executive order Friday to bolster protocols and support immi..."
+pubDate: "2025-07-12 02:56:04"
+pubDateTZ: "UTC"
+image_url: "https://nypost.com/wp-content%2Fuploads%2Fsites%2F2%2F2025%2F07%2F108029159.jpg?quality%3D90%26stri..."
+video_url: null
+source_id: "nypost"
+source_name: "New York Post"
+source_priority: 109
+source_url: "https://nypost.com"
+source_icon: "https://n.bytvi.com/nypost.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 2.81
+neutral: 87.05
+negative: 10.14
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "los angeles,california,united states of america,north america"
+]
+ai_org: [
+0: "ice"
+]
+duplicate: false
+}
+42: {
+article_id: "f82a05a9aa5322b51fdc54d54d4be225"
+title: "Ryan Routh offers himself for prisoner swap with US adversaries in letter shared by judge"
+link: "https://gazette.com/news/wex/ryan-routh-offers-himself-for-prisoner-swap-with-us-adversaries-in-let..."
+keywords: null
+creator: [
+0: "David Zimmermann, Washington Examiner"
+]
+description: "Ryan Routh, the second alleged would-be assassin of President Donald Trump, told the Florida judge ..."
+content: "Ryan Routh , the second alleged would-be assassin of President Donald Trump , told the Florida judg..."
+pubDate: "2025-07-12 02:51:26"
+pubDateTZ: "UTC"
+image_url: "https://bloximages.newyork1.vip.townnews.com/gazette.com/content/tncms/assets/v3/media/4/10/410a08b..."
+video_url: null
+source_id: "gazette"
+source_name: "Gazette"
+source_priority: 9587
+source_url: "https://gazette.com"
+source_icon: "https://n.bytvi.com/gazette.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.09
+neutral: 0.14
+negative: 99.77
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "florida,florida,puerto rico,north america"
+1: "florida,florida,uruguay,south america"
+2: "florida,united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+43: {
+article_id: "4051c85a5a0e8cb9e1a4ec581632d60f"
+title: "Galway Metals Announces Final Option Payment for Royalty Buy Back at Its Clarence Stream Property"
+link: "https://financialpost.com/globe-newswire/galway-metals-announces-final-option-payment-for-royalty-b..."
+keywords: [
+0: "gnw"
+1: "globenewswire"
+]
+creator: [
+0: "GlobeNewswire"
+]
+description: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) — Galway Metals Inc. (TSXV: GWM) (“Galway” or the “Company“..."
+content: "Author of the article: You can save this article by registering for free here . Or sign-in if you h..."
+pubDate: "2025-07-12 02:45:23"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "financialpost"
+source_name: "Financial Post"
+source_priority: 7235
+source_url: "https://financialpost.com"
+source_icon: "https://n.bytvi.com/financialpost.png"
+language: "english"
+country: [
+0: "canada"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.08
+neutral: 99.83
+negative: 0.09
+}
+ai_tag: [
+0: "corporate news"
+1: "metal & mining"
+]
+ai_region: [
+0: "toronto,ontario,canada,north america"
+]
+ai_org: [
+0: "galway metals inc"
+]
+duplicate: true
+}
+44: {
+article_id: "c398a83d7c62861e36ce97ff0336c6d8"
+title: "Galway Metals Announces Final Option Payment for Royalty Buy Back at Its Clarence Stream Property"
+link: "https://www.benzinga.com/pressreleases/25/07/g46380610/galway-metals-announces-final-option-payment..."
+keywords: [
+0: "news"
+1: "financing"
+2: "press releases"
+3: "tsxv:gwm"
+]
+creator: [
+0: "Globe Newswire"
+]
+description: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV:GWM) ("Galway" or the "Company"..."
+content: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. GWM (" Galway " or the " Company ") i..."
+pubDate: "2025-07-12 02:44:40"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "benzinga"
+source_name: "Benzinga"
+source_priority: 2050
+source_url: "https://www.benzinga.com"
+source_icon: "https://n.bytvi.com/benzinga.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+1: "business"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.08
+neutral: 99.85
+negative: 0.08
+}
+ai_tag: [
+0: "metal & mining"
+]
+ai_region: [
+0: "clarence stream property"
+1: "toronto,ohio,united states of america,north america"
+2: "galway,new york,united states of america,north america"
+]
+ai_org: [
+0: "galway metals inc"
+]
+duplicate: true
+}
+45: {
+article_id: "533b6dfda6d6ad63011869528683e6dc"
+title: "Galway Metals Announces Final Option Payment for Royalty Buy Back at Its Clarence Stream Property"
+link: "https://www.globenewswire.com/news-release/2025/07/12/3114314/0/en/Galway-Metals-Announces-Final-Op..."
+keywords: [
+0: "ca3645852086"
+1: "tsx-v:gwm"
+]
+creator: null
+description: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV: GWM) (“Galway” or the "Company..."
+content: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV: GWM) (“ Galway ” or the " Comp..."
+pubDate: "2025-07-12 02:44:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "globenewswire"
+source_name: "Globe Newswire"
+source_priority: 7268
+source_url: "https://www.globenewswire.com"
+source_icon: "https://n.bytvi.com/globenewswire.jpg"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "business"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.07
+neutral: 99.84
+negative: 0.09
+}
+ai_tag: [
+0: "metal & mining"
+]
+ai_region: [
+0: "galway,new york,united states of america,north america"
+1: "toronto,ohio,united states of america,north america"
+]
+ai_org: [
+0: "galway metals inc"
+]
+duplicate: true
+}
+46: {
+article_id: "602000db0beb026991db7a17a808e06a"
+title: "Galway Metals Announces Final Option Payment for Royalty Buy Back at Its Clarence Stream Property"
+link: "https://www.globenewswire.com/fr/news-release/2025/07/12/3114314/0/en/Galway-Metals-Announces-Final..."
+keywords: [
+0: "tsx-v:gwm"
+1: "ca3645852086"
+]
+creator: null
+description: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV: GWM) (“Galway” or the "Company..."
+content: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV: GWM) (“ Galway ” or the " Comp..."
+pubDate: "2025-07-12 02:44:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "globenewswire_fr"
+source_name: "Globenewswire_fr"
+source_priority: 2022
+source_url: "https://www.globenewswire.com/fr"
+source_icon: "https://n.bytvi.com/globenewswire_fr.jpg"
+language: "english"
+country: [
+0: "france"
+]
+category: [
+0: "business"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.07
+neutral: 99.84
+negative: 0.09
+}
+ai_tag: [
+0: "metal & mining"
+]
+ai_region: [
+0: "galway,new york,united states of america,north america"
+1: "toronto,ontario,canada,north america"
+2: "toronto,ohio,united states of america,north america"
+3: "toronto,new south wales,australia,australia/oceania"
+]
+ai_org: [
+0: "galway metals inc"
+]
+duplicate: false
+}
+47: {
+article_id: "59bc7858b6662535992e5ba2d42c2078"
+title: "Trump tours Texas flood sites and defends officials amid mounting questions about response"
+link: "https://www.channelnewsasia.com/world/texas-floods-trump-visit-disaster-response-5234761"
+keywords: [
+0: "world"
+]
+creator: null
+description: null
+content: "KERRVILLE, Texas: President Donald Trump on Friday (Jul 11) toured the devastation from catastrophi..."
+pubDate: "2025-07-12 02:40:24"
+pubDateTZ: "UTC"
+image_url: "https://dam.mediacorp.sg/image/upload/s--z8NVkA4r--/c_crop,h_450,w_800,x_0,y_83/fl_relative,g_south..."
+video_url: null
+source_id: "channelnewsasia"
+source_name: "Channel Newsasia"
+source_priority: 4763
+source_url: "https://www.channelnewsasia.com"
+source_icon: "https://n.bytvi.com/channelnewsasia.jpg"
+language: "english"
+country: [
+0: "georgia"
+1: "yemen"
+2: "afghanistan"
+3: "cyprus"
+4: "india"
+5: "singapore"
+6: "saudi arabia"
+7: "maldives"
+8: "japan"
+9: "united arab emirates"
+10: "malaysia"
+11: "china"
+12: "south korea"
+13: "north korea"
+14: "taiwan"
+15: "thailand"
+16: "pakistan"
+17: "mongolia"
+18: "brunei"
+19: "lebanon"
+20: "indonesia"
+21: "kyrgyzstan"
+22: "syria"
+23: "israel"
+24: "bhutan"
+25: "iran"
+26: "turkey"
+27: "armenia"
+28: "qatar"
+29: "philippines"
+30: "hong kong"
+31: "kazakhstan"
+32: "iraq"
+33: "bangladesh"
+34: "laos"
+35: "vietnam"
+36: "timor-leste"
+37: "kuwait"
+38: "myanmar"
+39: "azerbaijan"
+40: "jordan"
+41: "nepal"
+42: "sri lanka"
+43: "uzbekistan"
+44: "turkmenistan"
+45: "macau"
+46: "bahrain"
+47: "cambodia"
+48: "tajikistan"
+49: "oman"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.14
+negative: 99.75
+}
+ai_tag: [
+0: "natural disasters"
+]
+ai_region: [
+0: "texas,oklahoma,united states of america,north america"
+1: "kerrville,texas,united states of america,north america"
+2: "texas,missouri,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+48: {
+article_id: "acd267f98b6dd333461c62443d98f4e4"
+title: "PPP tries to woo Fazl ahead of KP Senate elections"
+link: "https://www.dawn.com/news/1923663/ppp-tries-to-woo-fazl-ahead-of-kp-senate-elections"
+keywords: [
+0: "pakistan"
+]
+creator: [
+0: "none@none.com (Kalbe Ali)"
+]
+description: "• Meeting ends without formal agreement on mutual support• Kundi says no-confidence vote against KP..."
+content: "• Meeting ends without formal agreement on mutual support• Kundi says no-confidence vote against KP..."
+pubDate: "2025-07-12 02:32:09"
+pubDateTZ: "UTC"
+image_url: "https://i.dawn.com/large/2025/07/12072956fb7a33a.jpg?r=073209"
+video_url: null
+source_id: "dawn"
+source_name: "Dawn"
+source_priority: 7267
+source_url: "https://www.dawn.com"
+source_icon: "https://n.bytvi.com/dawn.png"
+language: "english"
+country: [
+0: "pakistan"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.75
+neutral: 97.4
+negative: 1.85
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: null
+ai_org: [
+0: "ppp"
+1: "kp senate"
+]
+duplicate: false
+}
+49: {
+article_id: "ca7fece17210b69d9d4978c776902ee9"
+title: "At least 23 dead after airstrike on Buddhist monastery in Myanmar"
+link: "https://timesofindia.indiatimes.com/world/rest-of-world/at-least-23-dead-after-airstrike-on-buddhis..."
+keywords: null
+creator: null
+description: null
+content: "People check the debris at the building in a Buddhist monastery that was allegedly hit by the milit..."
+pubDate: "2025-07-12 02:26:39"
+pubDateTZ: "UTC"
+image_url: "https://static.toiimg.com/thumb/msid-122398461,imgsize-1802541,width-400,resizemode-4/122398461.jpg"
+video_url: null
+source_id: "toi"
+source_name: "The Times Of India"
+source_priority: 239
+source_url: "https://timesofindia.indiatimes.com"
+source_icon: "https://n.bytvi.com/toi.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.1
+neutral: 0.09
+negative: 99.81
+}
+ai_tag: [
+0: "accidents"
+]
+ai_region: [
+0: "bangkok,thailand,asia"
+1: "myanmar,asia"
+2: "bangkok,bangkok,thailand,asia"
+]
+ai_org: [
+0: "ap"
+]
+duplicate: true
+}
+]
+nextPage: "1752287199921953355"
+}
+For a comprehensive look, visit our detailed article - Response Objects: Data you receive from NewsData.io News API
+
+Security
+Secure login and authentication: NewsData.io uses secure methods for user authentication.
+
+Data encryption: NewsData.io uses encryption to protect user data, both in transit and at rest, to prevent unauthorized access to sensitive information.
+
+Access controls: NewsData.io may implement strict access controls to prevent unauthorized access to user data and ensure that only authorized personnel can access sensitive information.
+
+Regular security updates and patches: NewsData.io regularly update their systems and software to fix any discovered vulnerabilities and ensure the security of user data.
+
+Compliance with industry-standard security regulations: NewsData.io complies with industry-standard security and data protection regulations such as General Data Protection Regulation (GDPR) and the Payment Card Industry Data Security Standard (PCI DSS) to protect user data.
+
+Incident management and incident response: NewsData.io has a process in place to detect and respond to security incidents, such as data breaches or system failures, to minimize the impact on users.
+
+Regular backups and disaster recovery plans: NewsData.io maintains regular backups and disaster recovery plans to ensure data availability in case of an incident.
+
+Strict access controls on the part of the company to their own systems and data: NewsData.io has strict controls on their own systems and data to prevent any unauthorized access.
+
+As a user, you should also take your own security measures such as keeping your API key secure and not sharing it with anyone, use unique and complex passwords and keep your software updated.
+
+API Integration: NewsData.io has strict controls on how their APIs are integrated into third-party apps to ensure that user data is protected. This could include rate limiting, IP whitelisting, and encryption of data in transit.
+
+Regular Audits: NewsData.io conducts regular security audits and penetration testing to identify and address vulnerabilities in their systems and third-party apps that integrate with their APIs.
+
+Security awareness and training: NewsData.io provides the necessary security awareness training to their employees to ensure they are aware of the security threats and how to handle them.
+
+In summary, to maintain security and safety for users at NewsData.io, the platform should have strict controls on the level of access that third-party apps have to user data, a vetting process for third-party apps, strict controls on API integration, regular security audits and penetration testing, compliance with industry-standard security regulations, incident management process, and security awareness and training for the employees.
+
+Pagination
+Pagination is the process of breaking down a large set of results into smaller, manageable chunks, known as pages. NewsData.io API supports pagination to allow you to retrieve a large number of articles in smaller chunks.
+
+When you make a request, the default page size is 10 articles per page for free plan and 50 articles per page for paid plans. You can customize the number of articles you get per request.
+
+For example:
+
+Get URL
+
+https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY&q=YOUR_QUERY
+
+This request will retrieve 10 articles per page if you are a free user and 50 articles per page for paid plans.
+
+To go to the next page, you need to use next page string given at the bottom of the page
+
+
+Get URL
+
+https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY&q=YOUR-QUERY&page=XXXPPPXXXXXXXXXX
+
+This request will retrieve the next page of the request.
+
+Please note that you can only go to the next page from your current page. In case you want to go back to the previous page, you need to save the "nextPage" variable in your database.
+
+For practical understanding visit - All About Pagination in NewsData.io News API
+
+"q", "qInTitle" and "qInMeta" Advanced Search
+There are various ways to search for a topic or an event at NewsData.io. These filters enable the users to narrow down the search and get accurate results. Please refer the table below to understand all the filters you can use with "q", "qInTitle" or "qInMeta" parameters:
+
+Description	Example
+While searching for a single keyword
+q=social
+While searching for an exact phrase
+q=”social pizza”
+While searching for two keywords or more in the same news article
+q=social AND pizza AND pasta
+When searching for a keyword but need to exclude another keyword
+q=social NOT pizza
+while searching for a keyword but need to exclude multiple keywords
+q=social NOT (pizza AND wildfire)
+While searching for articles containing any one of the keywords.
+q=social OR pizza OR pasta
+The NOT parameter can be used in the OR operators as well. While searching any one of the keywords between two keywords and excluding one keyword.
+q=(pizza OR social) NOT pasta
+"Please note that the maximum character limit for a single query (q", "qInTitle" and "qInMeta") is 100. If the number of characters exceeds this limit, the API will show error. Additionally, please note that the operators AND, OR, NOT, as well as brackets and spaces, are included in the character count."
+
+For practical understanding and use cases of "q", "qInTitle" and "qInMeta" kindly visit - How to use "q", "qInTitle" and "qInMeta" parameters
+
+Rate Limit
+NewsData.io API has a rate limit, which is the number of requests that can be made to the API within a certain time period. The rate limit is in place to ensure that the API is available for all users and to prevent any one user from overloading the system.
+
+The specific rate limit for the API varies depending on the plan you have subscribed to. For example, a free plan may have a lower rate limit than a paid plan.
+
+The API limit you get for different plans is as follows:
+
+Free Plan: 30 credits every 15 minutes.
+
+Paid plans: 1800 credits every 15 minutes.
+
+If you exceed the rate limit for your plan, the API will return a "Rate Limit Exceeded" error and you will not be able to make any further requests until the rate limit resets after 15 minutes.
+
+For detailed understanding visit - Rate Limit of NewsData.io
+
+API credit limit for different plans
+NewsData.io API has a credit limit for different subscription plans. The credit limit is a way to control the amount of usage of the API by the users.
+
+The free plan gives access to 200 API credits on a daily basis. The paid plan has an API credit of 20000 per month for Basic plan, 50000 per month for Professional plan and 1000000 per month for Corporate plan.
+
+You can opt any of the subscription plans as per your requirements.
+
+Please refer the table below to check the API Credit limit for different Subscription plans:
+
+Plan Type	API Credit	Maximum results via API credit
+Free
+200/day
+10
+basic
+20,000/month
+50
+professional
+50,000/month
+50
+Corporate
+10,00,000/month
+50
+You can customize the number of articles you get per request from 1 to 50.
+
+For example:
+
+https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY&q=YOUR_QUERY&size=15
+
+This request will retrieve 15 articles per page or per request if you are a paid user and if you are a free user then you need to define the size between 1 to 10.
+
+How API credits get consumed
+API credit at NewsData.io gets consumed each time a request is made to the API. The number of credits consumed do not depend on the type of request made and the data returned.
+
+You can track the API credit limit and monitor the usage of the API at your NewsData.io account.
+
+For detailed understanding visit - How NewsData.io Credits Are Consumed
+
+HTTP response codes
+NewsData.io API returns various HTTP response codes depending on the request. Below are all the HTTP response codes:
+
+HTTP_response_code	Result	Description
+200
+Successful operation
+This error code is returned when the API request is successful.
+400
+Parameter missing
+This error code is returned when the API request is malformed or contains invalid parameters. For example, if you forget to include the apikey parameter in your request, the API will return a 400 Bad Request error or parameter missing.
+401
+Unauthorized
+This error code is returned when the API key is invalid or missing. Make sure you have a valid API key and that it is included in the request.
+403
+CORS policy failed. IP/Domain restricted
+This error can occur when the client making the API request is trying to access a resource on a different domain or IP address, and the server has not been configured to allow cross-origin resource sharing (CORS) from that domain or IP.
+409
+Parameter duplicate
+This error code can occur when a parameter is passed to the API with a duplicate value. To avoid this error, ensure that all parameters passed have unique values, and only include each parameter once in your request.
+415
+Unsupported type
+This error code can occur when the API is unable to process a request because the request is in a format that is not supported by the API.
+422
+Unprocessable entity
+422 Unprocessable Entity error in Newsdata.io API can occur when the API is unable to process a request due to a semantic error in the request, typically indicating that the request is well-formed, but the server is unable to understand or fulfill it.
+429
+Too many requests
+This error code is returned when you have exceeded the rate limit for your plan. You will need to wait for the rate limit to reset before making further requests.
+500
+Internal server error
+This error code is returned when there is an unexpected error on the server. This is usually a temporary issue and you should try your request again later.
+Latest News ("latest" endpoint)
+The latest news endpoint provides access to the latest and breaking news. The news articles are sorted by the published date. With the "Latest" endpoint, you can access the news articles up to the past 48 hours.
+
+Retrieving the latest news allows you to build experience such as showcasing the latest news, breaking news tickers and analyzing News to better understand their content.
+
+Resource URL
+
+https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY
+
+Resource Information
+
+Response Format
+JSON
+Requires Authentication
+Yes
+Rate Limited
+Yes
+Requests per 15 min window
+1800 credits (paid plans)
+Parameters
+Below are the Request Parameters you need to put in your query to run the API.
+
+Name	Required	Description	Default Value	Example
+apikey
+Required
+You need to add your API Key while accessing the newsdata API. 
+How to get the NewsData.io API key.
+id
+Optional
+Search the specific news article from its unique article_id string. You can add up to 50 article id strings in a single query or as per your specified limit.
+id=article_id
+id=article_id_1,article_id_2,
+article_id_3
+q
+Optional
+Search news articles for specific keywords or phrases present in the news title, content, URL, meta keywords and meta description. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Please refer Advanced Search for more details
+q=pizza
+qInTitle
+Optional
+Search news articles for specific keywords or phrases present in the news titles only. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Note: qInTitle can't be used with q or qInMeta parameter in the same query.
+qInTitle=pizza
+qInMeta
+Optional
+Search news articles for specific keywords or phrases present in the news titles, URL, meta keywords and meta description only. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Note: qInMeta can't be used with q or qInTitle parameter in the same query.
+qInMeta=pizza
+timeframe
+Optional
+Search the news articles for a specific timeframe (Minutes and Hours). For hours, you can set a timeframe of 1 to 48, and for minutes, you can define a timeframe of 1m to 2880m. For example, if you want to get the news for the past 6 hours then use timeframe=6 and if you want to get news for the last 15 min then use timeframe=15m.
+Note - You can only use timeframe either in hours or minutes.
+For Hours -
+timeframe=1
+timeframe=6
+timeframe=24
+For Minutes -
+timeframe=15m
+timeframe=45m
+timeframe=90m
+country
+Optional
+Search the news articles from a specific country. You can add up to 5 countries in a single query.
+Check the codes for all the countries here.
+country=au,jp
+category
+Optional
+Search the news articles for a specific category. You can add up to 5 categories in a single query.
+Check the codes for all the categories here.
+category=sports,top
+excludecategory
+Optional
+You can exclude specific categories to search for news articles. You can exclude up to 5 categories in a single query.
+Note: You can use either the 'category' parameter to include specific categories or the 'excludecategory' parameter to exclude them, but not both simultaneously.
+excludecategory=top
+language
+Optional
+Search the news articles for a specific language. You can add up to 5 languages in a single query. 
+Check the codes for all the languages here.
+language=fr,en
+tag
+Optional
+Search the news articles for specific AI-classified tags. You can add up to 5 tags in a single query.
+Check the codes for all the AI tags here.
+(Available only for Professional and Corporate users)
+tag=food,tourism
+sentiment
+Optional
+Search the news articles based on the sentiment of the news article (positive, negative, neutral).
+(Available only for Professional and Corporate users)
+sentiment=positive
+region
+Optional
+Search the news articles for specific geographical regions. The region could be a city, district, county, state, country, or continent. You can add up to 5 regions in a single query.
+(Available only for Corporate users).
+Check out NewsData.io Region blog for practical understanding.
+region=city1,city2
+region=city1-state1-country1,
+city2-country2
+region=state-country
+region=los
+angeles-california-usa
+region=new york,chicago
+domain
+Optional
+Search the news articles for specific domains or news sources. You can add up to 5 domains in a single query. 
+You can check the name of the domains here
+domain=nytimes,bbc
+domainurl
+Optional
+Search the news articles for specific domains or news sources. You can add up to 5 domains in a single query.
+Note: If the domain is incorrect, It will give suggestions in the response
+domainurl=nytimes.com,
+bbc.com,bbc.co.uk
+excludedomain
+Optional
+You can exclude specific domains or news sources to search the news articles. You can exclude up to 5 domains in a single query. Note: If the domain is incorrect, It will give suggestions in the response
+excludedomain=nytimes.com,
+bbc.com,bbc.co.uk
+excludefield
+Optional
+you can limit the response object to search for news articles. You can exclude multiple response objects in a single query.
+Note: You cannot exclude articles response field in the object
+excludefield=pubdate
+excludefield=source_icon,
+pubdate,link
+prioritydomain
+Optional
+Search the news articles only from top news domains. We have categorized prioritydomain in 3 categories.
+Top: Fetches news articles from the top 10% of the news domains
+Medium: Fetches news articles from the top 30% of the news domains. It means it already includes all the news articles of 'top' priority.
+Low: Fetches news articles from the top 50% of the news domains. It means it already includes all the news articles of 'top' and 'medium' priorities.
+prioritydomain=top
+prioritydomain=medium
+prioritydomain=low
+timezone
+Optional
+Search the news articles for a specific timezone. You can add any specific timezone.
+You can check the timezone here
+timezone=America/New_york
+timezone=Asia/Kolkata
+timezone=Asia/Qatar
+timezone=Europe/Berli
+full_content
+Optional
+Search the news articles with full content or without full content. Use '1' for news articles which contain the full_content response object and '0' for news articles which don't contain full_content response object.
+full_content=1
+full_content=0
+image
+Optional
+Search the news articles with featured image or without featured image. Use 1 for articles with featured image and 0 for articles without featured image.
+image=1
+image=0
+video
+Optional
+Search the news articles with videos or without videos. Use 1 for articles with videos and 0 for articles without videos.
+video=1
+video=0
+removeduplicate
+Optional
+The 'removeduplicate' parameter will allow users to filter out duplicate articles. Use 1 to remove duplicate articles.
+(Note: The overall 'removeduplicate' parameter functioning works on the basis of Newsdata.io's internal algorithm. It doesn't imply that the article which has a 'removeduplicate=1' parameter is actually a duplicate article.)
+removeduplicate=1
+size
+Optional
+You can customize the number of articles you get per API request from 1 to 50.
+Free user - 10
+Paid user - 50
+size=25
+page
+Optional
+Use page parameter to navigate to the next page. To know more:
+click here
+Example Queries
+
+1. News from Australia and United States of America
+
+https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY&country=au,us
+
+{
+status: "success"
+totalResults: 1495
+results: [
+0: {
+article_id: "465ed7ead13ab7aad6b95bb0471feae7"
+title: "You won’t believe what Kangana Ranaut said about politics, calls it..."
+link: "https://www.india.com/entertainment/you-wont-believe-what-kangana-ranaut-said-about-politics-calls-..."
+keywords: [
+0: "milind soman"
+1: "kangana ranaut"
+2: "entertainment"
+3: "anupam kher"
+4: "emergency"
+5: "shreyas talpade"
+]
+creator: null
+description: "In a recent interview, Kangana Ranaut has shared some of her thoughts related to politics and also ..."
+content: "In a recent interview, Kangana Ranaut has shared some of her thoughts related to politics and also ..."
+pubDate: "2025-07-12 06:55:30"
+pubDateTZ: "UTC"
+image_url: "https://static.india.com/wp-content/uploads/2025/07/Thumbnail-2025-07-12T113558.557-1.png"
+video_url: null
+source_id: "india"
+source_name: "India"
+source_priority: 8067
+source_url: "https://www.india.com"
+source_icon: "https://n.bytvi.com/india.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "entertainment"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 1.89
+neutral: 86.69
+negative: 11.42
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+1: {
+article_id: "ef86782de4de0f42c6cff012658db837"
+title: "Union Home Minister Amit Shah inaugurates BJP''s new state committee office in Kerala"
+link: "https://www.moneycontrol.com/news/india/union-home-minister-amit-shah-inaugurates-bjp-s-new-state-c..."
+keywords: [
+0: "amit shah, union minister amit shah, kerela office"
+]
+creator: [
+0: "Moneycontrol"
+]
+description: null
+content: "Union Home Minister Amit Shah Union Home Minister Amit Shah on Saturday inaugurated the new BJP sta..."
+pubDate: "2025-07-12 06:40:55"
+pubDateTZ: "UTC"
+image_url: "https://images.moneycontrol.com/static-mcnews/2025/04/20250425063754_amit-shah-1.jpeg"
+video_url: null
+source_id: "moneycontrol"
+source_name: "Moneycontrol"
+source_priority: 1039
+source_url: "https://www.moneycontrol.com"
+source_icon: "https://n.bytvi.com/moneycontrol.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+1: "business"
+2: "world"
+3: "politics"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 47.81
+neutral: 51.51
+negative: 0.68
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "kerala,india,asia"
+1: "kerala,gujarat,india,asia"
+]
+ai_org: [
+0: "bjp"
+]
+duplicate: true
+}
+2: {
+article_id: "53518c94378b09ca766ae0ed0acae298"
+title: "Maldives: Is a reunified MDP a threat to President Muizzu’s second-term ambitions?"
+link: "https://www.firstpost.com/opinion/maldives-is-a-reunified-mdp-a-threat-to-president-muizzus-second-..."
+keywords: [
+0: "opinion"
+]
+creator: [
+0: "Firstpost"
+]
+description: "The main challenge to Mohamed Muizzu's bid for a second term as Maldivian president comes from a re..."
+content: "The fast-tracked reunification of the Opposition Maldivian Democratic Party (MDP), the first pro-de..."
+pubDate: "2025-07-12 06:31:07"
+pubDateTZ: "UTC"
+image_url: "https://images.firstpost.com/uploads/2025/05/AFP__20250504__44EB4CP__v1__HighRes__MaldivesPoliticsM..."
+video_url: null
+source_id: "firstpost"
+source_name: "Firstpost"
+source_priority: 5906
+source_url: "https://www.firstpost.com"
+source_icon: "https://n.bytvi.com/firstpost.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "politics"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.1
+negative: 99.79
+}
+ai_tag: [
+0: "elections"
+1: "government"
+]
+ai_region: [
+0: "maldives,asia"
+]
+ai_org: [
+0: "mdp"
+1: "maldivia"
+]
+duplicate: false
+}
+3: {
+article_id: "4c49f0dfa5290e97c6eac989a45220fb"
+title: "Peter Obi Declares Loyalty To Labour Party, Reaffirms 2027 Presidential Ambition"
+link: "https://www.naijanews.com/2025/07/12/peter-obi-declares-loyalty-to-labour-party-reaffirms-2027-pres..."
+keywords: [
+0: "lp"
+1: "labour party"
+2: "politics"
+3: "peter obi"
+4: "adc"
+]
+creator: [
+0: "Enioluwa Adeniyi"
+]
+description: "The 2023 presidential candidate of the Labour Party, Peter Obi, has reaffirmed his membership of th..."
+content: "The 2023 presidential candidate of the Labour Party, Peter Obi, has reaffirmed his membership of th..."
+pubDate: "2025-07-12 06:27:14"
+pubDateTZ: "UTC"
+image_url: "https://www.naijanews.com/wp-content/uploads/2025/01/PETER-OBI1.jpg"
+video_url: null
+source_id: "naijanews"
+source_name: "Naija News"
+source_priority: 9385
+source_url: "https://www.naijanews.com"
+source_icon: "https://n.bytvi.com/naijanews.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 1.78
+neutral: 97.85
+negative: 0.37
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: [
+0: "reaffirms 2027 presidential ambition"
+1: "labour party"
+]
+duplicate: false
+}
+4: {
+article_id: "87d7bdca0f6d1edfbfe134839b8d9d96"
+title: "Iran poses 'rising threat' to UK residents and 'willing to use assassination'"
+link: "https://www.the-express.com/news/world-news/177205/iran-poses-rising-threat-uk-residents-may-use-as..."
+keywords: [
+0: "world news"
+]
+creator: [
+0: "Patrick Hill,John O'Sullivan"
+]
+description: "The warning was contained in a concerning report by Parliament's Intelligence and Security Committe..."
+content: "Iran presents an "escalating" danger to Britain and its people, both within and beyond UK borders, ..."
+pubDate: "2025-07-12 06:18:00"
+pubDateTZ: "UTC"
+image_url: "https://cdn-images.the-express.com/img/dynamic/12/590x/177205_1.jpg"
+video_url: null
+source_id: "express"
+source_name: "Daily Express Us"
+source_priority: 1139
+source_url: "https://www.the-express.com"
+source_icon: "https://n.bytvi.com/express.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.1
+neutral: 0.09
+negative: 99.81
+}
+ai_tag: [
+0: "national security"
+]
+ai_region: [
+0: "united kingdom,europe"
+1: "iran,asia"
+]
+ai_org: [
+0: "parliament intelligence and security committee"
+]
+duplicate: false
+}
+5: {
+article_id: "ecd90eaaedf4d69e8e565007b47a1bd6"
+title: "Poilievre criticizes Canada’s trade deadline with US as he seeks political comeback"
+link: "https://economictimes.indiatimes.com/news/international/canada/poilievre-criticizes-canadas-trade-d..."
+keywords: null
+creator: null
+description: "Pierre Poilievre is questioning Canada's approach to trade talks with the United States. He believe..."
+content: "Conservative Leader Pierre Poilievre, currently working to regain a seat in Parliament, is warning ..."
+pubDate: "2025-07-12 06:10:06"
+pubDateTZ: "UTC"
+image_url: "https://img.etimg.com/thumb/msid-122400763,width-1200,height-630,imgsize-134420,overlay-economictim..."
+video_url: null
+source_id: "economictimes_indiatimes"
+source_name: "The Economic Times"
+source_priority: 231
+source_url: "https://economictimes.indiatimes.com"
+source_icon: "https://n.bytvi.com/economictimes_indiatimes.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+1: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.13
+negative: 99.77
+}
+ai_tag: [
+0: "government"
+]
+ai_region: [
+0: "united states of america,north america"
+1: "canada,kentucky,united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+6: {
+article_id: "02b655c6633353584f68f69c3a4b9bb5"
+title: "Viral Photo Claiming Obasanjo Prostrated For Ladoja Proven To Be Fake"
+link: "https://www.naijanews.com/2025/07/12/viral-photo-claiming-obasanjo-prostrated-for-ladoja-proven-to-..."
+keywords: [
+0: "olusegun obasanjo"
+1: "gist"
+2: "rashidi ladoja"
+]
+creator: [
+0: "Enioluwa Adeniyi"
+]
+description: "A doctored image circulating on social media alleging that former President Olusegun Obasanjo prost..."
+content: "A doctored image circulating on social media alleging that former President Olusegun Obasanjo prost..."
+pubDate: "2025-07-12 06:07:46"
+pubDateTZ: "UTC"
+image_url: "https://www.naijanews.com/wp-content/uploads/2025/07/Ladoja-and-Obasanjo.jpeg"
+video_url: null
+source_id: "naijanews"
+source_name: "Naija News"
+source_priority: 9385
+source_url: "https://www.naijanews.com"
+source_icon: "https://n.bytvi.com/naijanews.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.08
+neutral: 0.11
+negative: 99.81
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+7: {
+article_id: "421bef2301b4c6cb23caa9f6ed0c9e85"
+title: "No Holiday Respite in Sight From This Economic Heat"
+link: "https://ng.investing.com/analysis/no-holiday-respite-in-sight-from-this-economic-heat-209684"
+keywords: null
+creator: [
+0: "ING Economic and Financial Analysis"
+]
+description: null
+content: "There’ll be no relief from the summer heat and storms this summer, both actual and those originatin..."
+pubDate: "2025-07-12 05:54:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "investing_ng"
+source_name: "Investing Nigeria"
+source_priority: 1205
+source_url: "https://ng.investing.com"
+source_icon: "https://n.bytvi.com/investing_ng.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.87
+neutral: 0.76
+negative: 98.37
+}
+ai_tag: [
+0: "climate and weather"
+]
+ai_region: [
+0: "white house,tennessee,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+8: {
+article_id: "b2f1f915e34bb23482c3cfd5c364981f"
+title: "No Holiday Respite in Sight From This Economic Heat"
+link: "https://au.investing.com/analysis/no-holiday-respite-in-sight-from-this-economic-heat-200607475"
+keywords: null
+creator: [
+0: "ING Economic and Financial Analysis"
+]
+description: null
+content: "There’ll be no relief from the summer heat and storms this summer, both actual and those originatin..."
+pubDate: "2025-07-12 05:54:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "investing_au"
+source_name: "Investing Australia"
+source_priority: 1205
+source_url: "https://au.investing.com"
+source_icon: "https://n.bytvi.com/investing_au.jpg"
+language: "english"
+country: [
+0: "australia"
+]
+category: [
+0: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.87
+neutral: 0.76
+negative: 98.37
+}
+ai_tag: [
+0: "climate and weather"
+]
+ai_region: [
+0: "white house,tennessee,united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+9: {
+article_id: "adc0328dbebc837342cf4a30a2820397"
+title: "No Holiday Respite in Sight From This Economic Heat"
+link: "https://uk.investing.com/analysis/no-holiday-respite-in-sight-from-this-economic-heat-200617556"
+keywords: null
+creator: [
+0: "ING Economic and Financial Analysis"
+]
+description: null
+content: "There’ll be no relief from the summer heat and storms this summer, both actual and those originatin..."
+pubDate: "2025-07-12 05:54:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "investing_uk"
+source_name: "Investing Uk"
+source_priority: 1205
+source_url: "https://uk.investing.com"
+source_icon: "https://n.bytvi.com/investing_uk.jpg"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.87
+neutral: 0.76
+negative: 98.37
+}
+ai_tag: [
+0: "climate and weather"
+]
+ai_region: [
+0: "white house,tennessee,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+10: {
+article_id: "1fcc84871c398f896a42835b47e10de1"
+title: "No Holiday Respite in Sight From This Economic Heat"
+link: "https://www.investing.com/analysis/no-holiday-respite-in-sight-from-this-economic-heat-200663474"
+keywords: null
+creator: [
+0: "ING Economic and Financial Analysis"
+]
+description: null
+content: "There’ll be no relief from the summer heat and storms this summer, both actual and those originatin..."
+pubDate: "2025-07-12 05:54:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "investing_us"
+source_name: "Investing Us"
+source_priority: 1205
+source_url: "https://www.investing.com"
+source_icon: "https://n.bytvi.com/investing_us.jpg"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "business"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.87
+neutral: 0.76
+negative: 98.37
+}
+ai_tag: [
+0: "climate and weather"
+]
+ai_region: [
+0: "white house,tennessee,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+11: {
+article_id: "8b2251ff10f4a7ffa45748b58eaded4a"
+title: "Dr Peter Boylan: Portiuncula hospital is not safe for women giving birth"
+link: "https://www.irishtimes.com/opinion/2025/07/12/dr-peter-boylan-portiuncula-hospital-is-not-safe-for-..."
+keywords: [
+0: "opinion"
+]
+creator: [
+0: "Peter Boylan"
+]
+description: "What the Portiuncula situation tells us is that smaller maternity units are no longer able to deliv..."
+content: "What does the latest report on serious problems in maternity services at Portiuncula University Hos..."
+pubDate: "2025-07-12 05:53:00"
+pubDateTZ: "UTC"
+image_url: "https://www.irishtimes.com/resizer/v2/XMZZ6RZNWRLYHFD46CKGMJRHPM.jpg?auth=cd2febb04731022e02f7c528c..."
+video_url: null
+source_id: "irishtimes"
+source_name: "The Irish Times"
+source_priority: 9425
+source_url: "https://www.irishtimes.com"
+source_icon: "https://n.bytvi.com/irishtimes.png"
+language: "english"
+country: [
+0: "ireland"
+]
+category: [
+0: "politics"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.17
+neutral: 0.25
+negative: 99.58
+}
+ai_tag: [
+0: "diseases"
+]
+ai_region: [
+0: "portiuncula"
+]
+ai_org: null
+duplicate: false
+}
+12: {
+article_id: "9640848ac8c98aaf3db366eeadea4c5f"
+title: "Tension As 13 Political Parties Reject Peace Accord As Lagos Residents Vote In LG Polls Today"
+link: "https://www.naijanews.com/2025/07/12/tension-as-13-political-parties-reject-peace-accord-as-lagos-r..."
+keywords: [
+0: "nigeria news"
+1: "lasiec"
+2: "lagos state"
+]
+creator: [
+0: "Enioluwa Adeniyi"
+]
+description: "Lagos residents are heading to the polls today, Saturday, July 12, to elect chairmen and councillor..."
+content: "Lagos residents are heading to the polls today, Saturday, July 12, to elect chairmen and councillor..."
+pubDate: "2025-07-12 05:43:03"
+pubDateTZ: "UTC"
+image_url: "https://www.naijanews.com/wp-content/uploads/2024/05/elections-in-Nigeria-636x323-1.png"
+video_url: null
+source_id: "naijanews"
+source_name: "Naija News"
+source_priority: 9385
+source_url: "https://www.naijanews.com"
+source_icon: "https://n.bytvi.com/naijanews.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.18
+neutral: 0.5
+negative: 99.32
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: [
+0: "lagos,lagos,nigeria,africa"
+1: "lagos,nigeria,africa"
+]
+ai_org: null
+duplicate: false
+}
+13: {
+article_id: "4a281464b9df30e8b2edef082513c069"
+title: "A Trump tariff letter is the best news this Southeast Asian junta has had in a while"
+link: "https://www.cnn.com/2025/07/12/asia/myanmar-us-tariffs-intl-hnk"
+keywords: null
+creator: null
+description: null
+content: "For most world leaders, tariff letters from US President Donald Trump mean a big headache. But one ..."
+pubDate: "2025-07-12 05:35:32"
+pubDateTZ: "UTC"
+image_url: "https://media.cnn.com/api/v1/images/stellar/prod/gettyimages-2206547747.jpg?c=16x9&q=w_800%2Cc_fill"
+video_url: null
+source_id: "cnn"
+source_name: "Cnn"
+source_priority: 165
+source_url: "https://edition.cnn.com"
+source_icon: "https://n.bytvi.com/cnn.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+1: "sports"
+2: "technology"
+3: "business"
+4: "science"
+5: "entertainment"
+6: "health"
+7: "world"
+8: "politics"
+9: "environment"
+10: "tourism"
+11: "education"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.51
+neutral: 0.44
+negative: 99.05
+}
+ai_tag: [
+0: "government"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+14: {
+article_id: "6782bf728c271e6fee9f24ea9cd72526"
+title: "A Trump tariff letter is the best news this Southeast Asian junta has had in a while"
+link: "https://sg.news.yahoo.com/trump-tariff-letter-best-news-053532069.html"
+keywords: null
+creator: [
+0: "CNN"
+]
+description: null
+content: "For most world leaders, tariff letters from US President Donald Trump mean a big headache. But one ..."
+pubDate: "2025-07-12 05:35:32"
+pubDateTZ: "UTC"
+image_url: "https://s.yimg.com/ny/api/res/1.2/GHvgTeoxfbZvq2WkMlAbTQ--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyNDI7aD02OTk-..."
+video_url: null
+source_id: "yahoo_sg"
+source_name: "Yahoo!news"
+source_priority: 17
+source_url: "https://sg.news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo_sg.png"
+language: "english"
+country: [
+0: "singapore"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.51
+neutral: 0.44
+negative: 99.05
+}
+ai_tag: [
+0: "government"
+]
+ai_region: [
+0: "united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+15: {
+article_id: "4c7573c46320588c9918f4268b7d7635"
+title: "Oil and gas community announces their preferred 2027 presidential aspirant"
+link: "https://www.legit.ng/politics/1663991-atiku-obi-amaechi-top-coalition-leader-strong-endorsement/"
+keywords: null
+creator: null
+description: "The oil and gas communities have announced their preferred aspirant for the 2027 presidency between..."
+content: "Rotimi Amaechi, the former Rivers governor, has been endorsed for the 2027 presidency by the oil an..."
+pubDate: "2025-07-12 05:31:47"
+pubDateTZ: "UTC"
+image_url: "https://cdn.legit.ng/images/1120/0e11e767b6e2b58e.jpeg?v=1"
+video_url: null
+source_id: "legit"
+source_name: "Legit Nigeria"
+source_priority: 1192
+source_url: "https://www.legit.ng"
+source_icon: "https://n.bytvi.com/legit.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.06
+neutral: 99.85
+negative: 0.09
+}
+ai_tag: [
+0: "energy"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+16: {
+article_id: "90f776424843b663dc78140fc34d219a"
+title: "From ‘Hindu Hriday Samrat’ to BJP rebel: T Raja Singh’s rise, rifts and road ahead in Telangana Pol..."
+link: "https://timesofindia.indiatimes.com/city/hyderabad/from-hindu-hriday-samrat-to-bjp-rebel-t-raja-sin..."
+keywords: null
+creator: null
+description: "T Raja Singh, a controversial figure in Telangana politics, embodies hardline Hindutva. Revered by ..."
+content: "HYDERABAD: Suspended BJP MLA T Raja Singh , often dismissed by critics as a rabble-rouser, remains ..."
+pubDate: "2025-07-12 05:30:56"
+pubDateTZ: "UTC"
+image_url: "https://static.toiimg.com/thumb/msid-122400196,imgsize-1057378,width-400,height-225,resizemode-72/1..."
+video_url: null
+source_id: "toi"
+source_name: "The Times Of India"
+source_priority: 239
+source_url: "https://timesofindia.indiatimes.com"
+source_icon: "https://n.bytvi.com/toi.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.15
+neutral: 0.16
+negative: 99.69
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "telangana,india,asia"
+]
+ai_org: [
+0: "bjp"
+1: "hindu hriday samrat’"
+]
+duplicate: false
+}
+17: {
+article_id: "c6254ea535a83c576b8059f5e743b9e8"
+title: "ISL On Hold, I-League In Ruins - Is This The Breaking Point For Indian Football?"
+link: "https://www.timesnownews.com/sports/football/isl-on-hold-i-league-in-ruins-is-this-the-breaking-poi..."
+keywords: null
+creator: [
+0: "Sudipta Biswas"
+]
+description: "The AIFF continues to be a mute spectator as FSDL put the ISL - India's top-flight league - on hold..."
+content: "Indian football, once hailed as the “sleeping giant of Asia,” is now a shadow of its former promise..."
+pubDate: "2025-07-12 05:29:49"
+pubDateTZ: "UTC"
+image_url: "https://images.timesnownews.com/thumb/msid-152267830,thumbsize-181348,width-1280,height-720,resizem..."
+video_url: null
+source_id: "timesnownews"
+source_name: "Times Now News"
+source_priority: 2243
+source_url: "https://www.timesnownews.com"
+source_icon: "https://n.bytvi.com/timesnownews.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.23
+neutral: 0.15
+negative: 99.62
+}
+ai_tag: [
+0: "soccer"
+]
+ai_region: [
+0: "india,asia"
+]
+ai_org: [
+0: "aiff"
+1: "isl"
+2: "fsdl"
+]
+duplicate: false
+}
+18: {
+article_id: "ad68b8d9cc2b8e5b6aacaf865a6d93c9"
+title: "Judge Blocks ICE From Randomly Stopping Suspected Migrants"
+link: "https://www.livemint.com/news/us-news/judge-blocks-ice-from-randomly-stopping-suspected-migrants-11..."
+keywords: null
+creator: null
+description: "A federal judge in Los Angeles issued a temporary order barring US immigration authorities from sto..."
+content: "(Bloomberg) -- A federal judge in Los Angeles issued a temporary order barring US immigration autho..."
+pubDate: "2025-07-12 05:14:43"
+pubDateTZ: "UTC"
+image_url: "https://www.livemint.com/lm-img/img/2024/12/06/1600x900/news_3_1733464427658_1733464446564.jpg"
+video_url: null
+source_id: "livemint"
+source_name: "Mint"
+source_priority: 7134
+source_url: "https://www.livemint.com"
+source_icon: "https://n.bytvi.com/livemint.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.13
+negative: 99.77
+}
+ai_tag: [
+0: "immigration and migrant issues"
+]
+ai_region: [
+0: "united states of america,north america"
+1: "los angeles,california,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+19: {
+article_id: "ab5b0b075e22b507fa74ceb0481c91af"
+title: "What Kangana Ranaut Was Told Before Becoming An MP: 'Attend Parliament For 60 Days'"
+link: "https://www.news18.com/movies/bollywood/what-kangana-ranaut-was-told-before-becoming-an-mp-attend-p..."
+keywords: [
+0: "movies"
+]
+creator: null
+description: "It should also be noted that Kangana Ranaut's comment comes days after the actress also admitted th..."
+content: "It should also be noted that Kangana Ranaut's comment comes days after the actress also admitted th..."
+pubDate: "2025-07-12 05:09:52"
+pubDateTZ: "UTC"
+image_url: "https://images.news18.com/ibnlive/uploads/2025/04/%E2%80%98Nature-Art-And-Fashion-We-Just-Described..."
+video_url: null
+source_id: "news18"
+source_name: "News 18"
+source_priority: 1063
+source_url: "https://www.news18.com"
+source_icon: "https://n.bytvi.com/news18.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "entertainment"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.37
+neutral: 79.05
+negative: 20.58
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+20: {
+article_id: "b788ff73181d3e7d51d51a3e651cf8e7"
+title: "Rosie O’Donnell: ‘I Look At America, And I Feel Overwhelmingly Depressed’"
+link: "https://ca.news.yahoo.com/rosie-o-donnell-look-america-050017816.html"
+keywords: [
+0: "celebrity"
+]
+creator: [
+0: "HuffPost UK"
+]
+description: "The US screen legend opens up about her fresh start after moving to Ireland, Donald Trump’s preside..."
+content: "Type Rosie O’Donnell ’s name into Google, and the first autocorrect suggestion is just one word. Th..."
+pubDate: "2025-07-12 05:00:17"
+pubDateTZ: "UTC"
+image_url: "https://media.zenfs.com/en/huffpost_uk_744/1900bf51b0d4e00e3eaeb31ae7d7e8ac"
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "canada"
+]
+category: [
+0: "sports"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 95.82
+neutral: 3.25
+negative: 0.93
+}
+ai_tag: [
+0: "television"
+]
+ai_region: [
+0: "ireland,indiana,united states of america,north america"
+1: "united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+21: {
+article_id: "5e1cd0dd3502dafe6bd989be3f05265d"
+title: "MPs and political candidates face ‘industrial’ levels of abuse, minister says"
+link: "https://ca.news.yahoo.com/mps-political-candidates-face-industrial-050004312.html"
+keywords: [
+0: "news"
+]
+creator: [
+0: "The Guardian"
+]
+description: "Exclusive: Young people deterred from politics, Rushanara Ali warns, as government plans stricter p..."
+content: "MPs and political candidates are facing “industrial” levels of intimidation and harassment, a minis..."
+pubDate: "2025-07-12 05:00:04"
+pubDateTZ: "UTC"
+image_url: "https://media.zenfs.com/en/theguardian_763/b31876e54c22cfd22fad9ae01d4ebf39"
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "canada"
+]
+category: [
+0: "sports"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.1
+neutral: 0.09
+negative: 99.81
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: true
+}
+22: {
+article_id: "47cf7adea4b7acdc60ff426ef44315b2"
+title: "MPs and political candidates face ‘industrial’ levels of abuse, minister says"
+link: "https://www.theguardian.com/politics/2025/jul/12/mps-political-candidates-intimidation-harassment-a..."
+keywords: [
+0: "local elections"
+1: "local politics"
+2: "online abuse"
+3: "politics"
+4: "uk news"
+5: "house of commons"
+6: "society"
+7: "women in politics"
+8: "labour"
+]
+creator: [
+0: "Kiran Stacey Political correspondent"
+]
+description: "Exclusive: Young people deterred from politics, Rushanara Ali warns, as government plans stricter p..."
+content: "MPs and political candidates are facing “industrial” levels of intimidation and harassment, a minis..."
+pubDate: "2025-07-12 05:00:04"
+pubDateTZ: "UTC"
+image_url: "https://i.guim.co.uk/img/media/f6f3377e75bc6d4c7f28a243ceee6f61c9f85204/688_0_6157_4929/master/6157..."
+video_url: null
+source_id: "theguardiantheguardian"
+source_name: "Theguardiantheguardian"
+source_priority: 184
+source_url: "https://www.theguardian.com/theguardian"
+source_icon: "https://n.bytvi.com/theguardiantheguardian.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.08
+negative: 99.82
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+23: {
+article_id: "a53315054ff69257ce62a5e1bbbf9320"
+title: "Pat Leahy: ‘Don’t call us, Mick Wallace, we’ll call you’: The presidential contest fails to ignite"
+link: "https://www.irishtimes.com/opinion/2025/07/12/pat-leahy-dont-call-us-mick-wallace-well-call-you-who..."
+keywords: [
+0: "opinion"
+]
+creator: [
+0: "Pat Leahy"
+]
+description: "Catherine Connolly is now in the running, and Fine Gael has a name for the ballot paper. None of th..."
+content: "It was starting to look like we might have no candidates for the presidency at all. The list of the..."
+pubDate: "2025-07-12 05:00:01"
+pubDateTZ: "UTC"
+image_url: "https://www.irishtimes.com/resizer/v2/4SUUFM7JAJAT7GROVDWZEYRBIQ.jpg?auth=6b9de53e67630ea4f7579da45..."
+video_url: null
+source_id: "irishtimes"
+source_name: "The Irish Times"
+source_priority: 9425
+source_url: "https://www.irishtimes.com"
+source_icon: "https://n.bytvi.com/irishtimes.png"
+language: "english"
+country: [
+0: "ireland"
+]
+category: [
+0: "politics"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.36
+neutral: 1.04
+negative: 98.6
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+24: {
+article_id: "b965af0d348db0c0aef2cc57c68a10fb"
+title: "In years to come, we will ask: ‘So, where were you the day you heard that Pat the Cope was willing ..."
+link: "https://www.irishtimes.com/politics/2025/07/12/in-years-to-come-we-will-ask-so-where-were-you-the-d..."
+keywords: [
+0: "politics"
+]
+creator: [
+0: "Miriam Lord"
+]
+description: "At the Irish embassy bash in London, guests were focused on the all-consuming question of who will ..."
+content: "Summer garden parties are a big thing on the Westminster political scene. The annual seasonal gathe..."
+pubDate: "2025-07-12 05:00:00"
+pubDateTZ: "UTC"
+image_url: "https://www.irishtimes.com/resizer/v2/BQRTHGOKGZEMRBGGLSEX4OSIV4.jpg?auth=3727d6abbbaf6af6b71b6ecee..."
+video_url: null
+source_id: "irishtimes"
+source_name: "The Irish Times"
+source_priority: 9425
+source_url: "https://www.irishtimes.com"
+source_icon: "https://n.bytvi.com/irishtimes.png"
+language: "english"
+country: [
+0: "ireland"
+]
+category: [
+0: "top"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 97.47
+neutral: 1.38
+negative: 1.15
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: [
+0: "london,kentucky,united states of america,north america"
+1: "london,california,united states of america,north america"
+2: "london,england,united kingdom,europe"
+3: "london,arkansas,united states of america,north america"
+4: "london,ontario,canada,north america"
+5: "london,ohio,united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+25: {
+article_id: "ef0d13432f28fce9b1530e3128e63514"
+title: "Blood, Votes, and Bibi: How Gaza war allowed Benjamin Netanyahu to stage a comeback - and save his ..."
+link: "https://timesofindia.indiatimes.com/world/middle-east/blood-votes-and-bibi-how-gaza-war-allowed-ben..."
+keywords: null
+creator: [
+0: "TOI World Desk"
+]
+description: "​There was a moment — brief, hushed, and deliberately unrecorded — in April 2024 when Benjamin Neta..."
+content: "FILE - President Donald Trump, left, stands with Israel's Prime Minister Benjamin Netanyahu at the ..."
+pubDate: "2025-07-12 04:49:43"
+pubDateTZ: "UTC"
+image_url: "https://static.toiimg.com/thumb/msid-122399697,imgsize-1455714,width-400,resizemode-4/122399697.jpg"
+video_url: null
+source_id: "toi"
+source_name: "The Times Of India"
+source_priority: 239
+source_url: "https://timesofindia.indiatimes.com"
+source_icon: "https://n.bytvi.com/toi.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.28
+neutral: 0.23
+negative: 99.49
+}
+ai_tag: [
+0: "conflicts & war"
+]
+ai_region: [
+0: "gaza,west bengal,india,asia"
+]
+ai_org: null
+duplicate: false
+}
+26: {
+article_id: "e7cbb2141969b4e49e18fda7a2484e49"
+title: "France opens criminal case against Musk’s X"
+link: "https://www.rt.com/news/621372-france-investigates-musk-x/"
+keywords: null
+creator: [
+0: "RT"
+]
+description: "A French prosecutor has launched a probe into Elon Musk’s X platform following complaints about its..."
+content: "Politicians claim that the platform’s algorithms boost hate speech and threaten democracy France ha..."
+pubDate: "2025-07-12 04:44:19"
+pubDateTZ: "UTC"
+image_url: "https://mf.b37mrtl.ru/files/2025.07/thumbnail/6871e77b85f540690758f39b.jpg"
+video_url: null
+source_id: "rt"
+source_name: "Rt"
+source_priority: 3123
+source_url: "https://www.rt.com/rss"
+source_icon: "https://n.bytvi.com/rt.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+1: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.33
+neutral: 10.6
+negative: 89.08
+}
+ai_tag: [
+0: "government"
+]
+ai_region: [
+0: "france,europe"
+]
+ai_org: [
+0: "elon musk’s x"
+]
+duplicate: false
+}
+27: {
+article_id: "4588c163e6a144d90148b189352f7967"
+title: "Federal funding cuts, cost of living dominate questions as Democrats end town hall series in Utah"
+link: "https://www.yahoo.com/news/federal-funding-cuts-cost-living-043346477.html"
+keywords: null
+creator: [
+0: "Utah News Dispatch"
+]
+description: null
+content: "Panelists at "The People's Townhall," Rep. Sara Jacobs, R-California, Brian King, Rep. Grant Miller..."
+pubDate: "2025-07-12 04:33:46"
+pubDateTZ: "UTC"
+image_url: "https://s.yimg.com/ny/api/res/1.2/lSI1IgzB3zF8Tsfl5UmEgA--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyNDI7aD05MzI7..."
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.13
+neutral: 99.48
+negative: 0.39
+}
+ai_tag: [
+0: "real estate"
+1: "politics"
+]
+ai_region: [
+0: "r-california"
+1: "utah,united states of america,north america"
+2: "utah,utah,united states of america,north america"
+]
+ai_org: [
+0: "the people townhall"
+]
+duplicate: false
+}
+28: {
+article_id: "6fad84098989d4180a53045afe9d37f3"
+title: "Garry Hynes: ‘My wife was taken from me in the blink of an eye. My whole life’s changed’"
+link: "https://www.irishtimes.com/culture/stage/2025/07/12/garry-hynes-my-wife-was-taken-from-me-in-the-bl..."
+keywords: [
+0: "stage"
+]
+creator: [
+0: "Deirdre Falvey"
+]
+description: "The Druid founder has a reputation as a demanding director. But she has mellowed – and theatre is a..."
+content: "Have you mellowed, Garry? “I probably have mellowed, to even be able to talk like this, although I ..."
+pubDate: "2025-07-12 04:18:00"
+pubDateTZ: "UTC"
+image_url: "https://www.irishtimes.com/resizer/v2/D7QRXOUE4NCKXNF3QKSJ2TAS74.JPG?auth=2eab13b841788e87a2c52b386..."
+video_url: null
+source_id: "irishtimes"
+source_name: "The Irish Times"
+source_priority: 9425
+source_url: "https://www.irishtimes.com"
+source_icon: "https://n.bytvi.com/irishtimes.png"
+language: "english"
+country: [
+0: "ireland"
+]
+category: [
+0: "entertainment"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 27.02
+neutral: 25.89
+negative: 47.09
+}
+ai_tag: [
+0: "entertainment"
+1: "movies"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+29: {
+article_id: "bd00a79eb2b60e3104069e5cf8f19a58"
+title: "Young Democrats have called for a rebrand. They're vying to replace the party's old guard"
+link: "https://abcnews.go.com/US/wireStory/young-democrats-called-rebrand-vying-replace-partys-guard-12369..."
+keywords: [
+0: "us"
+]
+creator: null
+description: "Younger Democratic candidates across the country are running to replace party elders"
+content: "PHOENIX -- Deja Foxx celebrated her April birthday in a way most 25-year-olds don’t. The extra cand..."
+pubDate: "2025-07-12 04:14:29"
+pubDateTZ: "UTC"
+image_url: "https://s.abcnews.com/images/US/wirestory_0f28087cd65118ebd6c0cc9a0fe030bb_4x3_384.jpg"
+video_url: null
+source_id: "abcnews"
+source_name: "Abc News"
+source_priority: 313
+source_url: "http://www.abcnews.go.com"
+source_icon: "https://n.bytvi.com/abcnews.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 4.07
+neutral: 3.2
+negative: 92.73
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: null
+ai_org: [
+0: "theyre"
+]
+duplicate: true
+}
+30: {
+article_id: "7071ae36c53091c33b849a4d476fa968"
+title: "History Today: When the first steam engine ship was launched in India"
+link: "https://www.firstpost.com/explainers/history-today-when-the-first-steam-engine-ship-was-launched-in..."
+keywords: [
+0: "explainers"
+]
+creator: [
+0: "Firstpost"
+]
+description: "The first steam engine ship, Diana, was launched on July 12, 1863, and became one of the earliest i..."
+content: "The British gave some of the most modern facilities and innovations of the time during their rule i..."
+pubDate: "2025-07-12 04:02:10"
+pubDateTZ: "UTC"
+image_url: "https://images.firstpost.com/uploads/2025/07/History-1-47-2025-07-1eae2273ea55e159f4af3905feaa25a9...."
+video_url: null
+source_id: "firstpost"
+source_name: "Firstpost"
+source_priority: 5906
+source_url: "https://www.firstpost.com"
+source_icon: "https://n.bytvi.com/firstpost.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 2.25
+neutral: 97.55
+negative: 0.2
+}
+ai_tag: [
+0: "energy"
+]
+ai_region: [
+0: "india,asia"
+]
+ai_org: null
+duplicate: false
+}
+31: {
+article_id: "b7652a7708e8e2feef6a0622ece8e85e"
+title: "Young Democrats have called for a rebrand. They're vying to replace the party's old guard"
+link: "https://www.yahoo.com/news/young-democrats-called-rebrand-theyre-040045984.html"
+keywords: null
+creator: [
+0: "Associated Press"
+]
+description: null
+content: "PHOENIX (AP) — Deja Foxx celebrated her April birthday in a way most 25-year-olds don’t. The extra ..."
+pubDate: "2025-07-12 04:00:45"
+pubDateTZ: "UTC"
+image_url: "https://s.yimg.com/ny/api/res/1.2/TBuJp7_aCbWgwbppWstlNg--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyNDI7aD04Mjg7..."
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "politics"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 33.96
+neutral: 4.1
+negative: 61.94
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "phoenix,new york,united states of america,north america"
+1: "phoenix,illinois,united states of america,north america"
+2: "phoenix,arizona,united states of america,north america"
+3: "phoenix,oregon,united states of america,north america"
+]
+ai_org: [
+0: "theyre"
+]
+duplicate: true
+}
+32: {
+article_id: "b0729ee94b206cfc817b63652cad14e2"
+title: "Young Democrats have called for a rebrand. They're vying to replace the party's old guard"
+link: "https://www.clickondetroit.com/news/politics/2025/07/12/young-democrats-have-called-for-a-rebrand-t..."
+keywords: null
+creator: [
+0: "Charlotte Kramon And Sejal Govindarao, Associated Press"
+]
+description: "Younger Democratic candidates across the country are running to replace party elders."
+content: "PHOENIX – Deja Foxx celebrated her April birthday in a way most 25-year-olds don’t. The extra candl..."
+pubDate: "2025-07-12 04:00:45"
+pubDateTZ: "UTC"
+image_url: "https://res.cloudinary.com/graham-media-group/image/upload/f_auto/q_auto/c_thumb,w_700/v1/media/gmg..."
+video_url: null
+source_id: "clickondetroit"
+source_name: "Clickondetroit"
+source_priority: 3621
+source_url: "https://www.clickondetroit.com"
+source_icon: "https://n.bytvi.com/clickondetroit.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 49.44
+neutral: 5.97
+negative: 44.59
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: null
+ai_org: [
+0: "theyre"
+]
+duplicate: true
+}
+33: {
+article_id: "e417cde84c796bd654fcfac29e84bf1a"
+title: "Young Democrats Have Called for a Rebrand. They're Vying to Replace the Party's Old Guard"
+link: "https://www.usnews.com/news/best-states/arizona/articles/2025-07-12/young-democrats-have-called-for..."
+keywords: null
+creator: [
+0: "Associated Press"
+]
+description: "Younger Democratic candidates across the country are running to replace party elders"
+content: "PHOENIX (AP) — Deja Foxx celebrated her April birthday in a way most 25-year-olds don’t. The extra ..."
+pubDate: "2025-07-12 04:00:45"
+pubDateTZ: "UTC"
+image_url: "https://www.usnews.com/object/image/00000197-fccb-d582-a9f7-fcef29120000/c6531d1638d0487cba487f186d..."
+video_url: null
+source_id: "usnews"
+source_name: "Usnews"
+source_priority: 80
+source_url: "https://www.usnews.com"
+source_icon: "https://n.bytvi.com/usnews.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 1.67
+neutral: 1.13
+negative: 97.21
+}
+ai_tag: [
+0: "politics"
+1: "elections"
+]
+ai_region: [
+0: "phoenix,new york,united states of america,north america"
+1: "phoenix,illinois,united states of america,north america"
+2: "phoenix,arizona,united states of america,north america"
+3: "phoenix,oregon,united states of america,north america"
+]
+ai_org: [
+0: "party old guard"
+]
+duplicate: true
+}
+34: {
+article_id: "1952b244bb215db6e0e3cdfcb335fd5e"
+title: "North America's Longest Coaster Is In Upstate New York"
+link: "https://nj1015.com/ixp/854/p/longest-outdoor-mountain-coaster-found-in-upstate-new-york/"
+keywords: [
+0: "new york news"
+1: "news in new york"
+]
+creator: [
+0: "Bobby Welber"
+]
+description: "Did you know that the longest outdoor mountain coaster in North America is located in a historic pa..."
+content: "Did you know that the longest outdoor mountain coaster in North America is located in a historic pa..."
+pubDate: "2025-07-12 04:00:35"
+pubDateTZ: "UTC"
+image_url: "https://townsquare.media/site/854/files/2024/09/attachment-Screenshot-Capture-2024-09-05-09-11-48.j..."
+video_url: null
+source_id: "nj1015"
+source_name: "New Jersey 101.5"
+source_priority: 9819
+source_url: "https://nj1015.com"
+source_icon: "https://n.bytvi.com/nj1015.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.11
+neutral: 99.79
+negative: 0.1
+}
+ai_tag: [
+0: "sports"
+1: "tourism"
+]
+ai_region: [
+0: "north america"
+1: "upstate new york"
+]
+ai_org: null
+duplicate: false
+}
+35: {
+article_id: "2a9c21b017a5b291a3c53694cded023a"
+title: "Young people don’t feel part of the EU – and they’re right | Francesco Grillo"
+link: "https://www.theguardian.com/commentisfree/2025/jul/12/young-people-eu-citizen-digital-age-erasmus-s..."
+keywords: [
+0: "european parliamentary elections 2024"
+1: "europe"
+2: "young people"
+3: "european commission"
+4: "european union"
+]
+creator: [
+0: "Francesco Grillo"
+]
+description: "Its remote, top-down structures need a fresh, citizen-led approach fit for the digital age. Let’s s..."
+content: "T he former Italian prime minister Mario Draghi produced his much-awaited prescription for how to r..."
+pubDate: "2025-07-12 04:00:00"
+pubDateTZ: "UTC"
+image_url: "https://i.guim.co.uk/img/media/38e30e9782803a483f87fb381e9252fc179c810d/414_0_4100_3280/master/4100..."
+video_url: null
+source_id: "theguardiantheguardian"
+source_name: "Theguardiantheguardian"
+source_priority: 184
+source_url: "https://www.theguardian.com/theguardian"
+source_icon: "https://n.bytvi.com/theguardiantheguardian.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 98.96
+neutral: 0.76
+negative: 0.28
+}
+ai_tag: [
+0: "social media and internet"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+36: {
+article_id: "77cf81218b763475433350f5dc799fb7"
+title: "Ceasefire, Sanctions, Or...What Are 'Frustrated' Trump's Next Options With 'Belligerent' Putin? | 4..."
+link: "https://www.news18.com/videos/world/ceasefire-sanctions-or-what-are-frustrated-trump-s-next-options..."
+keywords: [
+0: "world"
+]
+creator: null
+description: "While campaigning for re-election, US President Donald Trump had promised to end the war in Ukraine..."
+content: "While campaigning for re-election, US President Donald Trump had promised to end the war in Ukraine..."
+pubDate: "2025-07-12 03:30:35"
+pubDateTZ: "UTC"
+image_url: "https://images.news18.com/ibnlive/uploads/2025/07/1752291783_fa43f38a-3bce-40eb-93ff-c00e743dc67b-3..."
+video_url: null
+source_id: "news18"
+source_name: "News 18"
+source_priority: 1063
+source_url: "https://www.news18.com"
+source_icon: "https://n.bytvi.com/news18.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.1
+negative: 99.79
+}
+ai_tag: [
+0: "government"
+]
+ai_region: [
+0: "ukrain"
+1: "united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+37: {
+article_id: "659e24cadf2c3f0eff2710ef3b256aaf"
+title: "Obama is back on the fundraising circuit trying to help Democrats rebound for upcoming elections"
+link: "https://ca.news.yahoo.com/obama-back-fundraising-circuit-trying-031241301.html"
+keywords: [
+0: "politics"
+]
+creator: [
+0: "The Independent"
+]
+description: "Obama raised $85 million for the Democrats last cycle"
+content: "Former President Barack Obama has returned to the fundraising circuit, attending an event in Red Ba..."
+pubDate: "2025-07-12 03:12:41"
+pubDateTZ: "UTC"
+image_url: "https://media.zenfs.com/en/the_independent_577/cd7e52084cd7959dea7f17127da35353"
+video_url: null
+source_id: "yahoo"
+source_name: "Yahoo! News"
+source_priority: 17
+source_url: "https://news.yahoo.com"
+source_icon: "https://n.bytvi.com/yahoo.png"
+language: "english"
+country: [
+0: "canada"
+]
+category: [
+0: "sports"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 98.85
+neutral: 0.89
+negative: 0.26
+}
+ai_tag: [
+0: "corporate news"
+]
+ai_region: null
+ai_org: null
+duplicate: true
+}
+38: {
+article_id: "c75e00e3ad7f66b55a5c1526c883be93"
+title: "Obama is back on the fundraising circuit trying to help Democrats rebound for upcoming elections"
+link: "https://www.independent.co.uk/news/world/americas/us-politics/barack-obama-fundraising-democrats-el..."
+keywords: [
+0: "americas"
+1: "world"
+2: "us politics"
+]
+creator: [
+0: "Gustaf Kilander"
+]
+description: "Obama raised $85 million for the Democrats last cycle"
+content: "Former President Barack Obama has returned to the fundraising circuit, attending an event in Red Ba..."
+pubDate: "2025-07-12 03:12:41"
+pubDateTZ: "UTC"
+image_url: "https://static.independent.co.uk/2025/07/07/10/35430906bb5e0882cefa449bde84c7c0Y29udGVudHNlYXJjaGFw..."
+video_url: null
+source_id: "independentuk"
+source_name: "The Independent"
+source_priority: 290
+source_url: "https://www.independent.co.uk"
+source_icon: "https://n.bytvi.com/independentuk.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+]
+sentiment: "positive"
+sentiment_stats: {
+positive: 99.3
+neutral: 0.46
+negative: 0.24
+}
+ai_tag: [
+0: "corporate news"
+]
+ai_region: null
+ai_org: null
+duplicate: false
+}
+39: {
+article_id: "ee25e94fc14fc9c96612284131c5aa3b"
+title: "Top Nigerian Newspaper Headlines For Today, Saturday, 12th July, 2025"
+link: "https://www.naijanews.com/2025/07/12/top-nigerian-newspaper-headlines-for-today-saturday-12th-july-..."
+keywords: [
+0: "latest nigerian newspaper headlines"
+1: "nigerian newspapers"
+2: "breaking news"
+3: "major nigerian newspaper headlines today"
+4: "top nigerian newspaper headlines"
+5: "top nigerian newspaper headlines today"
+6: "major nigerian newspaper headlines"
+7: "latest nigerian newspaper headlines today"
+8: "nigeria breaking news today"
+9: "naija news"
+10: "headlines"
+]
+creator: [
+0: "Richard Ogunsile"
+]
+description: "Good morning, Nigeria. Welcome to the Naija News roundup of top newspaper headlines in Nigeria for ..."
+content: "Good morning, Nigeria. Welcome to the Naija News roundup of top newspaper headlines in Nigeria for ..."
+pubDate: "2025-07-12 03:00:19"
+pubDateTZ: "UTC"
+image_url: "https://www.naijanews.com/wp-content/uploads/2024/08/Nigerian-Newspaper-Headlines.png"
+video_url: null
+source_id: "naijanews"
+source_name: "Naija News"
+source_priority: 9385
+source_url: "https://www.naijanews.com"
+source_icon: "https://n.bytvi.com/naijanews.png"
+language: "english"
+country: [
+0: "nigeria"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.23
+neutral: 99.67
+negative: 0.1
+}
+ai_tag: [
+0: "awards and recognitions"
+]
+ai_region: [
+0: "nigeria,africa"
+]
+ai_org: [
+0: "naija news"
+]
+duplicate: false
+}
+40: {
+article_id: "309318e4cd65741cbc167e1ee11a5eb7"
+title: "Powers to help the West Midlands take back control is a 'turning point'"
+link: "https://www.birminghammail.co.uk/news/midlands-news/powers-help-west-midlands-take-32034860"
+keywords: [
+0: "midlands news"
+]
+creator: [
+0: "newsdesk@birminghamlive.co.uk (Gurdip Thandi)"
+]
+description: "The English Devolution and Community Empowerment Bill has been introduced to Parliament"
+content: "The English Devolution and Community Empowerment Bill has been introduced to Parliament New devolut..."
+pubDate: "2025-07-12 03:00:00"
+pubDateTZ: "UTC"
+image_url: "https://i2-prod.birminghammail.co.uk/incoming/article31595523.ece/ALTERNATES/s615/0_Mayor.jpg"
+video_url: null
+source_id: "birminghammail"
+source_name: "Birmingham Live"
+source_priority: 8610
+source_url: "https://www.birminghammail.co.uk"
+source_icon: "https://n.bytvi.com/birminghammail.png"
+language: "english"
+country: [
+0: "united kingdom"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 17.310000000000002
+neutral: 82.32
+negative: 0.38
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "west midlands"
+]
+ai_org: [
+0: "english devolution and community empowerment bill"
+]
+duplicate: false
+}
+41: {
+article_id: "10a509593fd74107e15e064f39bab3e3"
+title: "LA Mayor Karen Bass signs order to provide cash payments to immigrants affected by ICE raids"
+link: "https://nypost.com/2025/07/11/us-news/la-mayor-karen-bass-signs-order-to-provide-cash-payments-to-i..."
+keywords: null
+creator: [
+0: "Fox News"
+]
+description: "Los Angeles Mayor Karen Bass signed an executive order Friday to bolster protocols and support immi..."
+content: "Los Angeles Mayor Karen Bass signed an executive order Friday to bolster protocols and support immi..."
+pubDate: "2025-07-12 02:56:04"
+pubDateTZ: "UTC"
+image_url: "https://nypost.com/wp-content%2Fuploads%2Fsites%2F2%2F2025%2F07%2F108029159.jpg?quality%3D90%26stri..."
+video_url: null
+source_id: "nypost"
+source_name: "New York Post"
+source_priority: 109
+source_url: "https://nypost.com"
+source_icon: "https://n.bytvi.com/nypost.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 2.81
+neutral: 87.05
+negative: 10.14
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "los angeles,california,united states of america,north america"
+]
+ai_org: [
+0: "ice"
+]
+duplicate: false
+}
+42: {
+article_id: "f82a05a9aa5322b51fdc54d54d4be225"
+title: "Ryan Routh offers himself for prisoner swap with US adversaries in letter shared by judge"
+link: "https://gazette.com/news/wex/ryan-routh-offers-himself-for-prisoner-swap-with-us-adversaries-in-let..."
+keywords: null
+creator: [
+0: "David Zimmermann, Washington Examiner"
+]
+description: "Ryan Routh, the second alleged would-be assassin of President Donald Trump, told the Florida judge ..."
+content: "Ryan Routh , the second alleged would-be assassin of President Donald Trump , told the Florida judg..."
+pubDate: "2025-07-12 02:51:26"
+pubDateTZ: "UTC"
+image_url: "https://bloximages.newyork1.vip.townnews.com/gazette.com/content/tncms/assets/v3/media/4/10/410a08b..."
+video_url: null
+source_id: "gazette"
+source_name: "Gazette"
+source_priority: 9587
+source_url: "https://gazette.com"
+source_icon: "https://n.bytvi.com/gazette.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "world"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.09
+neutral: 0.14
+negative: 99.77
+}
+ai_tag: [
+0: "politics"
+]
+ai_region: [
+0: "florida,florida,puerto rico,north america"
+1: "florida,florida,uruguay,south america"
+2: "florida,united states of america,north america"
+]
+ai_org: null
+duplicate: false
+}
+43: {
+article_id: "4051c85a5a0e8cb9e1a4ec581632d60f"
+title: "Galway Metals Announces Final Option Payment for Royalty Buy Back at Its Clarence Stream Property"
+link: "https://financialpost.com/globe-newswire/galway-metals-announces-final-option-payment-for-royalty-b..."
+keywords: [
+0: "gnw"
+1: "globenewswire"
+]
+creator: [
+0: "GlobeNewswire"
+]
+description: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) — Galway Metals Inc. (TSXV: GWM) (“Galway” or the “Company“..."
+content: "Author of the article: You can save this article by registering for free here . Or sign-in if you h..."
+pubDate: "2025-07-12 02:45:23"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "financialpost"
+source_name: "Financial Post"
+source_priority: 7235
+source_url: "https://financialpost.com"
+source_icon: "https://n.bytvi.com/financialpost.png"
+language: "english"
+country: [
+0: "canada"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.08
+neutral: 99.83
+negative: 0.09
+}
+ai_tag: [
+0: "corporate news"
+1: "metal & mining"
+]
+ai_region: [
+0: "toronto,ontario,canada,north america"
+]
+ai_org: [
+0: "galway metals inc"
+]
+duplicate: true
+}
+44: {
+article_id: "c398a83d7c62861e36ce97ff0336c6d8"
+title: "Galway Metals Announces Final Option Payment for Royalty Buy Back at Its Clarence Stream Property"
+link: "https://www.benzinga.com/pressreleases/25/07/g46380610/galway-metals-announces-final-option-payment..."
+keywords: [
+0: "news"
+1: "financing"
+2: "press releases"
+3: "tsxv:gwm"
+]
+creator: [
+0: "Globe Newswire"
+]
+description: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV:GWM) ("Galway" or the "Company"..."
+content: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. GWM (" Galway " or the " Company ") i..."
+pubDate: "2025-07-12 02:44:40"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "benzinga"
+source_name: "Benzinga"
+source_priority: 2050
+source_url: "https://www.benzinga.com"
+source_icon: "https://n.bytvi.com/benzinga.png"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "top"
+1: "business"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.08
+neutral: 99.85
+negative: 0.08
+}
+ai_tag: [
+0: "metal & mining"
+]
+ai_region: [
+0: "clarence stream property"
+1: "toronto,ohio,united states of america,north america"
+2: "galway,new york,united states of america,north america"
+]
+ai_org: [
+0: "galway metals inc"
+]
+duplicate: true
+}
+45: {
+article_id: "533b6dfda6d6ad63011869528683e6dc"
+title: "Galway Metals Announces Final Option Payment for Royalty Buy Back at Its Clarence Stream Property"
+link: "https://www.globenewswire.com/news-release/2025/07/12/3114314/0/en/Galway-Metals-Announces-Final-Op..."
+keywords: [
+0: "ca3645852086"
+1: "tsx-v:gwm"
+]
+creator: null
+description: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV: GWM) (“Galway” or the "Company..."
+content: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV: GWM) (“ Galway ” or the " Comp..."
+pubDate: "2025-07-12 02:44:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "globenewswire"
+source_name: "Globe Newswire"
+source_priority: 7268
+source_url: "https://www.globenewswire.com"
+source_icon: "https://n.bytvi.com/globenewswire.jpg"
+language: "english"
+country: [
+0: "united states of america"
+]
+category: [
+0: "business"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.07
+neutral: 99.84
+negative: 0.09
+}
+ai_tag: [
+0: "metal & mining"
+]
+ai_region: [
+0: "galway,new york,united states of america,north america"
+1: "toronto,ohio,united states of america,north america"
+]
+ai_org: [
+0: "galway metals inc"
+]
+duplicate: true
+}
+46: {
+article_id: "602000db0beb026991db7a17a808e06a"
+title: "Galway Metals Announces Final Option Payment for Royalty Buy Back at Its Clarence Stream Property"
+link: "https://www.globenewswire.com/fr/news-release/2025/07/12/3114314/0/en/Galway-Metals-Announces-Final..."
+keywords: [
+0: "tsx-v:gwm"
+1: "ca3645852086"
+]
+creator: null
+description: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV: GWM) (“Galway” or the "Company..."
+content: "TORONTO, July 11, 2025 (GLOBE NEWSWIRE) -- Galway Metals Inc. (TSXV: GWM) (“ Galway ” or the " Comp..."
+pubDate: "2025-07-12 02:44:00"
+pubDateTZ: "UTC"
+image_url: null
+video_url: null
+source_id: "globenewswire_fr"
+source_name: "Globenewswire_fr"
+source_priority: 2022
+source_url: "https://www.globenewswire.com/fr"
+source_icon: "https://n.bytvi.com/globenewswire_fr.jpg"
+language: "english"
+country: [
+0: "france"
+]
+category: [
+0: "business"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.07
+neutral: 99.84
+negative: 0.09
+}
+ai_tag: [
+0: "metal & mining"
+]
+ai_region: [
+0: "galway,new york,united states of america,north america"
+1: "toronto,ontario,canada,north america"
+2: "toronto,ohio,united states of america,north america"
+3: "toronto,new south wales,australia,australia/oceania"
+]
+ai_org: [
+0: "galway metals inc"
+]
+duplicate: false
+}
+47: {
+article_id: "59bc7858b6662535992e5ba2d42c2078"
+title: "Trump tours Texas flood sites and defends officials amid mounting questions about response"
+link: "https://www.channelnewsasia.com/world/texas-floods-trump-visit-disaster-response-5234761"
+keywords: [
+0: "world"
+]
+creator: null
+description: null
+content: "KERRVILLE, Texas: President Donald Trump on Friday (Jul 11) toured the devastation from catastrophi..."
+pubDate: "2025-07-12 02:40:24"
+pubDateTZ: "UTC"
+image_url: "https://dam.mediacorp.sg/image/upload/s--z8NVkA4r--/c_crop,h_450,w_800,x_0,y_83/fl_relative,g_south..."
+video_url: null
+source_id: "channelnewsasia"
+source_name: "Channel Newsasia"
+source_priority: 4763
+source_url: "https://www.channelnewsasia.com"
+source_icon: "https://n.bytvi.com/channelnewsasia.jpg"
+language: "english"
+country: [
+0: "georgia"
+1: "yemen"
+2: "afghanistan"
+3: "cyprus"
+4: "india"
+5: "singapore"
+6: "saudi arabia"
+7: "maldives"
+8: "japan"
+9: "united arab emirates"
+10: "malaysia"
+11: "china"
+12: "south korea"
+13: "north korea"
+14: "taiwan"
+15: "thailand"
+16: "pakistan"
+17: "mongolia"
+18: "brunei"
+19: "lebanon"
+20: "indonesia"
+21: "kyrgyzstan"
+22: "syria"
+23: "israel"
+24: "bhutan"
+25: "iran"
+26: "turkey"
+27: "armenia"
+28: "qatar"
+29: "philippines"
+30: "hong kong"
+31: "kazakhstan"
+32: "iraq"
+33: "bangladesh"
+34: "laos"
+35: "vietnam"
+36: "timor-leste"
+37: "kuwait"
+38: "myanmar"
+39: "azerbaijan"
+40: "jordan"
+41: "nepal"
+42: "sri lanka"
+43: "uzbekistan"
+44: "turkmenistan"
+45: "macau"
+46: "bahrain"
+47: "cambodia"
+48: "tajikistan"
+49: "oman"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.11
+neutral: 0.14
+negative: 99.75
+}
+ai_tag: [
+0: "natural disasters"
+]
+ai_region: [
+0: "texas,oklahoma,united states of america,north america"
+1: "kerrville,texas,united states of america,north america"
+2: "texas,missouri,united states of america,north america"
+]
+ai_org: null
+duplicate: true
+}
+48: {
+article_id: "acd267f98b6dd333461c62443d98f4e4"
+title: "PPP tries to woo Fazl ahead of KP Senate elections"
+link: "https://www.dawn.com/news/1923663/ppp-tries-to-woo-fazl-ahead-of-kp-senate-elections"
+keywords: [
+0: "pakistan"
+]
+creator: [
+0: "none@none.com (Kalbe Ali)"
+]
+description: "• Meeting ends without formal agreement on mutual support• Kundi says no-confidence vote against KP..."
+content: "• Meeting ends without formal agreement on mutual support• Kundi says no-confidence vote against KP..."
+pubDate: "2025-07-12 02:32:09"
+pubDateTZ: "UTC"
+image_url: "https://i.dawn.com/large/2025/07/12072956fb7a33a.jpg?r=073209"
+video_url: null
+source_id: "dawn"
+source_name: "Dawn"
+source_priority: 7267
+source_url: "https://www.dawn.com"
+source_icon: "https://n.bytvi.com/dawn.png"
+language: "english"
+country: [
+0: "pakistan"
+]
+category: [
+0: "top"
+]
+sentiment: "neutral"
+sentiment_stats: {
+positive: 0.75
+neutral: 97.4
+negative: 1.85
+}
+ai_tag: [
+0: "elections"
+]
+ai_region: null
+ai_org: [
+0: "ppp"
+1: "kp senate"
+]
+duplicate: false
+}
+49: {
+article_id: "ca7fece17210b69d9d4978c776902ee9"
+title: "At least 23 dead after airstrike on Buddhist monastery in Myanmar"
+link: "https://timesofindia.indiatimes.com/world/rest-of-world/at-least-23-dead-after-airstrike-on-buddhis..."
+keywords: null
+creator: null
+description: null
+content: "People check the debris at the building in a Buddhist monastery that was allegedly hit by the milit..."
+pubDate: "2025-07-12 02:26:39"
+pubDateTZ: "UTC"
+image_url: "https://static.toiimg.com/thumb/msid-122398461,imgsize-1802541,width-400,resizemode-4/122398461.jpg"
+video_url: null
+source_id: "toi"
+source_name: "The Times Of India"
+source_priority: 239
+source_url: "https://timesofindia.indiatimes.com"
+source_icon: "https://n.bytvi.com/toi.png"
+language: "english"
+country: [
+0: "india"
+]
+category: [
+0: "top"
+]
+sentiment: "negative"
+sentiment_stats: {
+positive: 0.1
+neutral: 0.09
+negative: 99.81
+}
+ai_tag: [
+0: "accidents"
+]
+ai_region: [
+0: "bangkok,thailand,asia"
+1: "myanmar,asia"
+2: "bangkok,bangkok,thailand,asia"
+]
+ai_org: [
+0: "ap"
+]
+duplicate: true
+}
+]
+nextPage: "1752287199921953355"
+}
+2.News for domain BBC
+
+https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY&domain=bbc
+
+3. News for Category Science
+
+https://newsdata.io/api/1/latest?apikey=YOUR_API_KEY&category=science
+
+To dive deeper with practical examples visit - Get Latest News using NewsData.io "News" Endpoint: In Detail
+
+Crypto News
+Search and Monitor Worldwide Cryptocurrency-related news and blog data from the most reliable News and Blog Websites.
+
+Retrieving the latest news allows you to build experience such as showcasing the latest news, breaking news tickers and analyzing News to better understand their content.
+
+Resource URL
+
+https://newsdata.io/api/1/crypto?apikey=YOUR_API_KEY
+
+Resource Information
+
+Response Format
+JSON
+Requires Authentication
+Yes
+Rate Limited
+Yes
+Requests per 15 min window
+1800 credits (paid plans)
+Parameters
+Below are the Request Parameters you need to put in your query to run the API.
+
+Name	Required	Description	Default Value	Example
+apikey
+Required
+You need to add your API Key while accessing the newsdata API. 
+How to get the NewsData.io API key.
+id
+Optional
+Search the specific news article from its unique article_id string. You can add up to 50 article id strings in a single query or as per your specified limit.
+id=article_id
+id=article_id_1,article_id_2,
+article_id_3
+coin
+Optional
+Search the news articles for specific crypto coins using their short forms only. You can add up to 5 coins in a single query.
+coin=btc
+coin=eth,usdt,bnb
+q
+Optional
+Search news articles for specific keywords or phrases present in the news title, content, URL, meta keywords and meta description. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Please refer Advanced Search for more details
+q=pizza
+qInTitle
+Optional
+Search news articles for specific keywords or phrases present in the news titles only. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Note: qInTitle can't be used with q or qInMeta parameter in the same query.
+qInTitle=pizza
+qInMeta
+Optional
+Search news articles for specific keywords or phrases present in the news titles, URL, meta keywords and meta description only. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Note: qInMeta can't be used with q or qInTitle parameter in the same query.
+qInMeta=pizza
+timeframe
+Optional
+Search the news articles for a specific timeframe (Minutes and Hours). For hours, you can set a timeframe of 1 to 48, and for minutes, you can define a timeframe of 1m to 2880m. For example, if you want to get the news for the past 6 hours then use timeframe=6 and if you want to get news for the last 15 min then use timeframe=15m.
+Note - You can only use timeframe either in hours or minutes.
+For Hours -
+timeframe=1
+timeframe=6
+timeframe=24
+For Minutes -
+timeframe=15m
+timeframe=45m
+timeframe=90m
+from_date
+Optional
+Use from_date filter to get news data from a particular date in the past. Note: If you didn’t specify from_date then from_date will be considered as per your subscription plan. For example, if you have purchased the professional subscription plan and didn’t mention from_date then the API will automatically fetch the data from the past 1 year.
+from_date=YYYY-MM-DD
+from_date=2025-01-01
+from_date=YYYY-MM-DD HH:MM:SS
+from_date=2025-01-01 06:12:45
+to_date
+Optional
+This filter is used to set an end date for the search result.
+Note: If you didn't specify to_date then the API will fetch the data till today
+to_date=YYYY-MM-DD
+to_date=2025-01-30
+to_date=YYYY-MM-DD HH:MM:SS
+to_date=2025-01-30 06:12:45
+language
+Optional
+Search the news articles for a specific language. You can add up to 5 languages in a single query. 
+Check the codes for all the languages here.
+language=fr,en
+tag
+Optional
+Search the news articles for specific AI-classified tags. You can add up to 5 tags in a single query.
+Check the codes for all the crypto AI tags here.
+(Available only for Professional and Corporate users)
+tag=blockchain
+sentiment
+Optional
+Search the news articles based on the sentiment of the news article (positive, negative, neutral).
+(Available only for Professional and Corporate users)
+sentiment=positive
+domain
+Optional
+Search the news articles for specific domains or news sources. You can add up to 5 domains in a single query.
+You can check the name of the domains here
+domain=nytimes,bbc
+domainurl
+Optional
+Search the news articles for specific domains or news sources. You can add up to 5 domains in a single query.
+Note: If the domain is incorrect, It will give suggestions in the response
+domainurl=nytimes.com,
+bbc.com,bbc.co.uk
+excludedomain
+Optional
+You can exclude specific domains or news sources to search the news articles. You can exclude up to 5 domains in a single query. Note: If the domain is incorrect, It will give suggestions in the response
+excludedomain=nytimes.com,
+bbc.com,bbc.co.uk
+excludefield
+Optional
+you can limit the response object to search for news articles. You can exclude multiple response objects in a single query.
+Note: You cannot exclude articles response field in the object
+excludefield=pubdate
+excludefield=source_icon,
+pubdate,link
+prioritydomain
+Optional
+Search the news articles only from top news domains. We have categorized prioritydomain in 3 categories.
+Top: Fetches news articles from the top 10% of the news domains
+Medium: Fetches news articles from the top 30% of the news domains. It means it already includes all the news articles of 'top' priority.
+Low: Fetches news articles from the top 50% of the news domains. It means it already includes all the news articles of 'top' and 'medium' priorities.
+prioritydomain=top
+prioritydomain=medium
+prioritydomain=low
+timezone
+Optional
+Search the news articles for a specific timezone. You can add any specific timezone.
+You can check the timezone here
+timezone=America/New_york
+timezone=Asia/Kolkata
+timezone=Asia/Qatar
+timezone=Europe/Berli
+full_content
+Optional
+Search the news articles with full content or without full content. Use '1' for news articles which contain the full_content response object and '0' for news articles which don't contain full_content response object.
+full_content=1
+full_content=0
+image
+Optional
+Search the news articles with featured image or without featured image. Use 1 for articles with featured image and 0 for articles without featured image.
+image=1
+image=0
+video
+Optional
+Search the news articles with videos or without videos. Use 1 for articles with videos and 0 for articles without videos.
+video=1
+video=0
+removeduplicate
+Optional
+The 'removeduplicate' parameter will allow users to filter out duplicate articles. Use 1 to remove duplicate articles.
+(Note: The overall 'removeduplicate' parameter functioning works on the basis of Newsdata.io's internal algorithm. It doesn't imply that the article which has a 'removeduplicate=1' parameter is actually a duplicate article.)
+removeduplicate=1
+size
+Optional
+You can customize the number of articles you get per API request from 1 to 50.
+Free user - 10
+Paid user - 50
+size=25
+page
+Optional
+Use page parameter to navigate to the next page. To know more:
+click here
+Example Queries
+
+1. Crypto News related to Bitcoin only
+
+https://newsdata.io/api/1/crypto?apikey=YOUR_API_KEY&coin=btc
+
+2. Crypto News in Italian and Japanese language
+
+https://newsdata.io/api/1/crypto?apikey=YOUR_API_KEY&language=it,jp
+
+3. Crypto News from the domain coindesk
+
+https://newsdata.io/api/1/crypto?apikey=YOUR_API_KEY&domainurl=coindesk.com
+
+To dive deeper with practical examples visit - Crypto News API Endpoints
+
+News Archive
+The news archive endpoint provides access to the old news data for a topic, event, country, for a specific category in a country, or for a single or multiple domains.
+
+Retrieving a piece of old news allows you to get the past news data for research and analysis purposes.
+
+The News Archive endpoint is available only in Paid plans. You can get news data for the past 2 years using the Archive endpoint.
+
+There is limited access to the news archive endpoint for each paid plan:
+
+Basic
+6 months of historical data
+Professional
+2 year of historical data
+Corporate
+5 years of historical data
+Under your plan, you will not be able to access news data beyond these limits. To get news beyond the past 2 years, click here
+
+Resource URL
+
+https://newsdata.io/api/1/archive?apikey=YOUR_API_KEY&from_date=2025-03-13&to_date=2025-03-26&category=technology
+
+Resource Information
+
+Response Format
+JSON
+Requires Authentication
+Yes
+Rate Limited
+Yes
+Requests per 15 min window
+1800 credits (paid plans)
+Parameters
+Below are the Request Parameters you need to put in your query to run the API.
+
+Please note, your API query must contain atleast one of these parameters:
+
+['q','qInTitle','qInMeta','domain','country','category','language','full_content','image','video','prioritydomain','domainurl'],
+
+Otherwise the API query won't work.
+
+Name	Required	Description	Default Value	Example
+apikey
+Required
+You need to add your API Key while accessing the newsdata API.
+How to get the NewsData.io API key.
+id
+Optional
+Search the specific news article from its unique article_id string. You can add up to 50 article id strings in a single query or as per your specified limit.
+id=article_id
+id=article_id_1,article_id_2,
+article_id_3
+q
+Optional
+Search news articles for specific keywords or phrases present in the news title, content, URL, meta keywords and meta description. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Please refer Advanced Search for more details
+q=pizza
+qInTitle
+Optional
+Search news articles for specific keywords or phrases present in the news titles only. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Note: qInTitle can't be used with q or qInMeta parameter in the same query.
+qInTitle=pizza
+qInMeta
+Optional
+Search news articles for specific keywords or phrases present in the news titles, URL, meta keywords and meta description only. The value must be URL-encoded and the maximum character limit permitted is 512 characters.
+Note: qInMeta can't be used with q or qInTitle parameter in the same query.
+qInMeta=pizza
+from_date
+Optional
+Use from_date filter to get news data from a particular date in the past. Note: If you didn’t specify from_date then from_date will be considered as per your subscription plan. For example, if you have purchased the professional subscription plan and didn’t mention from_date then the API will automatically fetch the data from the past 1 year.
+from_date=YYYY-MM-DD
+from_date=2025-01-01
+from_date=YYYY-MM-DD HH:MM:SS
+from_date=2025-01-01 06:12:45
+to_date
+Optional
+This filter is used to set an end date for the search result.
+Note: If you didn't specify to_date then the API will fetch the data till today
+to_date=YYYY-MM-DD
+to_date=2025-01-30
+to_date=YYYY-MM-DD HH:MM:SS
+to_date=2025-01-30 06:12:45
+language
+Optional
+Search the news articles for a specific language. You can add up to 5 languages in a single query.
+Check the codes for all the languages here.
+language=fr,en
+country
+Optional
+Search the news articles from a specific country. You can add up to 5 countries in a single query.
+Check the codes for all the countries here.
+country=au,jp
+category
+Optional
+Search the news articles for a specific category. You can add up to 5 categories in a single query.
+Check the codes for all the categories here.
+category=sports,top
+excludecategory
+Optional
+You can exclude specific categories to search for news articles. You can exclude up to 5 categories in a single query.
+Note: You can use either the 'category' parameter to include specific categories or the 'excludecategory' parameter to exclude them, but not both simultaneously.
+excludecategory=top
+domain
+Optional
+Search the news articles for specific domains or news sources. You can add up to 5 domains in a single query.
+You can check the name of the domains here
+domain=nytimes,bbc
+domainurl
+Optional
+Search the news articles for specific domains or news sources. You can add up to 5 domains in a single query.
+Note: If the domain is incorrect, It will give suggestions in the response
+domainurl=nytimes.com,
+bbc.com,bbc.co.uk
+excludedomain
+Optional
+You can exclude specific domains or news sources to search the news articles. You can exclude up to 5 domains in a single query. Note: If the domain is incorrect, It will give suggestions in the response
+excludedomain=nytimes.com,
+bbc.com,bbc.co.uk
+excludefield
+Optional
+you can limit the response object to search for news articles. You can exclude multiple response objects in a single query.
+Note: You cannot exclude articles response field in the object
+excludefield=pubdate
+excludefield=source_icon,
+pubdate,link
+prioritydomain
+Optional
+Search the news articles only from top news domains. We have categorized prioritydomain in 3 categories.
+Top: Fetches news articles from the top 10% of the news domains
+Medium: Fetches news articles from the top 30% of the news domains. It means it already includes all the news articles of 'top' priority.
+Low: Fetches news articles from the top 50% of the news domains. It means it already includes all the news articles of 'top' and 'medium' priorities.
+prioritydomain=top
+prioritydomain=medium
+prioritydomain=low
+timezone
+Optional
+Search the news articles for a specific timezone. You can add any specific timezone.
+You can check the timezone here
+timezone=America/New_york
+timezone=Asia/Kolkata
+timezone=Asia/Qatar
+timezone=Europe/Berli
+full_content
+Optional
+Search the news articles with full content or without full content. Use '1' for news articles which contain the full_content response object and '0' for news articles which don't contain full_content response object.
+full_content=1
+full_content=0
+image
+Optional
+Search the news articles with featured image or without featured image. Use 1 for articles with featured image and 0 for articles without featured image.
+image=1
+image=0
+video
+Optional
+Search the news articles with videos or without videos. Use 1 for articles with videos and 0 for articles without videos.
+video=1
+video=0
+size
+Optional
+You can customize the number of articles you get per API request from 1 to 50.
+Free user - 10
+Paid user - 50
+size=25
+page
+Optional
+Use page parameter to navigate to the next page. To know more,
+click here
+Example Queries
+
+1. News from category technology and science
+
+https://newsdata.io/api/1/archive?apikey=YOUR_API_KEY&category=technology,science
+
+2. News from_date June 29, 2025 to July 12, 2025
+
+https://newsdata.io/api/1/archive?apikey=YOUR_API_KEY&from_date=2025-06-29&to_date=2025-07-12&category=technology
+
+3. News from June 13, 2025 till present date
+
+https://newsdata.io/api/1/archive?apikey=YOUR_API_KEY&from_date=2025-06-13&category=science
+
+To dive deeper with practical examples visit - All about News "Archive" Endpoint
+
+News Sources
+Sources endpoint provides names of randomly selected 100 domains from a country, category or/and language.
+
+It is mainly a convenience endpoint that you can use to keep track of the publishers available on the API.
+
+Resource URL
+
+https://newsdata.io/api/1/sources?apikey=YOUR_API_KEY
+
+Resource Information
+
+Response Format
+JSON
+Requires Authentication
+Yes
+Rate Limited
+Yes
+Requests per 15 min window
+1800 credits (paid plans)
+Parameters
+Below are the Request Parameters you need to put in your query to run the API.
+
+Name	Required	Description	Default Value	Example
+apikey
+Required
+You need to add your API Key while accessing the newsdata API.
+How to get the NewsData.io API key.
+language
+Optional
+Search the news articles for a specific language. You can add up to 5 languages in a single query.
+Check the codes for all the languages here.
+language=fr,en
+country
+Optional
+Search the news articles from a specific country. You can add up to 5 countries in a single query.
+Check the codes for all the countries here.
+country=au,jp
+category
+Optional
+Search the news articles for a specific category. You can add up to 5 categories in a single query.
+Check the codes for all the categories here.
+category=sports,top
+domainurl
+Optional
+Search the news articles for specific domains or news sources. You can add up to 5 domains in a single query.
+Note: If the domain is incorrect, It will give suggestions in the response
+domainurl=nytimes.com,
+bbc.com,bbc.co.uk
+prioritydomain
+Optional
+Search the news articles only from top news domains. We have categorized prioritydomain in 3 categories.
+Top: Fetches news articles from the top 10% of the news domains
+Medium: Fetches news articles from the top 30% of the news domains. It means it already includes all the news articles of 'top' priority.
+Low: Fetches news articles from the top 50% of the news domains. It means it already includes all the news articles of 'top' and 'medium' priorities.
+prioritydomain=top
+prioritydomain=medium
+prioritydomain=low
+Response Object
+
+Name	Description
+status
+success/error
+Status shows the status of your request. If the request was successful then it shows success, in case of error it shows error. In the case of error, a code and message property will be displayed.
+id
+The identifier of the domain. You can use this with our other endpoints.
+name
+The name of the domain (As defined by the NewsData.io moderators).
+url
+The URL of the domain.
+category
+Categories of the domain (These categories are defined by NewsData.io moderators).
+language
+Language of the domain (The language is defined by NewsData.io moderators).
+country
+Countries of the domain (The countries are defined by NewsData.io moderators).
+Example Queries
+
+1. News sources that show from specific country
+
+https://newsdata.io/api/1/sources?apikey=YOUR_API_KEY&country=ua
+
+2. News sources that show from specific category
+
+https://newsdata.io/api/1/sources?apikey=YOUR_API_KEY&category=politics
+
+3. News sources that show from specific language
+
+https://newsdata.io/api/1/sources?apikey=YOUR_API_KEY&language=nl
+
+To dive deeper with practical examples visit - News Sources Endpoints
+
+NewData.io Python Client
+Use the NewsData.io Python client library to integrate NewsData.io API into your Python application without having to make HTTP requests directly.
+
+Source: NewsData.io Python Client
+
+Installation:
+
+$ pip install newsdataapi
+
+Usage:
+
+from newsdataapi import NewsDataApiClient
+
+# API key authorization, Initialize the client with your API key
+
+api = NewsDataApiClient(apikey=YOUR_API_KEY)
+
+# You can pass empty or with request parameters (ex. country = "us")
+
+response = api.news_api(q="ronaldo", country="us")
+
+Pagination:
+
+from newsdataapi import NewsDataApiClient
+
+# API key authorization, Initialize the client with your API key
+
+api = NewsDataApiClient(apikey=YOUR_API_KEY)
+
+# You can paginate till last page by providing "page" parameter
+
+page=None
+
+while True:
+
+response = api.news_api(page = page)
+
+page = response.get('nextPage',None)
+
+if not page:
+
+break
+
+Get started with our comprehensive step-by-step blog -NewsData.io News API With Python Client
+
+Newsdata.io React Client
+Use the NewsData.io React client library to integrate NewsData.io API into your React application without having to manage HTTP requests manually.
+
+Source: NewsData.io React Client
+
+Installation:
+
+npm install newsdataapi
+
+Usage:
+
+import useNewsDataApiClient from "newsdataapi";
+
+
+# API key authorization, Initialize the client with your API key
+
+const { latest } = useNewsDataApiClient(YOUR_API_KEY)
+
+# You can pass empty or with request parameters (ex. country: "us")
+
+const data = await latest({ q: "ronaldo", country: "us" });
+
+Pagination:
+
+import useNewsDataApiClient from "newsdataapi";
+
+# API key authorization, Initialize the client with your API key
+
+const { latest } = useNewsDataApiClient(YOUR_API_KEY);
+
+let allNews = [];
+
+let nextPage;
+
+while (true) {
+
+# Include page only if we already have a nextPage value
+
+const params = { q: "ronaldo", country: "us" };
+
+if (nextPage) params.page = nextPage;
+
+const data = await latest(params);
+
+if (data?.results?.length) {
+
+allNews.push(...data.results);
+
+}
+
+# Exit loop if no nextPage
+
+if (!data.nextPage) break;
+
+# Set nextPage for next iteration
+
+nextPage = data.nextPage;
+
+}
+
+# Use the collected news
+
+console.log(allNews);
+
+Get started with our comprehensive step-by-step blog -NewsData.io News API With React Client
+
+NewsData.io PHP Client
+Use the NewsData.io PHP client library to integrate NewsData API into your PHP application without having to make HTTP requests directly.
+
+Source: NewsData.io PHP bindings
+
+Installation:
+
+$ composer require newsdataio/newsdataapi
+
+Usage:
+
+<?php
+
+require_once '../autoload.php';
+
+use NewsdataIONewsdataApi;
+
+$newsdataApiObj = new NewsdataApi(YOUR_API_KEY);
+
+#// Pass your desired strings in an array with unique key
+
+$data = array("q" => "ronaldo", "country" => "ie");
+
+$response = $newsdataApiObj->get_latest_news($data);
+
+?>

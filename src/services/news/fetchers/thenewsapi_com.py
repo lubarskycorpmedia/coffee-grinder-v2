@@ -70,7 +70,7 @@ class TheNewsAPIFetcher(BaseFetcher):
     
     def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Выполняет HTTP запрос к API
+        Выполняет HTTP запрос к API используя общую логику ретраев из базового класса
         
         Args:
             endpoint: Эндпоинт API
@@ -81,12 +81,22 @@ class TheNewsAPIFetcher(BaseFetcher):
         """
         url = f"{self.base_url}/{endpoint}"
         
+        # Используем общий метод из базового класса
+        result = self._make_request_with_retries(
+            session=self.session,
+            url=url,
+            params=params,
+            timeout=30
+        )
+        
+        # Если есть ошибка, возвращаем как есть
+        if "error" in result:
+            return result
+        
+        # Если успешно, обрабатываем ответ
+        response = result["response"]
+        
         try:
-            self.logger.debug(f"Making request to {url} with params: {params}")
-            
-            response = self.session.get(url, params=params, timeout=30)
-            response.raise_for_status()
-            
             data = response.json()
             
             # Проверяем на ошибки API
@@ -98,18 +108,10 @@ class TheNewsAPIFetcher(BaseFetcher):
             self.logger.debug(f"Request successful, got {len(data.get('data', []))} items")
             return data
             
-        except requests.exceptions.HTTPError as e:
-            error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
-            self.logger.error(error_msg)
-            return {"error": NewsAPIError(error_msg, e.response.status_code, 1)}
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Request failed: {str(e)}"
-            self.logger.error(error_msg)
-            return {"error": NewsAPIError(error_msg, None, 1)}
         except Exception as e:
-            error_msg = f"Unexpected error: {str(e)}"
+            error_msg = f"Failed to parse JSON response: {str(e)}"
             self.logger.error(error_msg)
-            return {"error": NewsAPIError(error_msg, None, 1)}
+            return {"error": NewsAPIError(error_msg, response.status_code, 1)}
     
     def _add_random_delay(self):
         """Добавляет случайную задержку для предотвращения rate limiting"""

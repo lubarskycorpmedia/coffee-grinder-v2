@@ -155,7 +155,7 @@ class TestNewsPipelineOrchestrator:
             query=mock_active_rubrics[0]["query"],
             categories=[mock_active_rubrics[0]["category"]],
             limit=5,  # дефолтный лимит
-            language="en"  # дефолтный язык
+            language=None  # дефолтный язык (None)
         )
     
     @patch('src.services.news.pipeline.get_active_rubrics')

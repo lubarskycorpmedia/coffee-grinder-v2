@@ -6,6 +6,7 @@ from .thenewsapi_com import TheNewsAPIFetcher
 from .newsapi_org import NewsAPIFetcher
 from .newsdata_io import NewsDataIOFetcher
 from .mediastack_com import MediaStackFetcher
+from .gnews_io import GNewsIOFetcher
 
 __all__ = [
     'BaseFetcher',
@@ -14,5 +15,6 @@ __all__ = [
     'TheNewsAPIFetcher',
     'NewsAPIFetcher',
     'NewsDataIOFetcher',
-    'MediaStackFetcher'
+    'MediaStackFetcher',
+    'GNewsIOFetcher'
 ] 

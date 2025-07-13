@@ -8,7 +8,7 @@ from src.config import (
     get_settings, get_news_providers_settings, get_ai_settings, get_google_settings,
     get_log_level, is_debug_mode,
     Settings, BaseProviderSettings, TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings,
-    NewsProvidersSettings, AISettings, GoogleSettings
+    MediaStackSettings, GNewsIOSettings, NewsProvidersSettings, AISettings, GoogleSettings
 )
 
 
@@ -169,6 +169,41 @@ class TestNewsAPISettings:
             NewsAPISettings()  # Отсутствует api_key
 
 
+class TestGNewsIOSettings:
+    """Тесты для настроек GNews.io провайдера"""
+    
+    def test_gnews_settings_creation(self):
+        """Тест создания настроек GNews с обязательными полями"""
+        settings = GNewsIOSettings(
+            api_key="test_api_key",
+            enabled=True,
+            priority=1
+        )
+        
+        assert settings.api_key == "test_api_key"
+        assert settings.enabled is True
+        assert settings.priority == 1
+        assert settings.base_url == "https://gnews.io/api/v4"
+        assert settings.page_size == 100
+    
+    def test_gnews_settings_defaults(self):
+        """Тест дефолтных значений настроек GNews"""
+        settings = GNewsIOSettings(api_key="test_key")
+        
+        assert settings.enabled is True
+        assert settings.priority == 1
+        assert settings.max_retries == 3
+        assert settings.backoff_factor == 2.0
+        assert settings.timeout == 30
+        assert settings.base_url == "https://gnews.io/api/v4"
+        assert settings.page_size == 100
+    
+    def test_gnews_settings_validation_error(self):
+        """Тест ошибки валидации при отсутствии обязательных полей"""
+        with pytest.raises(ValidationError):
+            GNewsIOSettings()  # Отсутствует api_key
+
+
 class TestNewsProvidersSettings:
     """Тесты для настроек всех провайдеров новостей"""
     
@@ -314,16 +349,20 @@ class TestSettingsGetters:
         mock_settings.THENEWSAPI_API_TOKEN = "test_token"
         mock_settings.NEWSAPI_API_KEY = "test_key"
         mock_settings.NEWSDATA_API_KEY = "test_newsdata_key"
+        mock_settings.MEDIASTACK_API_KEY = "test_mediastack_key"
+        mock_settings.GNEWS_API_KEY = "test_gnews_key"
         mock_get_settings.return_value = mock_settings
         
         providers_settings = get_news_providers_settings()
         
         assert providers_settings.default_provider == "thenewsapi"
-        assert providers_settings.fallback_providers == ["thenewsapi", "newsapi", "newsdata"]
-        assert len(providers_settings.providers) == 3
+        assert providers_settings.fallback_providers == ["thenewsapi", "newsapi", "newsdata", "mediastack", "gnews"]
+        assert len(providers_settings.providers) == 5
         assert "thenewsapi" in providers_settings.providers
         assert "newsapi" in providers_settings.providers
         assert "newsdata" in providers_settings.providers
+        assert "mediastack" in providers_settings.providers
+        assert "gnews" in providers_settings.providers
         
         thenewsapi_settings = providers_settings.get_provider_settings("thenewsapi")
         assert isinstance(thenewsapi_settings, TheNewsAPISettings)

@@ -39,9 +39,16 @@ class NewsDataIOSettings(BaseProviderSettings):
     page_size: int = Field(default=10, description="Размер страницы результатов")
 
 
+class MediaStackSettings(BaseProviderSettings):
+    """Настройки для MediaStack провайдера"""
+    access_key: str = Field(..., description="Access key для MediaStack API")
+    base_url: str = Field(default="https://api.mediastack.com/v1", description="Базовый URL API")
+    page_size: int = Field(default=25, description="Размер страницы результатов")
+
+
 class NewsProvidersSettings(BaseModel):
     """Настройки всех новостных провайдеров"""
-    providers: Dict[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings]] = Field(
+    providers: Dict[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings, MediaStackSettings]] = Field(
         default_factory=dict,
         description="Словарь провайдеров новостей"
     )
@@ -54,15 +61,15 @@ class NewsProvidersSettings(BaseModel):
         description="Список провайдеров для fallback в порядке приоритета"
     )
     
-    def get_provider_settings(self, provider_name: str) -> Optional[Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings]]:
+    def get_provider_settings(self, provider_name: str) -> Optional[Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings, MediaStackSettings]]:
         """Получить настройки конкретного провайдера"""
         return self.providers.get(provider_name)
     
-    def get_enabled_providers(self) -> Dict[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings]]:
+    def get_enabled_providers(self) -> Dict[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings, MediaStackSettings]]:
         """Получить только включенные провайдеры"""
         return {name: settings for name, settings in self.providers.items() if settings.enabled}
     
-    def get_providers_by_priority(self) -> List[tuple[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings]]]:
+    def get_providers_by_priority(self) -> List[tuple[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings, MediaStackSettings]]]:
         """Получить провайдеры отсортированные по приоритету"""
         enabled = self.get_enabled_providers()
         return sorted(enabled.items(), key=lambda x: x[1].priority)
@@ -138,6 +145,7 @@ class Settings(BaseSettings):
     THENEWSAPI_API_TOKEN: Optional[str] = Field(default=None, description="API токен для TheNewsAPI")
     NEWSAPI_API_KEY: Optional[str] = Field(default=None, description="API ключ для NewsAPI.org")
     NEWSDATA_API_KEY: Optional[str] = Field(default=None, description="API ключ для NewsData.io")
+    MEDIASTACK_API_KEY: Optional[str] = Field(default=None, description="Access key для MediaStack API")
     OPENAI_API_KEY: Optional[str] = Field(default=None, description="API ключ OpenAI")
     GOOGLE_SHEET_ID: Optional[str] = Field(default=None, description="ID Google Sheets документа")
     GOOGLE_SERVICE_ACCOUNT_PATH: Optional[str] = Field(default=None, description="Путь к файлу с Google service account JSON")
@@ -166,7 +174,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         settings = get_settings()
         
         # Создаем настройки провайдеров
-        providers: Dict[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings]] = {}
+        providers: Dict[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings, MediaStackSettings]] = {}
         
         # TheNewsAPI провайдер
         if settings.THENEWSAPI_API_TOKEN:
@@ -192,18 +200,28 @@ def get_news_providers_settings() -> NewsProvidersSettings:
                 enabled=True
             )
         
+        # MediaStack провайдер
+        if settings.MEDIASTACK_API_KEY:
+            providers["mediastack"] = MediaStackSettings(
+                access_key=settings.MEDIASTACK_API_KEY,
+                priority=4,
+                enabled=True
+            )
+        
         return NewsProvidersSettings(
             providers=providers,
             default_provider="thenewsapi" if "thenewsapi" in providers else (
                 "newsapi" if "newsapi" in providers else (
-                    "newsdata" if "newsdata" in providers else "thenewsapi"
+                    "newsdata" if "newsdata" in providers else (
+                        "mediastack" if "mediastack" in providers else "thenewsapi"
+                    )
                 )
             ),
             fallback_providers=list(providers.keys())
         )
     except Exception as e:
         # Fallback конфигурация с переменными окружения
-        fallback_providers: Dict[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings]] = {}
+        fallback_providers: Dict[str, Union[TheNewsAPISettings, NewsAPISettings, NewsDataIOSettings, MediaStackSettings]] = {}
         
         thenewsapi_token = os.getenv("THENEWSAPI_API_TOKEN")
         if thenewsapi_token:
@@ -226,6 +244,14 @@ def get_news_providers_settings() -> NewsProvidersSettings:
             fallback_providers["newsdata"] = NewsDataIOSettings(
                 api_key=newsdata_key,
                 priority=3,
+                enabled=True
+            )
+        
+        mediastack_key = os.getenv("MEDIASTACK_API_KEY")
+        if mediastack_key:
+            fallback_providers["mediastack"] = MediaStackSettings(
+                access_key=mediastack_key,
+                priority=4,
                 enabled=True
             )
         

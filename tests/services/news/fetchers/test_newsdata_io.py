@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 from datetime import datetime
 from src.services.news.fetchers.newsdata_io import NewsDataIOFetcher
 from src.services.news.fetchers.base import NewsAPIError
+import requests
 
 
 class MockNewsDataIOSettings:
@@ -382,17 +383,135 @@ class TestNewsDataIOFetcher:
     
     def test_standardize_source_minimal_data(self, fetcher):
         """Тест стандартизации источника с минимальными данными"""
-        source = {
-            'id': 'test_source',
-            'name': 'Test Source'
+        source_data = {
+            "id": "test-source"
         }
         
-        result = fetcher._standardize_source(source)
+        result = fetcher._standardize_source(source_data)
         
-        assert result['id'] == 'test_source'
-        assert result['name'] == 'Test Source'
-        assert result['provider'] == 'newsdata'
-        assert result['description'] == ''
-        assert result['category'] is None
-        assert result['language'] is None
-        assert result['country'] is None 
+        assert result["id"] == "test-source"
+        assert result["name"] == ""
+        assert result["description"] == ""
+        assert result["url"] == ""
+        assert result["category"] is None
+        assert result["language"] is None
+        assert result["country"] is None
+        assert result["provider"] == "newsdata"
+        assert result["raw_data"] == source_data
+    
+    @patch('src.services.news.fetchers.newsdata_io.requests.get')
+    def test_check_source_by_domain_success(self, mock_get, fetcher):
+        """Тест успешной проверки источника по домену"""
+        # Создаем mock response
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "status": "success",
+            "totalResults": 1,
+            "results": [
+                {
+                    "id": "washingtonpost",
+                    "name": "The Washington Post",
+                    "url": "https://www.washingtonpost.com"
+                }
+            ]
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+        
+        result = fetcher.check_source_by_domain("washingtonpost.com")
+        
+        assert result == "да"
+        mock_get.assert_called_once_with(
+            "https://newsdata.io/api/1/sources",
+            params={
+                'apikey': fetcher.settings.api_key,
+                'domainurl': 'washingtonpost.com'
+            },
+            timeout=30
+        )
+    
+    @patch('src.services.news.fetchers.newsdata_io.requests.get')
+    def test_check_source_by_domain_not_found(self, mock_get, fetcher):
+        """Тест проверки несуществующего источника"""
+        # Создаем mock response с пустыми результатами
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "status": "success",
+            "totalResults": 0,
+            "results": []
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+        
+        result = fetcher.check_source_by_domain("nonexistent.com")
+        
+        assert result == "нет"
+    
+    @patch('src.services.news.fetchers.newsdata_io.requests.get')
+    def test_check_source_by_domain_domain_mismatch(self, mock_get, fetcher):
+        """Тест проверки источника с несовпадающим доменом"""
+        # Настраиваем mock для возврата источника с другим доменом
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "status": "success",
+            "totalResults": 1,
+            "results": [
+                {
+                    "id": "different-source",
+                    "name": "Different Source",
+                    "url": "https://different.com"
+                }
+            ]
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+        
+        result = fetcher.check_source_by_domain("cnn.com")
+        
+        assert result == "нет"  # домен не совпадает
+    
+    @patch('src.services.news.fetchers.newsdata_io.requests.get')
+    def test_check_source_by_domain_api_error(self, mock_get, fetcher):
+        """Тест обработки ошибки API"""
+        # Создаем mock response с ошибкой API
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "status": "error",
+            "message": "Invalid API key"
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_get.return_value = mock_response
+        
+        result = fetcher.check_source_by_domain("cnn.com")
+        
+        assert result == "ошибка_api"
+    
+    @patch('src.services.news.fetchers.newsdata_io.requests.get')
+    def test_check_source_by_domain_http_error(self, mock_get, fetcher):
+        """Тест обработки HTTP ошибки"""
+        # Настраиваем mock для генерации HTTP ошибки
+        mock_get.side_effect = requests.exceptions.RequestException("Network error")
+        
+        result = fetcher.check_source_by_domain("cnn.com")
+        
+        assert result == "ошибка_http"
+    
+    def test_normalize_domain(self, fetcher):
+        """Тест нормализации домена"""
+        # Тестируем различные входные данные
+        assert fetcher._normalize_domain("https://www.cnn.com/news") == "cnn.com"
+        assert fetcher._normalize_domain("http://bbc.com:8080/path") == "bbc.com"
+        assert fetcher._normalize_domain("reuters.com") == "reuters.com"
+        assert fetcher._normalize_domain("") == ""
+        assert fetcher._normalize_domain("localhost:3000") == "localhost"
+    
+    @patch('src.services.news.fetchers.newsdata_io.NewsDataIOFetcher._normalize_domain')
+    def test_check_source_by_domain_invalid_domain(self, mock_normalize, fetcher):
+        """Тест проверки с невалидным доменом"""
+        # Настраиваем mock для возврата пустой строки (невалидный домен)
+        mock_normalize.return_value = ""
+        
+        result = fetcher.check_source_by_domain("invalid-domain")
+        
+        assert result == "нет"
+        mock_normalize.assert_called_once_with("invalid-domain") 

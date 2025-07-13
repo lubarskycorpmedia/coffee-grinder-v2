@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Any, TYPE_CHECKING
+import requests
 
 from newsdataapi import NewsDataApiClient
 
@@ -42,6 +43,99 @@ class NewsDataIOFetcher(BaseFetcher):
 
         # Инициализируем логгер
         self.logger = setup_logger(__name__)
+
+    def check_source_by_domain(self, domain: str) -> str:
+        """
+        Проверяет существование источника по домену через API sources
+        
+        Args:
+            domain: Домен для проверки (например, 'washingtonpost.com')
+        
+        Returns:
+            'да' - если источник найден и активен
+            'нет' - если источник не найден или неактивен
+            'ошибка_XXX' - если произошла ошибка API
+        """
+        try:
+            # Нормализуем домен
+            normalized_domain = self._normalize_domain(domain)
+            if not normalized_domain:
+                logger.warning(f"Невалидный домен: {domain}")
+                return "нет"
+            
+            # Делаем прямой HTTP запрос к API sources с параметром domainurl
+            
+            url = "https://newsdata.io/api/1/sources"
+            params = {
+                'apikey': self.settings.api_key,
+                'domainurl': normalized_domain
+            }
+            
+            logger.info(f"Проверяем источник по домену {normalized_domain} в NewsData.io")
+            
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data.get('status') != 'success':
+                logger.error(f"API вернул неуспешный статус: {data}")
+                return "ошибка_api"
+            
+            results = data.get('results', [])
+            
+            if not results:
+                logger.info(f"Источник с доменом {normalized_domain} не найден в NewsData.io")
+                return "нет"
+            
+            # Проверяем, что найденный источник действительно соответствует запрошенному домену
+            for source in results:
+                source_url = source.get('url', '')
+                source_domain = self._normalize_domain(source_url)
+                
+                if source_domain == normalized_domain:
+                    logger.info(f"Источник {source.get('name')} найден для домена {normalized_domain}")
+                    return "да"
+            
+            logger.info(f"Найденные источники не соответствуют домену {normalized_domain}")
+            return "нет"
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Ошибка HTTP запроса при проверке источника {domain}: {e}")
+            return f"ошибка_http"
+        except Exception as e:
+            logger.error(f"Неожиданная ошибка при проверке источника {domain}: {e}")
+            return f"ошибка_неизвестная"
+    
+    def _normalize_domain(self, domain: str) -> str:
+        """
+        Нормализует домен для использования в API
+        
+        Args:
+            domain: Исходный домен
+            
+        Returns:
+            str: Нормализованный домен
+        """
+        if not domain:
+            return ""
+        
+        # Убираем протокол
+        domain = domain.replace("https://", "").replace("http://", "")
+        
+        # Убираем www
+        if domain.startswith("www."):
+            domain = domain[4:]
+        
+        # Убираем путь и параметры
+        if "/" in domain:
+            domain = domain.split("/")[0]
+        
+        # Убираем порт
+        if ":" in domain:
+            domain = domain.split(":")[0]
+        
+        return domain.strip().lower()
 
     def _call_with_timeout(self, func, *args, **kwargs):
         """

@@ -77,6 +77,38 @@ class MediaStackFetcher(BaseFetcher):
             self._logger = setup_logger(__name__)
         return self._logger
     
+    def check_source_by_domain(self, domain: str) -> str:
+        """
+        Публичный метод для проверки существования источника по домену
+        
+        Args:
+            domain: Домен для проверки (может быть URL или доменом)
+            
+        Returns:
+            str: "да" если источник найден, "нет" если не найден, или код ошибки
+        """
+        try:
+            # Нормализуем домен через единый метод
+            normalized_domain = self._extract_domain_from_url(domain)
+            if not normalized_domain:
+                self.logger.warning(f"Failed to normalize domain: {domain}")
+                return "нет"
+            
+            # Используем существующий приватный метод
+            result = self._search_source_by_domain(normalized_domain)
+            
+            # Преобразуем результат в нужный формат
+            if result == "unavailable":
+                return "нет"
+            elif result and result != "unavailable":
+                return "да"
+            else:
+                return "нет"
+                
+        except Exception as e:
+            self.logger.error(f"Error checking source for domain {domain}: {e}")
+            return f"error: {str(e)}"
+
     def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Выполняет HTTP запрос к API используя общую логику ретраев из базового класса

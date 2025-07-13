@@ -16,6 +16,9 @@ from src.services.news.exporter import create_google_sheets_exporter
 from src.logger import setup_logger
 from dotenv import load_dotenv
 
+# Инициализируем логгер
+logger = setup_logger(__name__)
+
 # Массив доменов для тестирования
 DOMAINS_TO_TEST = [
     # "New York",
@@ -61,6 +64,39 @@ def test_source_availability(fetcher, domain: str, provider_name: str) -> str:
         Результат проверки: "да", "нет" или код ошибки
     """
     try:
+        # Для MediaStack и NewsData используем специализированные методы проверки источников
+        if provider_name in ["mediastack", "newsdata"]:
+            # Используем метод check_source_by_domain для прямой проверки источника
+            if hasattr(fetcher, 'check_source_by_domain'):
+                result = fetcher.check_source_by_domain(domain)
+                return result
+            else:
+                # Fallback на старый метод если новый метод недоступен
+                logger.warning(f"Method check_source_by_domain not found for {provider_name}, using fallback")
+                return _test_source_via_news_fetch(fetcher, domain, provider_name)
+        
+        # Для NewsAPI.org и TheNewsAPI используем старый метод через fetch_news
+        else:
+            return _test_source_via_news_fetch(fetcher, domain, provider_name)
+        
+    except Exception as e:
+        logger.error(f"Error testing source availability for {domain} in {provider_name}: {e}")
+        return f"exception: {str(e)}"
+
+
+def _test_source_via_news_fetch(fetcher, domain: str, provider_name: str) -> str:
+    """
+    Тестирует доступность источника через получение новостей (старый метод)
+    
+    Args:
+        fetcher: Экземпляр fetcher'а
+        domain: Домен для проверки
+        provider_name: Название провайдера
+    
+    Returns:
+        Результат проверки: "да", "нет" или код ошибки
+    """
+    try:
         # Используем единый универсальный метод fetch_news для всех провайдеров
         # Передаем только домен, отключаем любые временные фильтры
         response = fetcher.fetch_news(
@@ -83,6 +119,7 @@ def test_source_availability(fetcher, domain: str, provider_name: str) -> str:
         
     except Exception as e:
         return f"exception: {str(e)}"
+
 
 def normalize_domain(domain: str) -> str:
     """

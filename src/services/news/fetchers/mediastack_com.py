@@ -94,20 +94,69 @@ class MediaStackFetcher(BaseFetcher):
                 self.logger.warning(f"Failed to normalize domain: {domain}")
                 return "нет"
             
-            # Используем существующий приватный метод
-            result = self._search_source_by_domain(normalized_domain)
+            # Загружаем текущий маппинг
+            mapping = self._load_sources_mapping()
             
-            # Преобразуем результат в нужный формат
-            if result == "unavailable":
-                return "нет"
-            elif result and result != "unavailable":
-                return "да"
-            else:
-                return "нет"
+            # Проверяем, есть ли домен уже в маппинге
+            if normalized_domain in mapping:
+                source_id = mapping[normalized_domain]
+                self.logger.debug(f"Found in JSON: {normalized_domain} -> {source_id}")
+                if source_id == "unavailable":
+                    return "нет"
+                else:
+                    return "да"
+            
+            # Загружаем источники новостей только если домен не найден в маппинге
+            news_sources = self._load_news_sources()
+            search_term = None
+            
+            # Проверяем, есть ли домен в news_sources.json
+            if normalized_domain in news_sources:
+                source_names = news_sources[normalized_domain]
+                if source_names and len(source_names) > 0:
+                    search_term = source_names[0]  # Берём первое значение из массива
+                    self.logger.info(f"Found domain '{normalized_domain}' in news_sources.json, using search term: '{search_term}'")
+            
+            if search_term:
+                # Ищем по названию источника из news_sources.json
+                self.logger.info(f"Searching for source name: {search_term}")
+                search_result = self._make_request("sources", {"search": search_term, "limit": 100})
                 
+                self.logger.info(f"Search API response for '{search_term}': {search_result}")
+                
+                if "error" not in search_result:
+                    sources = search_result.get("data", [])
+                    self.logger.info(f"Found {len(sources)} sources for '{search_term}'")
+                    
+                    # Логируем первые несколько источников для анализа
+                    for i, source in enumerate(sources[:3]):
+                        self.logger.info(f"Source {i+1}: code={source.get('code')}, id={source.get('id')}, name={source.get('name')}, url={source.get('url')}")
+                    
+                    # Ищем совпадение по домену в URL источников
+                    for source in sources:
+                        source_url = source.get("url", "")
+                        if source_url:
+                            source_domain = self._extract_domain_from_url(source_url)
+                            
+                            self.logger.debug(f"Comparing '{normalized_domain}' with source domain '{source_domain}' from URL '{source_url}'")
+                            
+                            if source_domain and source_domain.lower() == normalized_domain.lower():
+                                source_id = source.get("code") or source.get("id", "")
+                                if source_id:
+                                    self.logger.info(f"Found exact domain match: {normalized_domain} -> {source_id}")
+                                    mapping[normalized_domain] = source_id
+                                    self._save_sources_mapping(mapping)
+                                    return "да"
+                else:
+                    self.logger.warning(f"Search API returned error for '{search_term}': {search_result}")
+            
+            # Если источник не найден, возвращаем "нет" без записи в JSON
+            self.logger.info(f"Source not found for domain {normalized_domain}")
+            return "нет"
+            
         except Exception as e:
             self.logger.error(f"Error checking source for domain {domain}: {e}")
-            return f"error: {str(e)}"
+            return f"ошибка: {str(e)}"
 
     def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """

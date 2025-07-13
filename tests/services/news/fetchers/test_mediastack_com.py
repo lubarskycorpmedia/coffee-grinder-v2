@@ -601,31 +601,120 @@ class TestMediaStackFetcher:
         assert fetcher._extract_root_domain("") is None
         assert fetcher._extract_root_domain("single") == "single"
     
-    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._search_source_by_domain')
-    def test_check_source_by_domain_success(self, mock_search_source, fetcher):
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._save_sources_mapping')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_news_sources')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_sources_mapping')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._make_request')
+    def test_check_source_by_domain_success(self, mock_make_request, mock_load_mapping, mock_load_news_sources, mock_save_mapping, fetcher):
         """Тест успешной проверки источника по домену"""
-        # Настраиваем mock для возврата найденного источника
-        mock_search_source.return_value = "cnn"
+        # Настраиваем mocks
+        mock_load_mapping.return_value = {}  # Пустой маппинг
+        mock_load_news_sources.return_value = {
+            "cnn.com": ["CNN"]
+        }
+        mock_make_request.return_value = {
+            "data": [
+                {
+                    "code": "cnn",
+                    "id": "cnn-id",
+                    "name": "CNN",
+                    "url": "https://cnn.com"
+                }
+            ]
+        }
         
         result = fetcher.check_source_by_domain("cnn.com")
         
         assert result == "да"
-        mock_search_source.assert_called_once_with("cnn.com")
+        mock_make_request.assert_called_once_with("sources", {"search": "CNN", "limit": 100})
+        mock_save_mapping.assert_called_once()
     
-    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._search_source_by_domain')
-    def test_check_source_by_domain_not_found(self, mock_search_source, fetcher):
-        """Тест проверки несуществующего источника"""
-        # Настраиваем mock для возврата unavailable
-        mock_search_source.return_value = "unavailable"
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_news_sources')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_sources_mapping')
+    def test_check_source_by_domain_found_in_mapping(self, mock_load_mapping, mock_load_news_sources, fetcher):
+        """Тест проверки источника, уже существующего в маппинге"""
+        # Настраиваем mock для возврата существующего маппинга
+        mock_load_mapping.return_value = {
+            "cnn.com": "cnn"
+        }
+        
+        result = fetcher.check_source_by_domain("cnn.com")
+        
+        assert result == "да"
+        # news_sources не должен загружаться, если источник уже в маппинге
+        mock_load_news_sources.assert_not_called()
+    
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_news_sources')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_sources_mapping')
+    def test_check_source_by_domain_unavailable_in_mapping(self, mock_load_mapping, mock_load_news_sources, fetcher):
+        """Тест проверки источника, помеченного как недоступный в маппинге"""
+        # Настраиваем mock для возврата недоступного источника
+        mock_load_mapping.return_value = {
+            "nonexistent.com": "unavailable"
+        }
         
         result = fetcher.check_source_by_domain("nonexistent.com")
         
         assert result == "нет"
-        mock_search_source.assert_called_once_with("nonexistent.com")
+        # news_sources не должен загружаться, если источник уже в маппинге
+        mock_load_news_sources.assert_not_called()
+    
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_news_sources')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_sources_mapping')
+    def test_check_source_by_domain_not_found(self, mock_load_mapping, mock_load_news_sources, fetcher):
+        """Тест проверки несуществующего источника"""
+        # Настраиваем mocks
+        mock_load_mapping.return_value = {}  # Пустой маппинг
+        mock_load_news_sources.return_value = {}  # Пустой news_sources
+        
+        result = fetcher.check_source_by_domain("nonexistent.com")
+        
+        assert result == "нет"  # Источник не найден
+    
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_news_sources')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_sources_mapping')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._make_request')
+    def test_check_source_by_domain_api_error(self, mock_make_request, mock_load_mapping, mock_load_news_sources, fetcher):
+        """Тест обработки ошибки API"""
+        # Настраиваем mocks
+        mock_load_mapping.return_value = {}
+        mock_load_news_sources.return_value = {
+            "test.com": ["Test Source"]
+        }
+        mock_make_request.return_value = {"error": "API Error"}
+        
+        result = fetcher.check_source_by_domain("test.com")
+        
+        assert result == "нет"  # При ошибке API возвращаем "нет"
+    
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_news_sources')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_sources_mapping')
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._make_request')
+    def test_check_source_by_domain_domain_mismatch(self, mock_make_request, mock_load_mapping, mock_load_news_sources, fetcher):
+        """Тест проверки источника с несовпадающим доменом"""
+        # Настраиваем mocks
+        mock_load_mapping.return_value = {}
+        mock_load_news_sources.return_value = {
+            "cnn.com": ["CNN"]
+        }
+        # API возвращает источник, но с другим доменом
+        mock_make_request.return_value = {
+            "data": [
+                {
+                    "code": "bbc",
+                    "id": "bbc-id", 
+                    "name": "BBC",
+                    "url": "https://bbc.com"  # Другой домен
+                }
+            ]
+        }
+        
+        result = fetcher.check_source_by_domain("cnn.com")
+        
+        assert result == "нет"  # Домен не совпадает 
     
     @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._extract_domain_from_url')
-    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._search_source_by_domain')
-    def test_check_source_by_domain_invalid_domain(self, mock_search_source, mock_extract_domain, fetcher):
+    def test_check_source_by_domain_invalid_domain(self, mock_extract_domain, fetcher):
         """Тест проверки с невалидным доменом"""
         # Настраиваем mock для возврата None (невалидный домен)
         mock_extract_domain.return_value = None
@@ -634,26 +723,14 @@ class TestMediaStackFetcher:
         
         assert result == "нет"
         mock_extract_domain.assert_called_once_with("invalid-domain")
-        mock_search_source.assert_not_called()
     
-    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._search_source_by_domain')
-    def test_check_source_by_domain_exception(self, mock_search_source, fetcher):
+    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._load_sources_mapping')
+    def test_check_source_by_domain_exception(self, mock_load_mapping, fetcher):
         """Тест обработки исключения при проверке источника"""
         # Настраиваем mock для выброса исключения
-        mock_search_source.side_effect = Exception("API error")
+        mock_load_mapping.side_effect = Exception("JSON load error")
         
         result = fetcher.check_source_by_domain("test.com")
         
-        assert result.startswith("error: ")
-        assert "API error" in result
-    
-    @patch('src.services.news.fetchers.mediastack_com.MediaStackFetcher._search_source_by_domain')
-    def test_check_source_by_domain_with_url(self, mock_search_source, fetcher):
-        """Тест проверки источника с полным URL"""
-        mock_search_source.return_value = "bbc"
-        
-        result = fetcher.check_source_by_domain("https://www.bbc.com/news")
-        
-        assert result == "да"
-        # Проверяем, что домен был нормализован
-        mock_search_source.assert_called_once_with("bbc.com") 
+        assert result.startswith("ошибка: ")
+        assert "JSON load error" in result 

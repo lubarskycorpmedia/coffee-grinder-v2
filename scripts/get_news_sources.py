@@ -22,33 +22,33 @@ logger = setup_logger(__name__)
 # Массив доменов для тестирования
 DOMAINS_TO_TEST = [
     # "New York",
-    # "ground.news",
-    # "nytimes.com", 
+    "ground.news",
+    "nytimes.com", 
     "washingtonpost.com",
-    # "bloomberg.com",
-    # "thehill.com",
-    # "reuters.com",
-    # "wsj.com",
-    # "newsnationnow.com",
-    # "breitbart.com",
-    # "ft.com",
-    # "axios.com",
-    # "foxnews.com",
-    # "newsmax.com",
-    # "nypost.com",
-    # "washingtontimes.com",
-    # "washingtonexaminer.com",
-    # "dailywire.com",
-    # "dailysignal.com",
-    # "time.com",
-    # "msnbc.com",
-    # "newsweek.com",
-    # "cnn.com",
-    # "politico.com",
-    # "theguardian.com",
-    # "theatlantic.com",
-    # "forbes.com",
-    # "understandingwar.org"
+    "bloomberg.com",
+    "thehill.com",
+    "reuters.com",
+    "wsj.com",
+    "newsnationnow.com",
+    "breitbart.com",
+    "ft.com",
+    "axios.com",
+    "foxnews.com",
+    "newsmax.com",
+    "nypost.com",
+    "washingtontimes.com",
+    "washingtonexaminer.com",
+    "dailywire.com",
+    "dailysignal.com",
+    "time.com",
+    "msnbc.com",
+    "newsweek.com",
+    "cnn.com",
+    "politico.com",
+    "theguardian.com",
+    "theatlantic.com",
+    "forbes.com",
+    "understandingwar.org"
 ]
 
 def test_source_availability(fetcher, domain: str, provider_name: str) -> str:
@@ -61,7 +61,7 @@ def test_source_availability(fetcher, domain: str, provider_name: str) -> str:
         provider_name: Название провайдера
     
     Returns:
-        Результат проверки: "да", "нет" или код ошибки
+        Результат проверки: "да" или "нет"
     """
     try:
         # Для MediaStack и NewsData используем специализированные методы проверки источников
@@ -69,7 +69,8 @@ def test_source_availability(fetcher, domain: str, provider_name: str) -> str:
             # Используем метод check_source_by_domain для прямой проверки источника
             if hasattr(fetcher, 'check_source_by_domain'):
                 result = fetcher.check_source_by_domain(domain)
-                return result
+                # Приводим результат к "да"/"нет"
+                return "да" if result == "да" else "нет"
             else:
                 # Fallback на старый метод если новый метод недоступен
                 logger.warning(f"Method check_source_by_domain not found for {provider_name}, using fallback")
@@ -81,7 +82,7 @@ def test_source_availability(fetcher, domain: str, provider_name: str) -> str:
         
     except Exception as e:
         logger.error(f"Error testing source availability for {domain} in {provider_name}: {e}")
-        return f"exception: {str(e)}"
+        return "нет"
 
 
 def _test_source_via_news_fetch(fetcher, domain: str, provider_name: str) -> str:
@@ -94,7 +95,7 @@ def _test_source_via_news_fetch(fetcher, domain: str, provider_name: str) -> str
         provider_name: Название провайдера
     
     Returns:
-        Результат проверки: "да", "нет" или код ошибки
+        Результат проверки: "да" или "нет"
     """
     try:
         # Используем единый универсальный метод fetch_news для всех провайдеров
@@ -107,18 +108,14 @@ def _test_source_via_news_fetch(fetcher, domain: str, provider_name: str) -> str
         
         # Проверяем на ошибку
         if "error" in response:
-            error = response["error"]
-            if hasattr(error, 'status_code') and error.status_code:
-                return str(error.status_code)
-            else:
-                return "error"
+            return "нет"
         
         # Проверяем наличие статей в стандартизированном формате
         articles = response.get("articles", [])
         return "да" if articles else "нет"
         
     except Exception as e:
-        return f"exception: {str(e)}"
+        return "нет"
 
 
 def normalize_domain(domain: str) -> str:

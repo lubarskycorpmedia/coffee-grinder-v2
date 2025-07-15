@@ -473,38 +473,31 @@ class NewsDataIOFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых категорий
         """
-        # TODO: АРХИТЕКТУРНАЯ ПРОБЛЕМА - захардкоженные категории
-        #
-        # ПРОБЛЕМА:
-        # Метод возвращает статичный список категорий NewsData.io вместо получения
-        # реальных категорий из источников. NewsData.io предоставляет фиксированный
-        # набор категорий, но источники могут иметь дополнительные категории.
-        #
-        # ВАРИАНТЫ РЕШЕНИЯ:
-        # 1. Получать категории из sources_api() и извлекать уникальные category
-        # 2. Разделить на get_supported_categories() (API категории) и get_available_categories() (из источников)
-        # 3. Комбинировать: возвращать API категории + категории из источников
-        # 4. Добавить параметр source для выбора: "api" или "sources"
-        #
-        # ОСОБЕННОСТЬ NewsData.io:
-        # В отличие от других API, здесь категории могут быть более гибкими,
-        # но для стабильности используем стандартный набор.
-
-        # Возвращаем стандартные категории NewsData.io
-        return [
-            "business",
-            "entertainment",
-            "environment",
-            "food",
-            "health",
-            "politics",
-            "science",
-            "sports",
-            "technology",
-            "top",
-            "tourism",
-            "world",
-        ]
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        categories_path = os.path.join(project_root, 'data', 'newsdata_io_categories.json')
+        with open(categories_path, 'r') as f:
+            categories = json.load(f)
+        return categories
+        # return [
+        #             "business",
+        #             "crime",
+        #             "domestic",
+        #             "education",
+        #             "entertainment",
+        #             "environment",
+        #             "food",
+        #             "health",
+        #             "lifestyle",
+        #             "politics",
+        #             "science",
+        #             "sports",
+        #             "technology",
+        #             "top",
+        #             "tourism",
+        #             "world",
+        #             "other"
+        #         ]
 
     def get_languages(self) -> list[str]:
         """
@@ -514,46 +507,12 @@ class NewsDataIOFetcher(BaseFetcher):
             List[str]: Список поддерживаемых языков
         """
         # Возвращаем стандартные языки NewsData.io
-        return [
-            "en",
-            "ar",
-            "bn",
-            "cs",
-            "da",
-            "de",
-            "el",
-            "es",
-            "et",
-            "fa",
-            "fi",
-            "fr",
-            "he",
-            "hi",
-            "hr",
-            "hu",
-            "id",
-            "it",
-            "ja",
-            "ko",
-            "lt",
-            "lv",
-            "ms",
-            "nl",
-            "no",
-            "pl",
-            "pt",
-            "ro",
-            "ru",
-            "sk",
-            "sl",
-            "sv",
-            "ta",
-            "th",
-            "tr",
-            "uk",
-            "vi",
-            "zh",
-        ]
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        languages_path = os.path.join(project_root, 'data', 'newsdata_io_languages.json')
+        with open(languages_path, 'r') as f:
+            languages = json.load(f)
+        return languages
 
     def _standardize_article(self, article: dict[str, Any]) -> dict[str, Any]:
         """

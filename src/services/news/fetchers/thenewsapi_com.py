@@ -156,25 +156,12 @@ class TheNewsAPIFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых категорий
         """
-        # TODO: АРХИТЕКТУРНАЯ ПРОБЛЕМА - захардкоженные категории
-        # 
-        # ПРОБЛЕМА:
-        # Метод возвращает статичный список вместо получения реальных категорий из API.
-        # Это противоречит логике get_categories.py, который получает все доступные 
-        # категории через get_sources().
-        #
-        # ВАРИАНТЫ РЕШЕНИЯ:
-        # 1. Получать категории из API через get_sources() с fallback к захардкоженным
-        # 2. Разделить на get_supported_categories() и get_available_categories()  
-        # 3. Добавить кеширование с параметром use_cache
-        # 4. Сделать асинхронную загрузку категорий при инициализации
-        #
-        # КОМПРОМИСС:
-        # Текущий подход обеспечивает производительность (нет HTTP запроса) и стабильность,
-        # но теряет актуальность данных. Для получения всех реальных категорий
-        # используйте get_sources() и извлекайте categories из каждого источника.
-        
-        return ["general", "business", "entertainment", "health", "science", "sports", "technology"]
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        categories_path = os.path.join(project_root, 'data', 'thenewsapi_com_categories.json')
+        with open(categories_path, 'r') as f:
+            categories = json.load(f)
+        return categories
     
     def get_languages(self) -> List[str]:
         """
@@ -183,8 +170,13 @@ class TheNewsAPIFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых языков
         """
-        return ["en", "es", "fr", "de", "it", "pt", "ru", "ar", "zh"]
-    
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        languages_path = os.path.join(project_root, 'data', 'thenewsapi_com_languages.json')
+        with open(languages_path, 'r') as f:
+            languages = json.load(f)
+        return languages
+        
     def fetch_headlines(self, 
                        locale: Optional[str] = None,
                        language: Optional[str] = None,

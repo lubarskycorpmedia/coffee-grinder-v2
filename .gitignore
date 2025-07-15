@@ -82,8 +82,9 @@ tasks/
 tmp/
 scripts/task-complexity-report.json
 
-# Google credentials
+# Конфигурационные JSON файлы
 *.json
+!data/*.json
 !.env.example
 
 # Dependency directories

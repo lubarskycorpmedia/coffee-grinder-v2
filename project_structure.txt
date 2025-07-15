@@ -1,0 +1,117 @@
+.
+|-- .coverage
+|-- .gitignore
+|-- .pre-commit-config.yaml
+|-- .roomodes
+|-- .taskmasterconfig
+|-- .windsurfrules
+|-- Dockerfile
+|-- Makefile
+|-- README.md
+|-- cronjob
+|-- data
+|   |-- mediastack_com_sources.json
+|   |-- news_sources.json
+|   |-- newsdata_io_categories.json
+|   |-- newsdata_io_languages.json
+|   |-- thenewsapi_com_categories.json
+|   `-- thenewsapi_com_languages.json
+|-- debug_api_full_response.json
+|-- htmlcov
+|   |-- .gitignore
+|   |-- class_index.html
+|   |-- coverage_html_cb_6fb7b396.js
+|   |-- favicon_32_cb_58284776.png
+|   |-- function_index.html
+|   |-- index.html
+|   |-- keybd_closed_cb_ce680311.png
+|   |-- status.json
+|   |-- style_cb_81f8c14c.css
+|   |-- z_068165969eb857ca___init___py.html
+|   |-- z_068165969eb857ca_base_py.html
+|   |-- z_068165969eb857ca_newsapi_org_py.html
+|   |-- z_068165969eb857ca_thenewsapi_com_py.html
+|   |-- z_145eef247bfb46b6_config_py.html
+|   |-- z_145eef247bfb46b6_healthcheck_py.html
+|   |-- z_145eef247bfb46b6_logger_py.html
+|   |-- z_145eef247bfb46b6_run_py.html
+|   |-- z_61160c3d16c344e9_news_chain_py.html
+|   |-- z_67f6f9a13eff1831___init___py.html
+|   |-- z_a3faada3f9827d88___init___py.html
+|   |-- z_a3faada3f9827d88_deduplicftor_rank_py.html
+|   |-- z_a3faada3f9827d88_exporter_py.html
+|   `-- z_a3faada3f9827d88_fetcher_fabric_py.html
+|-- poetry.lock
+|-- project_structure.txt
+|-- pyproject.toml
+|-- scripts
+|   |-- README_gnews.md
+|   |-- README_mediastack.md
+|   |-- README_newsapi.md
+|   |-- README_newsdata.md
+|   |-- README_thenewsapi.md
+|   |-- available_categories.txt
+|   |-- check_data_completeness.py
+|   |-- check_sheets_content.py
+|   |-- debug_api_response.py
+|   |-- debug_sheets_export.py
+|   |-- debug_thenewsapi.py
+|   |-- debug_with_raw_response.py
+|   |-- example_prd.txt
+|   |-- get_categories.py
+|   |-- get_news_sources.py
+|   |-- newsdata_io_doc.html
+|   |-- newsdata_io_doc.txt
+|   |-- prd.txt
+|   |-- rubrics_test_result_20250707_024926.json
+|   `-- rubrics_test_result_20250707_041403.json
+|-- src
+|   |-- config.py
+|   |-- healthcheck.py
+|   |-- langchain
+|   |   |-- __init__.py
+|   |   |-- image_chain.py
+|   |   |-- news_chain.py
+|   |   `-- presentation_chain.py
+|   |-- logger.py
+|   |-- openai_client.py
+|   |-- run.py
+|   |-- services
+|   |   |-- __init__.py
+|   |   |-- audio
+|   |   |   `-- tts_processor.py
+|   |   |-- images
+|   |   |   `-- image_processor.py
+|   |   |-- news
+|   |   |   |-- __init__.py
+|   |   |   |-- exporter.py
+|   |   |   |-- fetcher_fabric.py
+|   |   |   |-- fetchers
+|   |   |   |   |-- __init__.py
+|   |   |   |   |-- base.py
+|   |   |   |   |-- gnews_io.py
+|   |   |   |   |-- mediastack_com.py
+|   |   |   |   |-- newsapi_org.py
+|   |   |   |   |-- newsdata_io.py
+|   |   |   |   `-- thenewsapi_com.py
+|   |   |   |-- news_processor.py
+|   |   |   |-- pipeline.py
+|   |   |   `-- rubrics_config.py
+|   |   `-- presentations
+|   |       `-- ppt_generator.py
+|   `-- webapp
+|       |-- __init__.py
+|       `-- main.py
+`-- tests
+    |-- __init__.py
+    |-- config
+    |-- langchain
+    |   `-- __init__.py
+    `-- services
+        |-- __init__.py
+        `-- news
+            |-- __init__.py
+            `-- fetchers
+                `-- __init__.py
+
+19 directories, 96 files

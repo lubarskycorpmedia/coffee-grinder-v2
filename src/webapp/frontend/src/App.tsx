@@ -6,7 +6,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'config' | 'status'>('status')
 
   return (
-    <div className="min-h-screen coffee-gradient-accent">
+    <div className="min-h-screen coffee-gradient-accent flex flex-col">
       {/* Header */}
       <header className="coffee-gradient-accent shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -56,16 +56,16 @@ function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="flex-1 max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 w-full">
         {activeTab === 'status' && <StatusDashboard />}
         {activeTab === 'config' && <ConfigEditor />}
       </main>
 
       {/* Footer */}
-      <footer className="bg-coffee-dark border-t border-coffee-medium/30 mt-12">
+      <footer className="bg-coffee-dark border-t border-coffee-medium/30">
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
           <p className="text-center text-coffee-cream text-sm">
-            Coffee Grinder v2 - AI-powered news processing system
+            Coffee Grinder v2 - AI-powered news processing system, 2025
           </p>
         </div>
       </footer>

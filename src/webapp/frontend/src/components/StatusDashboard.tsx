@@ -342,6 +342,65 @@ const StatusDashboard = () => {
     }
   }
 
+  // Функция для получения информации о времени статуса
+  const getStatusTimeInfo = (status: ProcessingStatus): { timeString: string; label: string } | null => {
+    const formatTime = (timeString: string): string => {
+      const date = new Date(timeString)
+      const day = date.getDate().toString().padStart(2, '0')
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const year = date.getFullYear()
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      const seconds = date.getSeconds().toString().padStart(2, '0')
+      return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`
+    }
+
+    switch (status.state) {
+      case 'running':
+        if (status.start_time) {
+          return {
+            timeString: formatTime(status.start_time),
+            label: 'Время начала:'
+          }
+        }
+        break
+      
+      case 'completed':
+        if (status.end_time) {
+          return {
+            timeString: formatTime(status.end_time),
+            label: 'Время завершения:'
+          }
+        }
+        break
+      
+      case 'error':
+        if (status.end_time) {
+          return {
+            timeString: formatTime(status.end_time),
+            label: 'Время ошибки:'
+          }
+        }
+        break
+      
+      case 'idle':
+        if (status.end_time) {
+          return {
+            timeString: formatTime(status.end_time),
+            label: 'Последнее завершение:'
+          }
+        } else if (status.timestamp) {
+          return {
+            timeString: formatTime(status.timestamp),
+            label: 'Последнее обновление:'
+          }
+        }
+        break
+    }
+
+    return null
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-32">
@@ -392,15 +451,13 @@ const StatusDashboard = () => {
             {/* Current Status Message */}
             <div className="bg-coffee-cream/50 rounded-lg p-3">
               <p className="text-sm text-coffee-cream">
-                <strong>Сообщение:</strong> {status.message}{status.state === 'completed' && status.end_time && (() => {
-                  const date = new Date(status.end_time!)
-                  const day = date.getDate().toString().padStart(2, '0')
-                  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-                  const year = date.getFullYear()
-                  const hours = date.getHours().toString().padStart(2, '0')
-                  const minutes = date.getMinutes().toString().padStart(2, '0')
-                  const seconds = date.getSeconds().toString().padStart(2, '0')
-                  return ` ${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`
+                <strong>Сообщение:</strong> {status.message}
+                {(() => {
+                  const timeInfo = getStatusTimeInfo(status)
+                  if (timeInfo) {
+                    return ` (${timeInfo.label} ${timeInfo.timeString})`
+                  }
+                  return ''
                 })()}
               </p>
               {status.current_provider && (
@@ -432,20 +489,18 @@ const StatusDashboard = () => {
 
             {/* Processed Providers */}
             {status.processed_providers.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-coffee-cream mb-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-bold text-coffee-cream">
                   Обработанные провайдеры:
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {status.processed_providers.map((provider) => (
-                    <span 
-                      key={provider}
-                      className="px-2 py-1 bg-coffee-light text-coffee-foam text-xs rounded-full"
-                    >
-                      {provider}
-                    </span>
-                  ))}
-                </div>
+                </span>
+                {status.processed_providers.map((provider) => (
+                  <span 
+                    key={provider}
+                    className="px-2 py-1 bg-coffee-light text-coffee-foam text-xs rounded-full"
+                  >
+                    {provider}
+                  </span>
+                ))}
               </div>
             )}
 

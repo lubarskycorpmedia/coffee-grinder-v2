@@ -1,8 +1,8 @@
 {
-  "thenewsapi": {
-    "query": "Rubio Zelensky",
+  "newsapi": {
+    "query": "Трамп",
     "from_date": "2025-07-14",
-    "language": "en",
+    "language": "ru",
     "limit": 3
   }
 }

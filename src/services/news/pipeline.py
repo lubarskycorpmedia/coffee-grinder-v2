@@ -133,7 +133,10 @@ class NewsPipelineOrchestrator:
                     query: str, 
                     categories: List[str],
                     limit: Optional[int] = None,
-                    language: Optional[str] = None) -> PipelineResult:
+                    language: Optional[str] = None,
+                    from_date: Optional[str] = None,
+                    to_date: Optional[str] = None,
+                    **kwargs) -> PipelineResult:
         """
         Запускает полный pipeline обработки новостей
         
@@ -142,6 +145,9 @@ class NewsPipelineOrchestrator:
             categories: Список категорий новостей
             limit: Количество новостей (по умолчанию из настроек)
             language: Язык поиска (опционально)
+            from_date: Дата начала поиска (опционально)
+            to_date: Дата окончания поиска (опционально)
+            **kwargs: Дополнительные параметры для fetcher'а
             
         Returns:
             PipelineResult с детальными результатами выполнения
@@ -166,7 +172,7 @@ class NewsPipelineOrchestrator:
         try:
             # ЭТАП 1: Получение новостей
             self.logger.info("Stage 1: Fetching news")
-            stage_result = self._run_fetch_stage(query, categories_str, limit, language)
+            stage_result = self._run_fetch_stage(query, categories_str, limit, language, from_date, to_date, **kwargs)
             results["fetcher"] = stage_result
             
             if not stage_result.success:
@@ -213,7 +219,8 @@ class NewsPipelineOrchestrator:
         
         return self._create_pipeline_result(overall_success, 3, completed_stages, results, errors, start_time)
     
-    def _run_fetch_stage(self, query: str, categories: str, limit: int, language: Optional[str]) -> StageResult:
+    def _run_fetch_stage(self, query: str, categories: str, limit: int, language: Optional[str], 
+                        from_date: Optional[str] = None, to_date: Optional[str] = None, **kwargs) -> StageResult:
         """Выполняет этап получения новостей"""
         start_time = time.time()
         
@@ -223,7 +230,10 @@ class NewsPipelineOrchestrator:
                 query=query,
                 categories=categories,
                 limit=limit,
-                language=language
+                language=language,
+                from_date=from_date,
+                to_date=to_date,
+                **kwargs
             )
             
             execution_time = time.time() - start_time
@@ -255,26 +265,43 @@ class NewsPipelineOrchestrator:
             for article in articles:
                 try:
                     # Парсим дату публикации
-                    published_at_str = article.get("published_at", "")
-                    if published_at_str:
-                        # Обрабатываем разные форматы даты
-                        if published_at_str.endswith("Z"):
-                            published_at = datetime.fromisoformat(published_at_str.replace("Z", "+00:00"))
-                        elif "+" in published_at_str or published_at_str.endswith("00:00"):
-                            published_at = datetime.fromisoformat(published_at_str)
+                    published_at_raw = article.get("published_at", "")
+                    if published_at_raw:
+                        # Проверяем тип данных
+                        if isinstance(published_at_raw, datetime):
+                            # Уже datetime объект
+                            published_at = published_at_raw
+                        elif isinstance(published_at_raw, str):
+                            # Строка - парсим
+                            if published_at_raw.endswith("Z"):
+                                published_at = datetime.fromisoformat(published_at_raw.replace("Z", "+00:00"))
+                            elif "+" in published_at_raw or published_at_raw.endswith("00:00"):
+                                published_at = datetime.fromisoformat(published_at_raw)
+                            else:
+                                # Пытаемся парсить как ISO без таймзоны
+                                published_at = datetime.fromisoformat(published_at_raw + "+00:00")
                         else:
-                            # Пытаемся парсить как ISO без таймзоны
-                            published_at = datetime.fromisoformat(published_at_str + "+00:00")
+                            # Неизвестный тип - используем текущее время
+                            published_at = datetime.now()
                     else:
                         # Если даты нет, используем текущее время
                         published_at = datetime.now()
+                    
+                    # Извлекаем source как строку
+                    source_data = article.get("source", "")
+                    if isinstance(source_data, dict):
+                        # Если source - это dict, извлекаем name
+                        source_name = source_data.get("name", "") or source_data.get("id", "") or ""
+                    else:
+                        # Если source уже строка
+                        source_name = str(source_data) if source_data else ""
                     
                     news_item = NewsItem(
                         title=article.get("title", ""),
                         description=article.get("description", ""),
                         url=article.get("url", ""),
                         published_at=published_at,
-                        source=article.get("source", ""),
+                        source=source_name,
                         category=article.get("category"),
                         language=article.get("language", language),
                         image_url=article.get("image_url"),

@@ -4,6 +4,7 @@ from datetime import datetime
 import time
 import random
 import requests
+from urllib.parse import urlencode, urljoin
 
 if TYPE_CHECKING:
     from src.config import BaseProviderSettings
@@ -110,6 +111,41 @@ class BaseFetcher(ABC, metaclass=FetcherMeta):
         # Повторяем для rate limiting и серверных ошибок
         return response.status_code in [429, 500, 502, 503, 504]
     
+    def _mask_api_keys_in_url(self, url: str, params: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Маскирует API ключи в URL для безопасного логирования
+        
+        Args:
+            url: Базовый URL
+            params: Параметры запроса
+            
+        Returns:
+            Полный URL с замаскированными API ключами
+        """
+        if not params:
+            return url
+            
+        # Копируем параметры для маскировки
+        masked_params = params.copy()
+        
+        # Список возможных названий API ключей
+        api_key_fields = [
+            'api_key', 'apikey', 'api_token', 'access_key', 
+            'token', 'key', 'auth_token', 'authorization'
+        ]
+        
+        # Маскируем API ключи
+        for field in api_key_fields:
+            if field in masked_params:
+                masked_params[field] = "xxx"
+        
+        # Формируем полный URL с замаскированными параметрами
+        if masked_params:
+            query_string = urlencode(masked_params)
+            return f"{url}?{query_string}"
+        
+        return url
+    
     def _make_request_with_retries(self, 
                                   session: requests.Session,
                                   url: str, 
@@ -134,7 +170,10 @@ class BaseFetcher(ABC, metaclass=FetcherMeta):
         
         for attempt in range(self.max_retries):
             try:
+                # Логируем полный URL с замаскированными API ключами
+                masked_url = self._mask_api_keys_in_url(url, params)
                 if self._logger:
+                    self._logger.info(f"🌐 API Request: @{masked_url}")
                     self._logger.debug(f"Making request to {url} (attempt {attempt + 1}/{self.max_retries})")
                 
                 response = session.get(url, params=params, headers=headers, timeout=timeout)

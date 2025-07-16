@@ -1,8 +1,9 @@
 # src/services/news/fetchers/newsapi_org.py
 
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from datetime import datetime
+from urllib.parse import urlencode
 from newsapi import NewsApiClient
 from newsapi.newsapi_exception import NewsAPIException
 
@@ -39,6 +40,18 @@ class NewsAPIFetcher(BaseFetcher):
         
         # Инициализируем логгер
         self.logger = setup_logger(__name__)
+    
+    def _log_api_request(self, endpoint: str, params: Dict[str, Any]) -> None:
+        """Логирует полный URL запроса к NewsAPI с замаскированным API ключом"""
+        # Копируем параметры и маскируем API ключ
+        masked_params = params.copy()
+        masked_params['apiKey'] = 'xxx'
+        
+        # Формируем полный URL (base_url уже содержит /v2)
+        url = f"{self.base_url}/{endpoint}"
+        masked_url = f"{url}?{urlencode(masked_params)}"
+        
+        self.logger.info(f"🌐 API Request: @{masked_url}")
     
     def fetch_headlines(self, **kwargs) -> Dict[str, Any]:
         """
@@ -102,10 +115,10 @@ class NewsAPIFetcher(BaseFetcher):
             Dict[str, Any]: Результат в стандартном формате с полем "articles"
         """
         try:
-            # Если есть параметр domains, используем search_news (эндпоинт /v2/everything)
-            if 'domains' in kwargs:
+            # Если есть параметры для поиска (query, domains, from_date), используем search_news (эндпоинт /v2/everything)
+            if query or 'domains' in kwargs or kwargs.get('from_date') or kwargs.get('to_date'):
                 articles = self.search_news(
-                    query=query or "news",
+                    query=query or "*",  # Используем wildcard если query пустой
                     language=language,
                     limit=limit,
                     **kwargs
@@ -133,6 +146,9 @@ class NewsAPIFetcher(BaseFetcher):
             if 'country' in kwargs:
                 params['country'] = kwargs['country']
             
+            # Логируем запрос
+            self._log_api_request('top-headlines', params)
+            
             response = self.client.get_top_headlines(**params)
             
             if response.get('status') != 'ok':
@@ -156,8 +172,8 @@ class NewsAPIFetcher(BaseFetcher):
     def search_news(self, 
                     query: str,
                     language: Optional[str] = None,
-                    from_date: Optional[datetime] = None,
-                    to_date: Optional[datetime] = None,
+                    from_date: Optional[Union[datetime, str]] = None,
+                    to_date: Optional[Union[datetime, str]] = None,
                     limit: int = 50,
                     **kwargs) -> List[Dict[str, Any]]:
         """
@@ -188,9 +204,15 @@ class NewsAPIFetcher(BaseFetcher):
             
             # Добавляем даты если указаны
             if from_date:
-                params['from_param'] = from_date.strftime('%Y-%m-%d')
+                if isinstance(from_date, str):
+                    params['from_param'] = from_date
+                else:
+                    params['from_param'] = from_date.strftime('%Y-%m-%d')
             if to_date:
-                params['to'] = to_date.strftime('%Y-%m-%d')
+                if isinstance(to_date, str):
+                    params['to'] = to_date
+                else:
+                    params['to'] = to_date.strftime('%Y-%m-%d')
                 
             # Добавляем источники если указаны
             if 'sources' in kwargs:
@@ -199,6 +221,9 @@ class NewsAPIFetcher(BaseFetcher):
             # Добавляем домены если указаны
             if 'domains' in kwargs:
                 params['domains'] = kwargs['domains']
+            
+            # Логируем запрос
+            self._log_api_request('everything', params)
             
             response = self.client.get_everything(**params)
             

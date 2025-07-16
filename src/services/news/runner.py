@@ -248,13 +248,17 @@ def run_news_parsing_from_config(
                     category = config_dict.get("category", "")
                     limit = config_dict.get("limit", 50)
                     language = config_dict.get("language", "en")
+                    from_date = config_dict.get("from_date")
+                    to_date = config_dict.get("to_date")
                     
                     # Запускаем pipeline (NOTE: test_without_export не поддерживается в текущей версии)
                     result = orchestrator.run_pipeline(
                         query=query,
                         categories=[category] if category else [],
                         limit=limit,
-                        language=language
+                        language=language,
+                        from_date=from_date,
+                        to_date=to_date
                     )
                     all_results[provider_name] = {"success": result.success, "result": result}
                     

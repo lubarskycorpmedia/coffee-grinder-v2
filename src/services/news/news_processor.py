@@ -116,12 +116,21 @@ class NewsProcessor:
             # Конвертируем в NewsItem объекты
             news_items = []
             for article in news_data.get('articles', []):
+                # Извлекаем source как строку
+                source_data = article.get('source', '')
+                if isinstance(source_data, dict):
+                    # Если source - это dict, извлекаем name
+                    source_name = source_data.get('name', '') or source_data.get('id', '') or ''
+                else:
+                    # Если source уже строка
+                    source_name = str(source_data) if source_data else ''
+                    
                 news_item = NewsItem(
                     title=article.get('title', ''),
                     description=article.get('description', ''),
                     url=article.get('url', ''),
                     published_at=datetime.fromisoformat(article['published_at'].replace('Z', '+00:00')) if article.get('published_at') else datetime.now(timezone.utc),
-                    source=article.get('source', ''),
+                    source=source_name,
                     category=article.get('category', category or ''),
                     language=article.get('language', language or '')
                 )
@@ -170,12 +179,21 @@ class NewsProcessor:
             # Конвертируем в NewsItem объекты
             news_items = []
             for article in articles:
+                # Извлекаем source как строку
+                source_data = article.get('source', '')
+                if isinstance(source_data, dict):
+                    # Если source - это dict, извлекаем name
+                    source_name = source_data.get('name', '') or source_data.get('id', '') or ''
+                else:
+                    # Если source уже строка
+                    source_name = str(source_data) if source_data else ''
+                    
                 news_item = NewsItem(
                     title=article.get('title', ''),
                     description=article.get('description', ''),
                     url=article.get('url', ''),
                     published_at=datetime.fromisoformat(article['published_at'].replace('Z', '+00:00')) if article.get('published_at') else datetime.now(timezone.utc),
-                    source=article.get('source', ''),
+                    source=source_name,
                     category=article.get('category', ''),
                     language=article.get('language', language or '')
                 )

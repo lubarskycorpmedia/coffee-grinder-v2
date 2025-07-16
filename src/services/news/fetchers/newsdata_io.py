@@ -3,6 +3,7 @@
 from datetime import datetime
 from typing import Any, TYPE_CHECKING
 import requests
+from urllib.parse import urlencode
 
 from newsdataapi import NewsDataApiClient
 
@@ -72,6 +73,12 @@ class NewsDataIOFetcher(BaseFetcher):
             }
             
             logger.info(f"Проверяем источник по домену {normalized_domain} в NewsData.io")
+            
+            # Логируем полный URL с замаскированным API ключом
+            masked_params = params.copy()
+            masked_params['apikey'] = 'xxx'
+            masked_url = f"{url}?{urlencode(masked_params)}"
+            logger.info(f"🌐 API Request: @{masked_url}")
             
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()

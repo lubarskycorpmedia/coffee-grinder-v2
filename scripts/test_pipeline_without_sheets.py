@@ -99,12 +99,21 @@ def test_pipeline_stages():
                 else:
                     published_at = datetime.now()
                 
+                # Извлекаем source как строку
+                source_data = article.get("source", "")
+                if isinstance(source_data, dict):
+                    # Если source - это dict, извлекаем name
+                    source_name = source_data.get("name", "") or source_data.get("id", "") or ""
+                else:
+                    # Если source уже строка
+                    source_name = str(source_data) if source_data else ""
+                
                 news_item = NewsItem(
                     title=article.get("title", ""),
                     description=article.get("description", ""),
                     url=article.get("url", ""),
                     published_at=published_at,
-                    source=article.get("source", ""),
+                    source=source_name,
                     category=article.get("category"),
                     language=article.get("language", "en")
                 )

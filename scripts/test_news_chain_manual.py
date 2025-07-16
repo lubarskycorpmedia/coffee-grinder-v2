@@ -99,12 +99,21 @@ def convert_api_news_to_news_items(api_news: List[Dict]) -> List[NewsItem]:
                 news.get('published_at', '').replace('Z', '+00:00')
             ) if news.get('published_at') else datetime.now()
             
+            # Извлекаем source как строку
+            source_data = news.get('source', '')
+            if isinstance(source_data, dict):
+                # Если source - это dict, извлекаем name
+                source_name = source_data.get('name', '') or source_data.get('id', '') or ''
+            else:
+                # Если source уже строка
+                source_name = str(source_data) if source_data else ''
+            
             news_item = NewsItem(
                 title=news.get('title', ''),
                 description=news.get('description', ''),
                 url=news.get('url', ''),
                 published_at=published_at,
-                source=news.get('source', ''),
+                source=source_name,
                 category=news.get('category'),
                 language=news.get('language')
             )

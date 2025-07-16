@@ -23,6 +23,7 @@ RUN poetry config virtualenvs.create false \
     && poetry install --no-interaction --no-ansi --no-root
 
 COPY src/ ./src/
+COPY data/ ./data/
 COPY .config/ .config/
 COPY cronjob ./cronjob
 

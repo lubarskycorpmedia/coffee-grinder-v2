@@ -135,6 +135,11 @@ class PipelineSettings(BaseModel):
         description="Возвращать частичные результаты при ошибках в pipeline. "
                    "True - продолжать выполнение даже при ошибках на отдельных этапах"
     )
+    TASKS_LOGS_COUNT: int = Field(
+        default=10,
+        description="Максимальное количество задач в окне логов. "
+                   "Ограничивает количество аккордеонов с логами задач в веб-интерфейсе"
+    )
 
 
 class GoogleSettings(BaseModel):

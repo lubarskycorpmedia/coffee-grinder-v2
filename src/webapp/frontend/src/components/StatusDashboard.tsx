@@ -26,6 +26,15 @@ interface LogEntry {
   rawLine: string
 }
 
+interface TaskLogGroup {
+  taskId: string
+  taskName: string
+  startTime: string
+  endTime?: string
+  logs: LogEntry[]
+  isExpanded: boolean
+}
+
 interface LogsResponse {
   success: boolean
   lines_requested: number
@@ -43,14 +52,98 @@ const StatusDashboard = () => {
   // Состояния для логов
   const [showLogsModal, setShowLogsModal] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
-  const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([])
+  const [taskLogGroups, setTaskLogGroups] = useState<TaskLogGroup[]>([])
+  const [filteredTaskGroups, setFilteredTaskGroups] = useState<TaskLogGroup[]>([])
   const [logFilter, setLogFilter] = useState<string>('ALL') // ALL, INFO, ERROR, DEBUG, WARNING
   const [isLoadingLogs, setIsLoadingLogs] = useState(false)
+  const [tasksLogsCount] = useState(10) // Пока хардкод, потом получать из API
   
   const queryClient = useQueryClient()
   const intervalRef = useRef<number>()
   const lastStatusRef = useRef<ProcessingStatus>()
   const logsContainerRef = useRef<HTMLDivElement>(null)
+
+  // Функция группировки логов по задачам
+  const groupLogsByTasks = (logs: LogEntry[]): TaskLogGroup[] => {
+    const groups: TaskLogGroup[] = []
+    let currentGroup: TaskLogGroup | null = null
+    
+    logs.forEach((log, index) => {
+      // Определяем начало новой задачи по маркерам
+      const isTaskStart = log.message.includes('Pipeline started - Начинается обработка') ||
+                         log.message.includes('Starting - Начинается обработка провайдера') ||
+                         (index === 0) // Первый лог всегда начинает задачу
+
+      const isTaskEnd = log.message.includes('Pipeline finished - Завершение pipeline') ||
+                       log.message.includes('Pipeline completed - Завершена обработка') ||
+                       log.message.includes('Completed - Завершена обработка провайдера')
+
+      if (isTaskStart || !currentGroup) {
+        // Закрываем предыдущую группу если она была
+        if (currentGroup && !currentGroup.endTime) {
+          currentGroup.endTime = log.timestamp
+        }
+        
+        // Создаем новую группу
+        const taskName = extractTaskName(log.message) || `Задача ${groups.length + 1}`
+        currentGroup = {
+          taskId: `task_${Date.now()}_${index}`,
+          taskName,
+          startTime: log.timestamp,
+          logs: [log],
+          isExpanded: groups.length === 0 // Первая группа открыта по умолчанию
+        }
+        groups.push(currentGroup)
+      } else {
+        // Добавляем лог в текущую группу
+        currentGroup.logs.push(log)
+        
+        if (isTaskEnd) {
+          currentGroup.endTime = log.timestamp
+        }
+      }
+    })
+    
+    // Ограничиваем количество групп
+    return groups.slice(-tasksLogsCount)
+  }
+
+  // Функция извлечения имени задачи из сообщения
+  const extractTaskName = (message: string): string | null => {
+    // Основная обработка pipeline
+    if (message.includes('Pipeline started - Начинается обработка новостей')) {
+      return '🚀 Обработка новостей'
+    }
+    
+    // Обработка отдельного провайдера
+    if (message.includes('Starting - Начинается обработка провайдера:')) {
+      const match = message.match(/провайдера:\s*([^\s]+)/i)
+      return match ? `📡 ${match[1]}` : '📡 Провайдер'
+    }
+    
+    // Фаллбек для старых форматов
+    if (message.includes('провайдер')) {
+      const match = message.match(/провайдер[:\s]([^,\s]+)/i)
+      return match ? `📡 ${match[1]}` : '📡 Провайдер'
+    }
+    
+    if (message.includes('Pipeline')) {
+      return '🔄 Pipeline'
+    }
+    
+    return null
+  }
+
+  // Функция переключения состояния аккордеона
+  const toggleTaskGroup = (taskId: string) => {
+    setTaskLogGroups(prev => 
+      prev.map(group => 
+        group.taskId === taskId 
+          ? { ...group, isExpanded: !group.isExpanded }
+          : group
+      )
+    )
+  }
 
   // Функция парсинга лога
   const parseLogLine = (line: string): LogEntry => {
@@ -133,6 +226,10 @@ const StatusDashboard = () => {
         console.log('Пример первых 3 строк:', data.logs.slice(0, 3))
         
         setLogs(parsedLogs)
+        
+        // Группируем логи по задачам
+        const groups = groupLogsByTasks(parsedLogs)
+        setTaskLogGroups(groups)
       }
     } catch (error) {
       console.error('Ошибка получения логов:', error)
@@ -142,26 +239,31 @@ const StatusDashboard = () => {
     }
   }
 
-  // Фильтрация логов
+  // Фильтрация групп логов
   useEffect(() => {
     if (logFilter === 'ALL') {
-      setFilteredLogs(logs)
+      setFilteredTaskGroups(taskLogGroups)
     } else {
-      setFilteredLogs(logs.filter((log: LogEntry) => log.level === logFilter))
+      const filtered = taskLogGroups.map(group => ({
+        ...group,
+        logs: group.logs.filter((log: LogEntry) => log.level === logFilter)
+      })).filter(group => group.logs.length > 0)
+      setFilteredTaskGroups(filtered)
     }
-  }, [logs, logFilter])
+  }, [taskLogGroups, logFilter])
 
   // Автопрокрутка к новым логам
   useEffect(() => {
     if (logsContainerRef.current && showLogsModal) {
       logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight
     }
-  }, [filteredLogs, showLogsModal])
+  }, [filteredTaskGroups, showLogsModal])
 
   // Очистка логов
   const clearLogs = () => {
     setLogs([])
-    setFilteredLogs([])
+    setTaskLogGroups([])
+    setFilteredTaskGroups([])
   }
 
   // Получение статуса БЕЗ автообновления
@@ -665,39 +767,80 @@ const StatusDashboard = () => {
             <div className="flex-1 overflow-hidden">
               <div 
                 ref={logsContainerRef}
-                className="h-full overflow-y-auto p-4 space-y-2 bg-gray-900 text-green-400 font-mono text-sm"
+                className="h-full overflow-y-auto p-4 space-y-3 bg-gray-900 text-green-400 font-mono text-sm"
               >
-                {filteredLogs.length === 0 ? (
+                {filteredTaskGroups.length === 0 ? (
                   <div className="text-gray-500 text-center py-8">
-                    {logs.length === 0 ? 'Логи не найдены' : 'Нет логов для выбранного фильтра'}
+                    {taskLogGroups.length === 0 ? 'Логи не найдены' : 'Нет логов для выбранного фильтра'}
                   </div>
                 ) : (
-                  filteredLogs.map((log, index) => (
-                    <div key={index} className="flex space-x-3 hover:bg-gray-800 px-2 py-1 rounded">
-                      {/* Timestamp */}
-                      <span className="text-blue-400 shrink-0 w-24">
-                        {log.timestamp.slice(11, 19)}
-                      </span>
-                      
-                      {/* Level */}
-                      <span className={`shrink-0 w-16 font-semibold ${
-                        log.level === 'ERROR' ? 'text-red-400' :
-                        log.level === 'WARNING' ? 'text-yellow-400' :
-                        log.level === 'DEBUG' ? 'text-purple-400' :
-                        'text-green-400'
-                      }`}>
-                        {log.level}
-                      </span>
-                      
-                      {/* Method */}
-                      <span className="text-cyan-400 shrink-0 w-64 truncate" title={log.method}>
-                        {log.method}
-                      </span>
-                      
-                      {/* Message */}
-                      <span className="text-white flex-1">
-                        {log.message}
-                      </span>
+                  filteredTaskGroups.map((taskGroup) => (
+                    <div key={taskGroup.taskId} className="border border-gray-700 rounded-lg">
+                      {/* Заголовок аккордеона */}
+                      <div 
+                        className="flex items-center justify-between p-3 bg-gray-800 hover:bg-gray-750 cursor-pointer rounded-t-lg"
+                        onClick={() => toggleTaskGroup(taskGroup.taskId)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <span className="text-white font-semibold">
+                            {taskGroup.taskName}
+                          </span>
+                          <span className="text-gray-400 text-xs">
+                            {taskGroup.startTime.slice(11, 19)}
+                            {taskGroup.endTime && ` - ${taskGroup.endTime.slice(11, 19)}`}
+                          </span>
+                          <span className="bg-gray-600 text-gray-300 px-2 py-1 rounded text-xs">
+                            {taskGroup.logs.length} записей
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {/* Индикатор статуса по логам */}
+                          {taskGroup.logs.some(log => log.level === 'ERROR') ? (
+                            <span className="bg-red-500 w-3 h-3 rounded-full" title="Есть ошибки"></span>
+                          ) : taskGroup.logs.some(log => log.level === 'WARNING') ? (
+                            <span className="bg-yellow-500 w-3 h-3 rounded-full" title="Есть предупреждения"></span>
+                          ) : (
+                            <span className="bg-green-500 w-3 h-3 rounded-full" title="Успешно"></span>
+                          )}
+                          <span className="text-gray-400">
+                            {taskGroup.isExpanded ? '▼' : '▶'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Содержимое аккордеона */}
+                      {taskGroup.isExpanded && (
+                        <div className="border-t border-gray-700">
+                          {taskGroup.logs.map((log, index) => (
+                            <div key={index} className="flex space-x-3 hover:bg-gray-800 px-3 py-2 border-b border-gray-800 last:border-b-0">
+                              {/* Timestamp */}
+                              <span className="text-blue-400 shrink-0 w-20 text-xs">
+                                {log.timestamp.slice(11, 19)}
+                              </span>
+                              
+                              {/* Level */}
+                              <span className={`shrink-0 w-16 font-semibold text-xs ${
+                                log.level === 'ERROR' ? 'text-red-400' :
+                                log.level === 'WARNING' ? 'text-yellow-400' :
+                                log.level === 'DEBUG' ? 'text-purple-400' :
+                                'text-green-400'
+                              }`}>
+                                {log.level}
+                              </span>
+                              
+                              {/* Method */}
+                              <span className="text-cyan-400 shrink-0 w-48 truncate text-xs" title={log.method}>
+                                {log.method}
+                              </span>
+                              
+                              {/* Message */}
+                              <span className="text-white flex-1 text-xs leading-relaxed">
+                                {log.message}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -708,7 +851,9 @@ const StatusDashboard = () => {
             <div className="p-4 border-t border-coffee-medium bg-coffee-medium/50">
               <div className="flex items-center justify-between text-sm text-coffee-cream">
                 <span>
-                  Показано: {filteredLogs.length} из {logs.length} записей
+                  Показано: {filteredTaskGroups.length} задач из {taskLogGroups.length} 
+                  ({filteredTaskGroups.reduce((total, group) => total + group.logs.length, 0)} записей)
+                  {tasksLogsCount < taskLogGroups.length && ` • Ограничено ${tasksLogsCount} задачами`}
                 </span>
                 <span>
                   Обновление: {status?.state === 'running' ? 'автоматически' : 'вручную'}

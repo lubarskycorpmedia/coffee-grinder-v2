@@ -200,6 +200,9 @@ def run_news_parsing_from_config(
         with file_lock(lock_file):
             logger.info("🔐 Получена блокировка процесса")
             
+            # МАРКЕР НАЧАЛА ОБРАБОТКИ
+            logger.info("🚀 Pipeline started - Начинается обработка новостей")
+            
             # Загружаем конфигурацию
             try:
                 config = ProcessingConfig.from_json_file(config_path)
@@ -209,6 +212,7 @@ def run_news_parsing_from_config(
                 error_msg = f"Ошибка загрузки конфигурации: {str(e)}"
                 logger.error(error_msg)
                 progress_tracker.update_progress("error", 0, message=error_msg)
+                logger.error("💥 Pipeline completed - Завершена обработка с ошибкой конфигурации")
                 return {"success": False, "error": error_msg}
             
             # Инициализация прогресса
@@ -236,7 +240,8 @@ def run_news_parsing_from_config(
                 if progress_callback:
                     progress_callback(current_percent, provider_name)
                 
-                logger.info(f"🔄 Обработка провайдера: {provider_name}")
+                # МАРКЕР НАЧАЛА ОБРАБОТКИ ПРОВАЙДЕРА
+                logger.info(f"▶️ Starting - Начинается обработка провайдера: {provider_name}")
                 
                 try:
                     # Создаем оркестратор для конкретного провайдера
@@ -264,8 +269,12 @@ def run_news_parsing_from_config(
                     
                     if result.success:
                         logger.info(f"✅ Провайдер {provider_name} обработан успешно")
+                        # МАРКЕР УСПЕШНОГО ЗАВЕРШЕНИЯ ПРОВАЙДЕРА
+                        logger.info(f"✅ Completed - Завершена обработка провайдера: {provider_name}")
                     else:
                         logger.error(f"❌ Ошибка обработки провайдера {provider_name}: {result.errors}")
+                        # МАРКЕР ЗАВЕРШЕНИЯ ПРОВАЙДЕРА С ОШИБКОЙ
+                        logger.error(f"❌ Completed - Завершена обработка провайдера с ошибками: {provider_name}")
                     
                     processed_providers.append(provider_name)
                     
@@ -273,6 +282,9 @@ def run_news_parsing_from_config(
                     error_msg = f"Ошибка обработки {provider_name}: {str(e)}"
                     logger.error(error_msg)
                     all_results[provider_name] = {"success": False, "error": error_msg}
+                    # МАРКЕР ЗАВЕРШЕНИЯ ПРОВАЙДЕРА С ИСКЛЮЧЕНИЕМ
+                    logger.error(f"💥 Completed - Завершена обработка провайдера с исключением: {provider_name}")
+                    processed_providers.append(provider_name)
             
             # Финальный прогресс
             total_success = all([r.get("success", False) for r in all_results.values()])
@@ -288,7 +300,11 @@ def run_news_parsing_from_config(
             if progress_callback:
                 progress_callback(100, None)
             
-            logger.info("🏁 Обработка завершена")
+            # МАРКЕР ФИНАЛЬНОГО ЗАВЕРШЕНИЯ
+            if total_success:
+                logger.info("🏁 Pipeline finished - Завершение pipeline: все провайдеры обработаны успешно")
+            else:
+                logger.error("🚩 Pipeline finished - Завершение pipeline: обработка завершена с ошибками")
             
             return {
                 "success": total_success,
@@ -301,12 +317,16 @@ def run_news_parsing_from_config(
         error_msg = str(e)
         logger.error(f"🔒 {error_msg}")
         progress_tracker.update_progress("error", 0, message=error_msg)
+        # МАРКЕР ЗАВЕРШЕНИЯ С ОШИБКОЙ БЛОКИРОВКИ
+        logger.error("🔒 Pipeline completed - Завершена обработка: ошибка блокировки процесса")
         return {"success": False, "error": error_msg}
     
     except Exception as e:
         error_msg = f"Критическая ошибка: {str(e)}"
         logger.error(f"💥 {error_msg}")
         progress_tracker.update_progress("error", 0, message=error_msg)
+        # МАРКЕР ЗАВЕРШЕНИЯ С КРИТИЧЕСКОЙ ОШИБКОЙ
+        logger.error("💥 Pipeline completed - Завершена обработка: критическая ошибка")
         return {"success": False, "error": error_msg}
 
 

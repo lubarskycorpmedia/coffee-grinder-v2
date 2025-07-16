@@ -3,6 +3,7 @@
 import json
 import os
 import asyncio
+import time
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,7 +13,7 @@ from fastapi.security.api_key import APIKeyHeader
 from pydantic import BaseModel, ValidationError
 
 from src.services.news.runner import (
-    run_from_config, 
+    run_news_parsing_from_config, 
     ProgressTracker, 
     ProcessingConfig, 
     NewsProviderConfig
@@ -46,7 +47,7 @@ class ConfigUpdateRequest(BaseModel):
 
 class TriggerRequest(BaseModel):
     """Модель для запуска обработки"""
-    dry_run: bool = False
+    test_without_export: bool = False
     config_path: Optional[str] = None
 
 
@@ -177,6 +178,9 @@ async def trigger_processing(
     """
     Запустить обработку новостей в фоновом режиме
     """
+    # ЗАМЕР ВРЕМЕНИ НАЧИНАЕТСЯ СРАЗУ ПРИ ПОЛУЧЕНИИ ЗАПРОСА
+    start_time = time.time()
+    
     config_path = trigger_request.config_path or "data/news_parsing_config.json"
     
     # Проверяем существование конфигурации
@@ -204,9 +208,9 @@ async def trigger_processing(
     def run_processing():
         try:
             logger.info("🚀 Starting news processing in background")
-            result = run_from_config(
+            result = run_news_parsing_from_config(
                 config_path=config_path,
-                dry_run=trigger_request.dry_run,
+                test_without_export=trigger_request.test_without_export,
                 redis_url=redis_url
             )
             logger.info(f"✅ Processing completed: {result}")
@@ -219,7 +223,7 @@ async def trigger_processing(
         "success": True,
         "message": "News processing started",
         "config_path": config_path,
-        "dry_run": trigger_request.dry_run,
+        "test_without_export": trigger_request.test_without_export,
         "started_at": datetime.now(timezone.utc).isoformat()
     }
 

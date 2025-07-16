@@ -54,17 +54,27 @@ def setup_logger(
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
-    # Опциональный файловый handler с ротацией
+    # Файловый handler с ротацией (по умолчанию включен)
+    if log_file is None:
+        # Дефолтный путь для файла логов
+        import os
+        os.makedirs("/app/logs", exist_ok=True)
+        log_file = "/app/logs/app.log"
+    
     if log_file:
-        file_handler = RotatingFileHandler(
-            log_file,
-            maxBytes=max_bytes,
-            backupCount=backup_count,
-            encoding='utf-8'
-        )
-        file_handler.setLevel(log_level)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        try:
+            file_handler = RotatingFileHandler(
+                log_file,
+                maxBytes=max_bytes,
+                backupCount=backup_count,
+                encoding='utf-8'
+            )
+            file_handler.setLevel(log_level)
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+        except Exception as e:
+            # Если не можем создать файл, просто продолжаем без файлового логирования
+            print(f"Warning: Could not create log file {log_file}: {e}")
     
     return logger
 

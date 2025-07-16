@@ -3,10 +3,10 @@
 
 # Запуск обработки новостей каждый день в 6:00 UTC
 # Формат: минута час день_месяца месяц день_недели команда
-0 6 * * * cd /app && python -m src.run --limit 100 >> /app/logs/news_pipeline.log 2>&1
+0 6 * * * cd /app && python -m src.run >> /app/logs/news_pipeline.log 2>&1
 
 # Дополнительный запуск в 18:00 UTC для получения вечерних новостей
-0 18 * * * cd /app && python -m src.run --limit 50 >> /app/logs/news_pipeline.log 2>&1
+0 18 * * * cd /app && python -m src.run >> /app/logs/news_pipeline.log 2>&1
 
 # Еженедельная очистка старых логов (воскресенье в 2:00 UTC)
 0 2 * * 0 find /app/logs -name "*.log" -mtime +7 -delete 

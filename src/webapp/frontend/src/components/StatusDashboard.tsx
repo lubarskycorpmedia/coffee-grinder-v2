@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import toast from 'react-hot-toast'
-import { PlayIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { PlayIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon, DocumentTextIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface ProcessingStatus {
   state: 'idle' | 'running' | 'completed' | 'error'
@@ -13,15 +13,156 @@ interface ProcessingStatus {
   service_status: string
   redis_connected: boolean
   config_exists: boolean
+  start_time?: string
+  end_time?: string
+  duration?: number
+}
+
+interface LogEntry {
+  timestamp: string
+  level: string
+  method: string
+  message: string
+  rawLine: string
+}
+
+interface LogsResponse {
+  success: boolean
+  lines_requested: number
+  lines_returned: number
+  log_file: string | null
+  logs: string[]
+  timestamp: string
 }
 
 const StatusDashboard = () => {
   const [isDryRun, setIsDryRun] = useState(false)
   const [isPolling, setIsPolling] = useState(false)
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false)
+  
+  // Состояния для логов
+  const [showLogsModal, setShowLogsModal] = useState(false)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([])
+  const [logFilter, setLogFilter] = useState<string>('ALL') // ALL, INFO, ERROR, DEBUG, WARNING
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false)
+  
   const queryClient = useQueryClient()
   const intervalRef = useRef<number>()
   const lastStatusRef = useRef<ProcessingStatus>()
+  const logsContainerRef = useRef<HTMLDivElement>(null)
+
+  // Функция парсинга лога
+  const parseLogLine = (line: string): LogEntry => {
+    // Реальный формат логов контейнера: "2025-07-16 11:45:32 - src.services.news.pipeline - INFO - message"
+    const containerFormat = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s*-\s*([^-]+)\s*-\s*(\w+)\s*-\s*(.+)$/
+    
+    // Старый формат с миллисекундами: "2024-01-15 10:30:45,123 - coffee_grinder - INFO - message"
+    const oldFormat = /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[,\.]\d{3})\s*-\s*([^-]+)\s*-\s*(\w+)\s*-\s*(.+)$/
+    
+    // Простой формат "LEVEL: message"
+    const simpleFormat = /^(\w+):\s*(.+)$/
+    
+    let match = line.match(containerFormat)
+    if (match) {
+      const [, timestamp, module, level, message] = match
+      return {
+        timestamp: timestamp.trim(),
+        level: level.trim(),
+        method: module.trim(),
+        message: message.trim(),
+        rawLine: line
+      }
+    }
+    
+    match = line.match(oldFormat)
+    if (match) {
+      const [, timestamp, module, level, message] = match
+      return {
+        timestamp: timestamp.trim(),
+        level: level.trim(),
+        method: module.trim(),
+        message: message.trim(),
+        rawLine: line
+      }
+    }
+    
+    match = line.match(simpleFormat)
+    if (match) {
+      const [, level, message] = match
+      return {
+        timestamp: new Date().toISOString().slice(11, 19),
+        level: level.trim(),
+        method: 'system',
+        message: message.trim(),
+        rawLine: line
+      }
+    }
+    
+    // Если не удалось распарсить, возвращаем как есть
+    return {
+      timestamp: new Date().toISOString().slice(11, 19),
+      level: 'INFO',
+      method: 'system',
+      message: line.trim(),
+      rawLine: line
+    }
+  }
+
+  // Функция получения логов
+  const fetchLogs = async () => {
+    setIsLoadingLogs(true)
+    try {
+      const response = await fetch('/news/api/logs?lines=200', {
+        headers: {
+          'X-API-Key': 'development_key'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch logs')
+      }
+      
+      const data: LogsResponse = await response.json()
+      
+      if (data.success && data.logs) {
+        // Сначала покажем ВСЕ логи для отладки
+        const parsedLogs = data.logs.map(parseLogLine)
+        
+        console.log('Получено логов:', data.logs.length)
+        console.log('Пример первых 3 строк:', data.logs.slice(0, 3))
+        
+        setLogs(parsedLogs)
+      }
+    } catch (error) {
+      console.error('Ошибка получения логов:', error)
+      toast.error('Ошибка загрузки логов')
+    } finally {
+      setIsLoadingLogs(false)
+    }
+  }
+
+  // Фильтрация логов
+  useEffect(() => {
+    if (logFilter === 'ALL') {
+      setFilteredLogs(logs)
+    } else {
+      setFilteredLogs(logs.filter((log: LogEntry) => log.level === logFilter))
+    }
+  }, [logs, logFilter])
+
+  // Автопрокрутка к новым логам
+  useEffect(() => {
+    if (logsContainerRef.current && showLogsModal) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight
+    }
+  }, [filteredLogs, showLogsModal])
+
+  // Очистка логов
+  const clearLogs = () => {
+    setLogs([])
+    setFilteredLogs([])
+  }
 
   // Получение статуса БЕЗ автообновления
   const { data: status, isLoading, refetch } = useQuery<ProcessingStatus>(
@@ -72,6 +213,11 @@ const StatusDashboard = () => {
         if (newStatus.state === 'completed' || newStatus.state === 'error') {
           setIsPolling(false)
         }
+      }
+
+      // Обновляем логи если модальное окно открыто и процесс запущен
+      if (showLogsModal && newStatus?.state === 'running') {
+        await fetchLogs()
       }
     } catch (error) {
       console.error('Ошибка опроса статуса:', error)
@@ -160,7 +306,7 @@ const StatusDashboard = () => {
       case 'running':
         return 'text-coffee-cream'
       case 'completed':
-        return 'text-green-400'
+        return 'text-coffee-cream'
       case 'error':
         return 'text-red-400'
       default:
@@ -173,7 +319,7 @@ const StatusDashboard = () => {
       case 'running':
         return <ClockIcon className="h-6 w-6 text-coffee-cream" />
       case 'completed':
-        return <CheckCircleIcon className="h-6 w-6 text-green-400" />
+        return <CheckCircleIcon className="h-6 w-6 text-coffee-cream" />
       case 'error':
         return <ExclamationTriangleIcon className="h-6 w-6 text-red-400" />
       default:
@@ -246,12 +392,41 @@ const StatusDashboard = () => {
             {/* Current Status Message */}
             <div className="bg-coffee-cream/50 rounded-lg p-3">
               <p className="text-sm text-coffee-cream">
-                <strong>Сообщение:</strong> {status.message}
+                <strong>Сообщение:</strong> {status.message}{status.state === 'completed' && status.end_time && (() => {
+                  const date = new Date(status.end_time!)
+                  const day = date.getDate().toString().padStart(2, '0')
+                  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+                  const year = date.getFullYear()
+                  const hours = date.getHours().toString().padStart(2, '0')
+                  const minutes = date.getMinutes().toString().padStart(2, '0')
+                  const seconds = date.getSeconds().toString().padStart(2, '0')
+                  return ` ${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`
+                })()}
               </p>
               {status.current_provider && (
                 <p className="text-sm text-coffee-cream mt-1">
                   <strong>Текущий провайдер:</strong> {status.current_provider}
                 </p>
+              )}
+              {status.state === 'completed' && status.duration && (
+                <div className="mt-2">
+                  <p className="text-sm text-coffee-cream">
+                    <strong>Длительность:</strong> {(() => {
+                      const totalSeconds = Math.round(status.duration!)
+                      const hours = Math.floor(totalSeconds / 3600)
+                      const minutes = Math.floor((totalSeconds % 3600) / 60)
+                      const seconds = totalSeconds % 60
+                      
+                      if (hours > 0) {
+                        return `${hours} час ${minutes} мин ${seconds} сек`
+                      } else if (minutes > 0) {
+                        return `${minutes} мин ${seconds} сек`
+                      } else {
+                        return `${seconds} сек`
+                      }
+                    })()}
+                  </p>
+                </div>
               )}
             </div>
 
@@ -265,7 +440,7 @@ const StatusDashboard = () => {
                   {status.processed_providers.map((provider) => (
                     <span 
                       key={provider}
-                      className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
+                      className="px-2 py-1 bg-coffee-light text-coffee-foam text-xs rounded-full"
                     >
                       {provider}
                     </span>
@@ -275,11 +450,11 @@ const StatusDashboard = () => {
             )}
 
             {/* System Status */}
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-4 gap-4 text-sm">
               <div className="text-center">
                 <p className="text-coffee-cream">Сервис</p>
                 <p className={`font-medium ${
-                  status.service_status === 'running' ? 'text-green-600' : 'text-red-400'
+                  status.service_status === 'running' ? 'text-coffee-cream' : 'text-red-400'
                 }`}>
                   {status.service_status === 'running' ? 'Запущен' : 'Остановлен'}
                 </p>
@@ -287,7 +462,7 @@ const StatusDashboard = () => {
               <div className="text-center">
                 <p className="text-coffee-cream">Redis</p>
                 <p className={`font-medium ${
-                  status.redis_connected ? 'text-green-600' : 'text-red-400'
+                  status.redis_connected ? 'text-coffee-cream' : 'text-red-400'
                 }`}>
                   {status.redis_connected ? 'Подключен' : 'Отключен'}
                 </p>
@@ -295,10 +470,23 @@ const StatusDashboard = () => {
               <div className="text-center">
                 <p className="text-coffee-cream">Конфиг</p>
                 <p className={`font-medium ${
-                  status.config_exists ? 'text-green-600' : 'text-red-400'
+                  status.config_exists ? 'text-coffee-cream' : 'text-red-400'
                 }`}>
                   {status.config_exists ? 'Существует' : 'Отсутствует'}
                 </p>
+              </div>
+              <div className="flex justify-center items-center">
+                <button
+                  onClick={() => {
+                    setShowLogsModal(true)
+                    fetchLogs()
+                  }}
+                  className="btn-secondary flex items-center justify-center space-x-2 px-4 py-2"
+                  title="Просмотр логов обработки"
+                >
+                  <DocumentTextIcon className="h-4 w-4" />
+                  <span>Логи</span>
+                </button>
               </div>
             </div>
           </div>
@@ -361,6 +549,118 @@ const StatusDashboard = () => {
       {status && (
         <div className="text-center text-coffee-cream text-sm">
           Последнее обновление: {new Date(status.timestamp).toLocaleString('ru-RU')}
+        </div>
+      )}
+
+      {/* Logs Modal */}
+      {showLogsModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowLogsModal(false)}
+        >
+          <div 
+            className="bg-coffee-light rounded-lg shadow-xl w-full max-w-6xl h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-coffee-medium">
+              <div className="flex items-center space-x-3">
+                <DocumentTextIcon className="h-6 w-6 text-coffee-cream" />
+                <h2 className="text-xl font-semibold text-coffee-cream">
+                  Логи обработки новостей
+                </h2>
+                {isLoadingLogs && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-coffee-cream"></div>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                {/* Log Level Filter */}
+                <select
+                  value={logFilter}
+                  onChange={(e) => setLogFilter(e.target.value)}
+                  className="bg-coffee-medium text-coffee-cream border border-coffee-dark rounded px-3 py-1 text-sm"
+                >
+                  <option value="ALL">Все уровни</option>
+                  <option value="INFO">INFO</option>
+                  <option value="ERROR">ERROR</option>
+                  <option value="DEBUG">DEBUG</option>
+                  <option value="WARNING">WARNING</option>
+                </select>
+
+                {/* Clear Logs Button */}
+                <button
+                  onClick={clearLogs}
+                  className="bg-coffee-medium hover:bg-coffee-dark text-coffee-cream px-3 py-1 rounded text-sm"
+                >
+                  Очистить
+                </button>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowLogsModal(false)}
+                  className="text-coffee-cream hover:text-white"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Logs Container */}
+            <div className="flex-1 overflow-hidden">
+              <div 
+                ref={logsContainerRef}
+                className="h-full overflow-y-auto p-4 space-y-2 bg-gray-900 text-green-400 font-mono text-sm"
+              >
+                {filteredLogs.length === 0 ? (
+                  <div className="text-gray-500 text-center py-8">
+                    {logs.length === 0 ? 'Логи не найдены' : 'Нет логов для выбранного фильтра'}
+                  </div>
+                ) : (
+                  filteredLogs.map((log, index) => (
+                    <div key={index} className="flex space-x-3 hover:bg-gray-800 px-2 py-1 rounded">
+                      {/* Timestamp */}
+                      <span className="text-blue-400 shrink-0 w-24">
+                        {log.timestamp.slice(11, 19)}
+                      </span>
+                      
+                      {/* Level */}
+                      <span className={`shrink-0 w-16 font-semibold ${
+                        log.level === 'ERROR' ? 'text-red-400' :
+                        log.level === 'WARNING' ? 'text-yellow-400' :
+                        log.level === 'DEBUG' ? 'text-purple-400' :
+                        'text-green-400'
+                      }`}>
+                        {log.level}
+                      </span>
+                      
+                      {/* Method */}
+                      <span className="text-cyan-400 shrink-0 w-64 truncate" title={log.method}>
+                        {log.method}
+                      </span>
+                      
+                      {/* Message */}
+                      <span className="text-white flex-1">
+                        {log.message}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-coffee-medium bg-coffee-medium/50">
+              <div className="flex items-center justify-between text-sm text-coffee-cream">
+                <span>
+                  Показано: {filteredLogs.length} из {logs.length} записей
+                </span>
+                <span>
+                  Обновление: {status?.state === 'running' ? 'автоматически' : 'вручную'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

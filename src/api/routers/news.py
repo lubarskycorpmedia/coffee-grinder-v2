@@ -18,6 +18,7 @@ from src.services.news.runner import (
     ProcessingConfig, 
     NewsProviderConfig
 )
+from src.services.news.fetcher_fabric import FetcherFactory
 from src.logger import setup_logger
 
 
@@ -300,4 +301,53 @@ async def clear_progress(api_key: str = Depends(get_api_key)) -> Dict[str, Any]:
         raise HTTPException(
             status_code=500,
             detail=f"Error clearing progress: {str(e)}"
+        )
+
+
+@router.get("/parameters")
+async def get_parameters() -> Dict[str, Any]:
+    """
+    Получить параметры (категории и языки) для всех включенных провайдеров
+    """
+    try:
+        # Получаем список включенных провайдеров
+        enabled_providers = FetcherFactory.get_enabled_providers()
+        
+        parameters = {}
+        
+        for provider_name in enabled_providers:
+            try:
+                # Создаем экземпляр fetcher'а для провайдера
+                fetcher = FetcherFactory.create_fetcher_from_config(provider_name)
+                
+                # Получаем категории и языки
+                categories = fetcher.get_categories()
+                languages = fetcher.get_languages()
+                
+                parameters[provider_name] = {
+                    "categories": categories,
+                    "languages": languages
+                }
+                
+                logger.debug(f"✅ Parameters loaded for provider: {provider_name}")
+                
+            except Exception as provider_error:
+                error_message = f"Failed to load parameters for {provider_name}: {str(provider_error)}"
+                logger.warning(error_message)
+                
+                # Устанавливаем пустые списки для провайдера с ошибкой
+                parameters[provider_name] = {
+                    "categories": [],
+                    "languages": []
+                }
+        
+        logger.info(f"📋 Parameters loaded for {len(enabled_providers)} providers")
+        
+        return parameters
+        
+    except Exception as e:
+        logger.error(f"Error loading parameters: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error loading parameters: {str(e)}"
         ) 

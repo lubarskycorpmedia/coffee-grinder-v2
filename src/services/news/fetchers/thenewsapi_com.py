@@ -157,7 +157,8 @@ class TheNewsAPIFetcher(BaseFetcher):
             List[str]: Список поддерживаемых категорий
         """
         import os
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        import json
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
         categories_path = os.path.join(project_root, 'data', 'thenewsapi_com_categories.json')
         with open(categories_path, 'r') as f:
             categories = json.load(f)
@@ -171,7 +172,8 @@ class TheNewsAPIFetcher(BaseFetcher):
             List[str]: Список поддерживаемых языков
         """
         import os
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        import json
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
         languages_path = os.path.join(project_root, 'data', 'thenewsapi_com_languages.json')
         with open(languages_path, 'r') as f:
             languages = json.load(f)

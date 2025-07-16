@@ -481,7 +481,8 @@ class NewsDataIOFetcher(BaseFetcher):
             List[str]: Список поддерживаемых категорий
         """
         import os
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        import json
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
         categories_path = os.path.join(project_root, 'data', 'newsdata_io_categories.json')
         with open(categories_path, 'r') as f:
             categories = json.load(f)
@@ -515,7 +516,8 @@ class NewsDataIOFetcher(BaseFetcher):
         """
         # Возвращаем стандартные языки NewsData.io
         import os
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        import json
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
         languages_path = os.path.join(project_root, 'data', 'newsdata_io_languages.json')
         with open(languages_path, 'r') as f:
             languages = json.load(f)

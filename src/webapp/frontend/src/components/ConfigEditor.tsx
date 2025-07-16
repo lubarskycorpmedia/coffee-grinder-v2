@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { PlusIcon, TrashIcon, DocumentIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 
@@ -27,6 +27,16 @@ interface FormData {
   }>
 }
 
+// Новые интерфейсы для параметров провайдеров
+interface ProviderParameters {
+  categories: string[]
+  languages: string[]
+}
+
+interface ParametersData {
+  [providerName: string]: ProviderParameters
+}
+
 // Компонент для красивого date input
 const DateInput = ({ name, register, placeholder }: { 
   name: string, 
@@ -51,6 +61,124 @@ const DateInput = ({ name, register, placeholder }: {
   )
 }
 
+// Компонент мультиселекта с чекбоксами
+const MultiSelectCheckbox = ({ 
+  options, 
+  value, 
+  onChange, 
+  placeholder,
+  anyLabel = "Любая"
+}: { 
+  options: string[]
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  anyLabel?: string
+}) => {
+  const [isOpen, setIsOpen] = useState(false)
+  
+  // Закрываем dropdown при клике вне компонента
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (!target.closest('.multiselect-container')) {
+        setIsOpen(false)
+      }
+    }
+    
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
+  
+  // Парсим текущие значения из строки
+  const selectedValues = value ? value.split(',').filter(Boolean) : []
+  
+  const handleOptionChange = (option: string, checked: boolean) => {
+    let newValues: string[]
+    
+    if (option === '') {
+      // Выбран "Любая" - сбрасываем все остальные
+      newValues = checked ? [] : []
+    } else {
+      if (checked) {
+        // Добавляем опцию, убираем "Любая" если она была
+        newValues = [...selectedValues.filter(v => v !== ''), option]
+      } else {
+        // Убираем опцию
+        newValues = selectedValues.filter(v => v !== option)
+      }
+    }
+    
+    onChange(newValues.join(','))
+  }
+
+  const displayText = () => {
+    if (selectedValues.length === 0) {
+      return anyLabel
+    }
+    if (selectedValues.length === 1) {
+      return selectedValues[0]
+    }
+    return `${selectedValues.length} выбрано`
+  }
+
+  return (
+    <div className="relative multiselect-container">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="input-field text-left flex justify-between items-center w-full"
+      >
+        <span>{displayText()}</span>
+        <svg 
+          className={`w-4 h-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-10 w-full mt-1 bg-coffee-dark border border-coffee-cream/30 rounded-md shadow-lg max-h-60 overflow-auto">
+          {/* Опция "Любая" */}
+          <label className="flex items-center px-3 py-2 hover:bg-coffee-cream/10 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedValues.length === 0}
+              onChange={(e) => handleOptionChange('', e.target.checked)}
+              className="mr-2 rounded border-coffee-cream/30 text-coffee-cream focus:ring-coffee-cream"
+            />
+            <span className="text-coffee-cream">{anyLabel}</span>
+          </label>
+          
+          {/* Остальные опции */}
+          {options.map((option) => (
+            <label key={option} className="flex items-center px-3 py-2 hover:bg-coffee-cream/10 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(option)}
+                onChange={(e) => handleOptionChange(option, e.target.checked)}
+                className="mr-2 rounded border-coffee-cream/30 text-coffee-cream focus:ring-coffee-cream"
+              />
+              <span className="text-coffee-cream">{option}</span>
+            </label>
+          ))}
+          
+          {options.length === 0 && (
+            <div className="px-3 py-2 text-coffee-cream/60 text-sm">
+              {placeholder || "Нет доступных опций"}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const ConfigEditor = () => {
   const queryClient = useQueryClient()
   const [showRawJSON, setShowRawJSON] = useState(false)
@@ -69,6 +197,26 @@ const ConfigEditor = () => {
         throw new Error('Failed to fetch config')
       }
       return response.json()
+    }
+  )
+
+  // Получение параметров провайдеров (категории и языки)
+  const { data: parametersData, isLoading: isLoadingParameters } = useQuery<ParametersData>(
+    'provider-parameters',
+    async () => {
+      const response = await fetch('/news/api/parameters', {
+        headers: {
+          'X-API-Key': 'development_key'
+        }
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch provider parameters')
+      }
+      return response.json()
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 минут кеша
+      cacheTime: 10 * 60 * 1000, // 10 минут в памяти
     }
   )
 
@@ -267,7 +415,7 @@ const ConfigEditor = () => {
             <div key={field.id} className="card">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-coffee-cream">
-                  Провайдер #{index + 1}
+                  Запрос #{index + 1}
                 </h3>
                 {fields.length > 1 && (
                   <button
@@ -284,7 +432,7 @@ const ConfigEditor = () => {
                 {/* Provider Name */}
                 <div>
                   <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Название провайдера *
+                    Провайдер *
                   </label>
                   <select
                     {...control.register(`providers.${index}.name`)}
@@ -302,7 +450,7 @@ const ConfigEditor = () => {
                 {/* Query */}
                 <div>
                   <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Поисковый запрос
+                    Ключевые слова
                   </label>
                   <input
                     type="text"
@@ -317,12 +465,30 @@ const ConfigEditor = () => {
                   <label className="block text-sm font-medium text-coffee-cream mb-1">
                     Категория
                   </label>
-                  <input
-                    type="text"
-                    {...control.register(`providers.${index}.config.category`)}
-                    className="input-field"
-                    placeholder={getProviderPlaceholder(watchedProviders[index]?.name, 'category')}
-                  />
+                  {watchedProviders[index]?.name && parametersData ? (
+                    <Controller
+                      name={`providers.${index}.config.category`}
+                      control={control}
+                      render={({ field }) => (
+                        <MultiSelectCheckbox
+                          options={parametersData?.[watchedProviders[index].name]?.categories || []}
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          placeholder="Нет доступных категорий"
+                          anyLabel="Любая категория"
+                        />
+                      )}
+                    />
+                  ) : (
+                    <div className="input-field text-coffee-cream/60">
+                      {!watchedProviders[index]?.name 
+                        ? "Сначала выберите провайдера" 
+                        : isLoadingParameters 
+                          ? "Загрузка..." 
+                          : "Ошибка загрузки категорий"
+                      }
+                    </div>
+                  )}
                 </div>
 
                 {/* Language */}
@@ -330,17 +496,30 @@ const ConfigEditor = () => {
                   <label className="block text-sm font-medium text-coffee-cream mb-1">
                     Язык
                   </label>
-                  <select
-                    {...control.register(`providers.${index}.config.language`)}
-                    className="input-field"
-                  >
-                    <option value="">По умолчанию</option>
-                    <option value="en">English</option>
-                    <option value="ru">Русский</option>
-                    <option value="es">Español</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                  </select>
+                  {watchedProviders[index]?.name && parametersData ? (
+                    <Controller
+                      name={`providers.${index}.config.language`}
+                      control={control}
+                      render={({ field }) => (
+                        <MultiSelectCheckbox
+                          options={parametersData?.[watchedProviders[index].name]?.languages || []}
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                          placeholder="Нет доступных языков"
+                          anyLabel="Любой язык"
+                        />
+                      )}
+                    />
+                  ) : (
+                    <div className="input-field text-coffee-cream/60">
+                      {!watchedProviders[index]?.name 
+                        ? "Сначала выберите провайдера" 
+                        : isLoadingParameters 
+                          ? "Загрузка..." 
+                          : "Ошибка загрузки языков"
+                      }
+                    </div>
+                  )}
                 </div>
 
                 {/* Limit */}
@@ -408,7 +587,7 @@ const ConfigEditor = () => {
               className="btn-secondary flex items-center space-x-2 mx-auto"
             >
               <PlusIcon className="h-4 w-4" />
-              <span>Добавить провайдера</span>
+              <span>Добавить запрос</span>
             </button>
           </div>
 

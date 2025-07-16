@@ -1,8 +1,16 @@
 {
   "newsapi": {
     "query": "Трамп",
+    "category": "business,general,entertainment,technology,science",
     "from_date": "2025-07-14",
-    "language": "ru",
-    "limit": 3
+    "language": "ru,en",
+    "limit": 10
+  },
+  "thenewsapi": {
+    "query": "Mask потепление",
+    "category": "general,entertainment,politics",
+    "from_date": "2025-07-14",
+    "language": "ru,en",
+    "limit": 10
   }
 }

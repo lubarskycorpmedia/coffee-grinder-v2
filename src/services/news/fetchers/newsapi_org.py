@@ -330,25 +330,13 @@ class NewsAPIFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых категорий
         """
-        # TODO: АРХИТЕКТУРНАЯ ПРОБЛЕМА - захардкоженные категории
-        # 
-        # ПРОБЛЕМА:
-        # Метод возвращает статичный список категорий NewsAPI вместо получения 
-        # реальных категорий из источников. NewsAPI предоставляет фиксированный
-        # набор категорий, но источники могут иметь дополнительные категории.
-        #
-        # ВАРИАНТЫ РЕШЕНИЯ:
-        # 1. Получать категории из get_sources() и извлекать уникальные category
-        # 2. Разделить на get_supported_categories() (API категории) и get_available_categories() (из источников)
-        # 3. Комбинировать: возвращать API категории + категории из источников
-        # 4. Добавить параметр source для выбора: "api" или "sources"
-        #
-        # ОСОБЕННОСТЬ NewsAPI:
-        # В отличие от TheNewsAPI, здесь категории строго определены API документацией,
-        # но источники могут иметь более детальную категоризацию.
-        
-        # Возвращаем стандартные категории NewsAPI
-        return ["business", "entertainment", "general", "health", "science", "sports", "technology"]
+        import os
+        import json
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        categories_path = os.path.join(project_root, 'data', 'newsapi_org_categories.json')
+        with open(categories_path, 'r') as f:
+            categories = json.load(f)
+        return categories
     
     def get_languages(self) -> List[str]:
         """
@@ -357,8 +345,13 @@ class NewsAPIFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых языков
         """
-        # Возвращаем стандартные языки NewsAPI
-        return ["en", "ar", "de", "es", "fr", "he", "it", "nl", "no", "pt", "ru", "sv", "ud", "zh"]
+        import os
+        import json
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        languages_path = os.path.join(project_root, 'data', 'newsapi_org_languages.json')
+        with open(languages_path, 'r') as f:
+            languages = json.load(f)
+        return languages
     
     def _map_rubric_to_category(self, rubric: Optional[str]) -> Optional[str]:
         """

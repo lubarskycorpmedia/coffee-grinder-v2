@@ -532,33 +532,12 @@ class MediaStackFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых категорий
         """
-        # TODO: АРХИТЕКТУРНАЯ ПРОБЛЕМА - захардкоженные категории
-        # 
-        # ПРОБЛЕМА:
-        # Метод возвращает статичный список категорий MediaStack вместо получения
-        # реальных категорий из источников. MediaStack предоставляет фиксированный
-        # набор категорий, но источники могут иметь дополнительные категории.
-        #
-        # ВАРИАНТЫ РЕШЕНИЯ:
-        # 1. Получать категории из get_sources() и извлекать уникальные category
-        # 2. Разделить на get_supported_categories() (API категории) и get_available_categories() (из источников)
-        # 3. Комбинировать: возвращать API категории + категории из источников
-        # 4. Добавить параметр source для выбора: "api" или "sources"
-        #
-        # ОСОБЕННОСТЬ MediaStack:
-        # В отличие от других API, здесь категории могут быть более гибкими,
-        # но для стабильности используем стандартный набор из документации.
-        
-        # Возвращаем стандартные категории MediaStack из документации
-        return [
-            "general",
-            "business", 
-            "entertainment",
-            "health",
-            "science",
-            "sports",
-            "technology"
-        ]
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        categories_path = os.path.join(project_root, 'data', 'mediastack_com_categories.json')
+        with open(categories_path, 'r') as f:
+            categories = json.load(f)
+        return categories
     
     def get_languages(self) -> List[str]:
         """
@@ -567,23 +546,13 @@ class MediaStackFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых языков
         """
-        # Возвращаем поддерживаемые языки MediaStack из документации
-        return [
-            "ar",  # Arabic
-            "de",  # German
-            "en",  # English
-            "es",  # Spanish
-            "fr",  # French
-            "he",  # Hebrew
-            "it",  # Italian
-            "nl",  # Dutch
-            "no",  # Norwegian
-            "pt",  # Portuguese
-            "ru",  # Russian
-            "se",  # Swedish
-            "zh"   # Chinese
-        ]
-    
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        languages_path = os.path.join(project_root, 'data', 'mediastack_com_languages.json')
+        with open(languages_path, 'r') as f:
+            languages = json.load(f)
+        return languages
+        
     def fetch_news(self,
                    query: Optional[str] = None,
                    category: Optional[str] = None,

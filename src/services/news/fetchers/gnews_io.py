@@ -164,35 +164,13 @@ class GNewsIOFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых категорий
         """
-        # TODO: АРХИТЕКТУРНАЯ ПРОБЛЕМА - захардкоженные категории
-        # 
-        # ПРОБЛЕМА:
-        # Метод возвращает статичный список категорий GNews вместо получения
-        # реальных категорий из API. GNews предоставляет фиксированный
-        # набор категорий для top-headlines эндпоинта.
-        #
-        # ВАРИАНТЫ РЕШЕНИЯ:
-        # 1. Получать категории динамически через тестовые запросы к API
-        # 2. Разделить на get_supported_categories() (API категории) и get_available_categories() (из источников)
-        # 3. Комбинировать: возвращать API категории + категории из источников
-        # 4. Добавить параметр source для выбора: "api" или "sources"
-        #
-        # ОСОБЕННОСТЬ GNews:
-        # В отличие от других API, здесь категории используются только для top-headlines,
-        # но для стабильности используем стандартный набор из документации.
-        
-        # Возвращаем стандартные категории GNews из документации
-        return [
-            "general",
-            "world", 
-            "nation",
-            "business",
-            "technology",
-            "entertainment",
-            "sports",
-            "science",
-            "health"
-        ]
+        import os
+        import json
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        categories_path = os.path.join(project_root, 'data', 'gnews_io_categories.json')
+        with open(categories_path, 'r') as f:
+            categories = json.load(f)
+        return categories
     
     def get_languages(self) -> List[str]:
         """
@@ -201,32 +179,14 @@ class GNewsIOFetcher(BaseFetcher):
         Returns:
             List[str]: Список поддерживаемых языков
         """
-        # Возвращаем поддерживаемые языки GNews из документации
-        return [
-            "ar",  # Arabic
-            "zh",  # Chinese
-            "nl",  # Dutch
-            "en",  # English
-            "fr",  # French
-            "de",  # German
-            "el",  # Greek
-            "he",  # Hebrew
-            "hi",  # Hindi
-            "it",  # Italian
-            "ja",  # Japanese
-            "ml",  # Malayalam
-            "mr",  # Marathi
-            "no",  # Norwegian
-            "pt",  # Portuguese
-            "ro",  # Romanian
-            "ru",  # Russian
-            "es",  # Spanish
-            "sv",  # Swedish
-            "ta",  # Tamil
-            "te",  # Telugu
-            "uk"   # Ukrainian
-        ]
-    
+        import os
+        import json
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        languages_path = os.path.join(project_root, 'data', 'gnews_io_languages.json')
+        with open(languages_path, 'r') as f:
+            languages = json.load(f)
+        return languages
+        
     def get_countries(self) -> List[str]:
         """
         Получить поддерживаемые страны

@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background: linear-gradient(135deg, #4E342E 0%, #5D4037 50%, #8D6E63 100%);
+    min-height: 100vh;
+  }
+  
+  body {
+    @apply antialiased;
+    background: linear-gradient(135deg, #4E342E 0%, #5D4037 50%, #8D6E63 100%);
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-coffee-mocha hover:bg-coffee-cream text-coffee-cream hover:text-coffee-dark px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-coffee-cream focus:ring-offset-2 focus:ring-offset-coffee-dark;
+  }
+  
+  .btn-secondary {
+    @apply bg-coffee-medium hover:bg-coffee-light text-coffee-cream px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-coffee-cream focus:ring-offset-2 focus:ring-offset-coffee-dark;
+  }
+  
+  .card {
+    @apply bg-coffee-dark rounded-xl shadow-2xl border border-coffee-medium/30 p-6 backdrop-blur-sm;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-coffee-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-coffee-cream focus:border-coffee-cream bg-coffee-black text-coffee-cream placeholder-coffee-cream/50;
+  }
+  
+  .coffee-gradient {
+    background: linear-gradient(135deg, #1A0E0A 0%, #2F1B14 50%, #3E2723 100%);
+  }
+  
+  .coffee-gradient-accent {
+    background: linear-gradient(135deg, #4E342E 0%, #5D4037 50%, #8D6E63 100%);
+  }
+} 

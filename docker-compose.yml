@@ -1,15 +1,59 @@
 # /docker-compose.yml
 
+networks:
+  b2bc_network:
+    external: true
+
 services:
-  news:
+  news-backend:
     build: .
     env_file:
       - .env
     ports:
-      - "0.0.0.0:8003:8000"  # Слушаем на всех интерфейсах
+      - "0.0.0.0:8001:8000"  # Слушаем на всех интерфейсах
+    volumes:
+      - .:/app
+      - /app/.venv  # Исключаем .venv из volume mapping
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
     restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - b2bc_network
+
+  news-frontend:
+    build: ./src/webapp/frontend
+    ports:
+      - "3005:3005"
+      - "3006:3006"
+    volumes:
+      - ./src/webapp/frontend:/app
+      - /app/node_modules  # Исключаем node_modules из volume mapping для производительности
+    environment:
+      - CHOKIDAR_USEPOLLING=true  # Для file watching в Docker
+      - FAST_REFRESH=true
+    command: npm run dev
+    restart: always
+    networks:
+      - b2bc_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - b2bc_network
+
+volumes:
+  redis_data:

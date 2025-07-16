@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+import asyncio
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 
@@ -128,7 +129,7 @@ def validate_environment() -> Dict[str, Any]:
     return validation_results
 
 
-def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
+async def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     """
     Запускает полный pipeline обработки новостей
     
@@ -138,67 +139,23 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
     Returns:
         Результаты выполнения pipeline
     """
+    from src.services.news.runner import run_pipeline_from_args
+    
     logger = setup_logger(__name__)
-    
-    # Валидация окружения
-    logger.info("🔍 Проверка настроек окружения...")
-    validation = validate_environment()
-    
-    if validation["errors"]:
-        logger.error("❌ Критические ошибки настроек:")
-        for error in validation["errors"]:
-            logger.error(f"  - {error}")
-        return {"success": False, "errors": validation["errors"]}
-    
-    if validation["warnings"]:
-        logger.warning("⚠️ Предупреждения:")
-        for warning in validation["warnings"]:
-            logger.warning(f"  - {warning}")
-    
-    # Создаем процессор новостей
-    logger.info(f"🚀 Запуск pipeline (dry-run: {args.dry_run})")
+    logger.info("🔄 Запуск через унифицированный runner")
     
     try:
-        # Определяем провайдера
-        provider = args.provider
-        if provider is None:
-            providers_settings = get_news_providers_settings()
-            provider = providers_settings.default_provider
+        results = await run_pipeline_from_args(args)
         
-        processor = create_news_processor(
-            news_provider=provider,
-            max_news_items=args.limit,
-            fail_on_errors=False  # Продолжаем работу при ошибках
-        )
-        
-        # Запускаем полный pipeline
-        results = processor.run_full_pipeline(
-            query=args.query,
-            category=args.category,
-            language=args.language,
-            limit=args.limit,
-            export_to_sheets=not args.dry_run,  # Экспорт только если не dry-run
-            append_to_sheets=True
-        )
-        
-        # Логируем результаты
-        logger.info("📊 Результаты выполнения:")
-        logger.info(f"  📰 Получено новостей: {results['fetched_count']}")
-        logger.info(f"  🔄 Обработано новостей: {results['processed_count']}")
-        logger.info(f"  📋 Экспортировано: {results['exported_count']}")
-        logger.info(f"  🔍 Найдено дубликатов: {results['duplicates_found']}")
-        logger.info(f"  ⏱️ Время выполнения: {results['duration_seconds']:.2f} сек")
-        
-        if args.dry_run:
-            logger.info("🔍 Режим dry-run: экспорт в Google Sheets пропущен")
-        
+        # Логирование результатов
         if results["success"]:
-            logger.info("✅ Pipeline выполнен успешно!")
+            logger.info("🎉 Обработка завершена успешно!")
+            if "providers_processed" in results:
+                logger.info(f"📊 Обработано провайдеров: {results['providers_processed']}")
         else:
-            logger.error("❌ Pipeline завершен с ошибками")
-            if results.get("errors"):
-                for error in results["errors"]:
-                    logger.error(f"  - {error}")
+            logger.error("💔 Обработка завершена с ошибками:")
+            if "error" in results:
+                logger.error(f"  - {results['error']}")
         
         return results
         
@@ -207,10 +164,7 @@ def run_pipeline(args: argparse.Namespace) -> Dict[str, Any]:
         logger.error(f"💥 {error_msg}")
         return {
             "success": False,
-            "errors": [error_msg],
-            "fetched_count": 0,
-            "processed_count": 0,
-            "exported_count": 0
+            "error": error_msg
         }
 
 
@@ -234,7 +188,7 @@ def main() -> int:
     logger.info(f"⏰ Запуск: {datetime.now(timezone.utc).isoformat()}")
     
     # Запуск pipeline
-    results = run_pipeline(args)
+    results = asyncio.run(run_pipeline(args))
     
     # Определяем код возврата
     exit_code = 0 if results["success"] else 1

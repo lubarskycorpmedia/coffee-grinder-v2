@@ -31,6 +31,8 @@ tenacity = "^9.0.0"
 pydantic-settings = "^2.10.1"
 newsapi-python = "^0.2.7"
 newsdataapi = "^0.1.23"
+# Redis для progress tracking
+redis = "^5.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"

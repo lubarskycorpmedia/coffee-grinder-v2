@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { useForm, useFieldArray } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { PlusIcon, TrashIcon, DocumentIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, TrashIcon, DocumentIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 
 interface ProviderConfig {
   query?: string
@@ -25,6 +25,30 @@ interface FormData {
     name: string
     config: ProviderConfig
   }>
+}
+
+// Компонент для красивого date input
+const DateInput = ({ name, register, placeholder }: { 
+  name: string, 
+  register: any, 
+  placeholder?: string 
+}) => {
+  return (
+    <div className="relative group">
+      <input
+        type="date"
+        {...register(name)}
+        className="input-field pr-10 cursor-pointer hover:border-coffee-cream/50 focus:border-coffee-cream transition-colors"
+        placeholder={placeholder}
+        style={{
+          colorScheme: 'dark',
+        }}
+      />
+      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-coffee-cream/70 group-hover:text-coffee-cream transition-colors">
+        <CalendarDaysIcon className="h-5 w-5" />
+      </div>
+    </div>
+  )
 }
 
 const ConfigEditor = () => {
@@ -354,10 +378,10 @@ const ConfigEditor = () => {
                   <label className="block text-sm font-medium text-coffee-cream mb-1">
                     Дата от
                   </label>
-                  <input
-                    type="date"
-                    {...control.register(`providers.${index}.config.from_date`)}
-                    className="input-field"
+                  <DateInput
+                    name={`providers.${index}.config.from_date`}
+                    register={control.register}
+                    placeholder="Выберите дату начала"
                   />
                 </div>
 
@@ -366,10 +390,10 @@ const ConfigEditor = () => {
                   <label className="block text-sm font-medium text-coffee-cream mb-1">
                     Дата до
                   </label>
-                  <input
-                    type="date"
-                    {...control.register(`providers.${index}.config.to_date`)}
-                    className="input-field"
+                  <DateInput
+                    name={`providers.${index}.config.to_date`}
+                    register={control.register}
+                    placeholder="Выберите дату окончания"
                   />
                 </div>
               </div>

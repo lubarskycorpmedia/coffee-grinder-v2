@@ -2,6 +2,152 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Date Picker Coffee Theme Styles */
+input[type="date"] {
+  color-scheme: dark;
+}
+
+/* Webkit Date Picker Styling */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+  opacity: 0;
+}
+
+/* Date text styling */
+input[type="date"]::-webkit-datetime-edit {
+  color: #BCAAA4; /* coffee-cream */
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: #BCAAA4; /* coffee-cream */
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  color: #BCAAA4; /* coffee-cream */
+  padding: 0 1px;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #BCAAA4; /* coffee-cream */
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus {
+  background: rgba(188, 170, 164, 0.1); /* coffee-cream/10 */
+  color: #F5F5DC; /* coffee-foam */
+}
+
+/* Clear button */
+input[type="date"]::-webkit-clear-button {
+  color: #BCAAA4; /* coffee-cream */
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-clear-button:hover {
+  color: #F5F5DC; /* coffee-foam */
+}
+
+/* Firefox date input styling */
+input[type="date"]::-moz-placeholder {
+  color: #5D4037; /* coffee-medium */
+  opacity: 1;
+}
+
+input[type="date"]::placeholder {
+  color: #5D4037; /* coffee-medium */
+  opacity: 1;
+}
+
+/* Focus states */
+input[type="date"]:focus {
+  outline: none;
+  border-color: #BCAAA4; /* coffee-cream */
+  box-shadow: 0 0 0 1px #BCAAA4; /* coffee-cream */
+}
+
+/* Hover states */
+input[type="date"]:hover {
+  border-color: rgba(188, 170, 164, 0.5); /* coffee-cream/50 */
+}
+
+/* Date Picker Calendar Coffee Theme */
+::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) sepia(0.3) saturate(2) hue-rotate(15deg) brightness(1.1); /* coffee tint */
+}
+
+/* Custom calendar styling for webkit browsers */
+input[type="date"]:focus::-webkit-calendar-picker-indicator {
+  filter: invert(0.9) sepia(0.4) saturate(2.5) hue-rotate(20deg) brightness(1.2);
+}
+
+/* Global calendar styling - webkit calendar popup */
+::-webkit-calendar-picker {
+  background-color: #2F1B14 !important; /* coffee-dark */
+  border: 1px solid #5D4037 !important; /* coffee-medium */
+  color: #BCAAA4 !important; /* coffee-cream */
+}
+
+/* Calendar header and navigation */
+::-webkit-calendar-picker-header {
+  background-color: #4E342E !important; /* coffee-mocha */
+  color: #F5F5DC !important; /* coffee-foam */
+  border-bottom: 1px solid #5D4037 !important; /* coffee-medium */
+}
+
+/* Calendar days */
+::-webkit-calendar-picker-day {
+  background-color: transparent !important;
+  color: #BCAAA4 !important; /* coffee-cream */
+  border: none !important;
+}
+
+::-webkit-calendar-picker-day:hover {
+  background-color: #5D4037 !important; /* coffee-medium */
+  color: #F5F5DC !important; /* coffee-foam */
+}
+
+::-webkit-calendar-picker-day[aria-selected="true"] {
+  background-color: #BCAAA4 !important; /* coffee-cream */
+  color: #2F1B14 !important; /* coffee-dark */
+}
+
+/* Calendar month/year picker */
+::-webkit-calendar-picker-month-year {
+  background-color: #2F1B14 !important; /* coffee-dark */
+  color: #BCAAA4 !important; /* coffee-cream */
+}
+
+/* Force coffee theme for entire date input system including calendar popup */
+input[type="date"] {
+  filter: sepia(60%) saturate(180%) hue-rotate(15deg) brightness(0.8) contrast(1.2);
+  accent-color: #8D6E63; /* coffee-light */
+}
+
+input[type="date"]:focus,
+input[type="date"]:active {
+  filter: sepia(70%) saturate(200%) hue-rotate(20deg) brightness(0.85) contrast(1.3);
+}
+
+/* Apply coffee theme to the entire document when date picker is open */
+input[type="date"]:focus {
+  color-scheme: dark;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

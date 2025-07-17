@@ -19,6 +19,7 @@ from src.services.news.runner import (
 from src.services.news.fetcher_fabric import FetcherFactory
 from src.utils.input_validator import validate_api_input
 from src.logger import setup_logger
+from src.services.news.fetcher_fabric import FetcherFactory
 
 
 # Настройки API
@@ -154,10 +155,14 @@ async def update_config(
             
             logger.info(f"🧹 Отфильтрованная конфигурация для запроса {i+1} ({provider_name}): {filtered_config}")
             
+            # Упорядочиваем поля согласно исходному порядку в JSON файлах параметров
+            ordered_config = get_ordered_config(provider_name, filtered_config)
+            logger.info(f"📋 Упорядоченная конфигурация для запроса {i+1} ({provider_name}): {list(ordered_config.keys())}")
+            
             # Сохраняем запрос даже если конфигурация пустая (по требованию)
             final_requests.append({
                 "provider": provider_name,
-                "config": filtered_config
+                "config": ordered_config
             })
         
         logger.info(f"💾 Сохраняем финальную конфигурацию: {len(final_requests)} запросов")
@@ -165,7 +170,7 @@ async def update_config(
         # Сохраняем конфигурацию в едином формате с обёрткой
         config_to_save = {"requests": final_requests}
         with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(config_to_save, f, ensure_ascii=False, indent=2)
+            json.dump(config_to_save, f, ensure_ascii=False, indent=2, sort_keys=False)
         
         logger.info(f"💾 Configuration saved to {config_path}")
         
@@ -499,3 +504,42 @@ async def test_validator(
             "error": str(e),
             "original": data
         } 
+
+
+def get_ordered_config(provider_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Упорядочить поля конфигурации согласно исходному порядку в JSON файлах параметров
+    
+    Args:
+        provider_name: Имя провайдера
+        config: Конфигурация для упорядочивания
+        
+    Returns:
+        Упорядоченная конфигурация с сохранением исходного порядка полей
+    """
+    try:
+        # Получаем порядок полей из JSON файла параметров провайдера
+        fetcher = FetcherFactory.create_fetcher_from_config(provider_name)
+        provider_params = fetcher.get_provider_parameters()
+        field_order = list(provider_params.get("fields", {}).keys())
+        
+        # Создаем упорядоченную конфигурацию
+        ordered_config = {}
+        
+        # Сначала добавляем поля в порядке из JSON файла
+        for field_name in field_order:
+            if field_name in config:
+                ordered_config[field_name] = config[field_name]
+        
+        # Затем добавляем любые дополнительные поля
+        for field_name, value in config.items():
+            if field_name not in ordered_config:
+                ordered_config[field_name] = value
+        
+        logger.debug(f"📋 Упорядочены поля для {provider_name}: {list(ordered_config.keys())}")
+        return ordered_config
+        
+    except Exception as e:
+        logger.warning(f"⚠️ Не удалось упорядочить поля для {provider_name}: {str(e)}")
+        # Возвращаем исходную конфигурацию если не удалось упорядочить
+        return config 

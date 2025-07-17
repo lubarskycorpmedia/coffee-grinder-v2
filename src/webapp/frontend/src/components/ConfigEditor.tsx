@@ -48,17 +48,17 @@ const DateTimeInput = ({ name, register, placeholder }: {
   placeholder?: string 
 }) => {
   return (
-    <div className="relative group">
+    <div className="relative">
       <input
         type="datetime-local"
         {...register(name)}
-        className="input-field pr-10 cursor-pointer hover:border-coffee-cream/50 focus:border-coffee-cream transition-colors"
+        className="input-field pr-10 cursor-pointer hover:border-coffee-cream/50 focus:border-coffee-cream transition-colors [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
         placeholder={placeholder}
         style={{
           colorScheme: 'dark',
         }}
       />
-      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-coffee-cream/70 group-hover:text-coffee-cream transition-colors">
+      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-coffee-cream/70 hover:text-coffee-cream transition-colors pointer-events-none">
         <CalendarDaysIcon className="h-5 w-5" />
       </div>
     </div>

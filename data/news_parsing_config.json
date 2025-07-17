@@ -3,23 +3,26 @@
     {
       "provider": "thenewsapi_com",
       "config": {
+        "search": "тпсмрпти ",
+        "locale": " ыукп ыукп ыукп ыукп",
         "categories": "tech,politics",
+        "domains": "ыкеп ыкеп кп",
         "language": "ar,bg",
         "published_before": "2025-07-24T23:47",
-        "published_after": "2025-07-01T23:47",
+        "published_after": "2025-07-03T02:51",
         "limit": "22"
       }
     },
     {
       "provider": "newsdata_io",
       "config": {
+        "q": "вкерквер квер кр ",
         "country": "2",
         "category": "business,domestic",
         "language": "sq,ar,af",
-        "size": "666",
-        "q": "вкерквер квер кр ",
         "domain": " ыукп уыкп",
         "domainurl": " уыкп уыкп ",
+        "size": "666",
         "image": " ыукп уыкп",
         "video": " укп куп п",
         "full_content": " ыукп укып ",
@@ -34,7 +37,8 @@
     {
       "provider": "thenewsapi_com",
       "config": {
-        "search": " ыукп ыукп ыукп "
+        "search": " ыукп ыукп ыукп ",
+        "language": "ar"
       }
     }
   ]

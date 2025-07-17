@@ -46,18 +46,15 @@ class NewsPipelineOrchestrator:
     """
     
     def __init__(self, 
-                 provider: str = "thenewsapi_com",
                  worksheet_name: str = "News",
                  ranking_criteria: Optional[str] = None):
         """
         Инициализация оркестратора
         
         Args:
-            provider: Провайдер новостей (по умолчанию "thenewsapi_com")
             worksheet_name: Имя листа в Google Sheets
             ranking_criteria: Критерии ранжирования для LLM
         """
-        self.provider = provider
         self.worksheet_name = worksheet_name
         self.ranking_criteria = ranking_criteria or self._get_default_ranking_criteria()
         
@@ -69,11 +66,10 @@ class NewsPipelineOrchestrator:
         self.logger = setup_logger(__name__)
         
         # Компоненты pipeline (создаются лениво)
-        self._fetcher = None
         self._news_chain = None
         self._exporter = None
         
-        self.logger.info(f"NewsPipelineOrchestrator initialized with provider: {provider}")
+        self.logger.info("NewsPipelineOrchestrator initialized for multi-provider processing")
     
     def _get_default_ranking_criteria(self) -> str:
         """Возвращает дефолтные критерии ранжирования"""
@@ -101,14 +97,6 @@ class NewsPipelineOrchestrator:
         """
     
     @property
-    def fetcher(self):
-        """Ленивое создание fetcher'а"""
-        if self._fetcher is None:
-            self._fetcher = create_news_fetcher_from_config(self.provider)
-            self.logger.info(f"Created fetcher for provider: {self.provider}")
-        return self._fetcher
-    
-    @property
     def news_chain(self):
         """Ленивое создание цепочки обработки новостей"""
         if self._news_chain is None:
@@ -129,36 +117,19 @@ class NewsPipelineOrchestrator:
             self.logger.info(f"Created Google Sheets exporter for worksheet: {self.worksheet_name}")
         return self._exporter
     
-    def run_pipeline(self, 
-                    query: str, 
-                    categories: List[str],
-                    limit: Optional[int] = None,
-                    language: Optional[str] = None,
-                    published_after: Optional[str] = None,
-                    published_before: Optional[str] = None,
-                    **kwargs) -> PipelineResult:
+    def run_pipeline(self, config_requests: List[Dict[str, Any]]) -> PipelineResult:
         """
-        Запускает полный pipeline обработки новостей
+        Запускает полный pipeline обработки новостей для всех запросов
         
         Args:
-            query: Поисковый запрос
-            categories: Список категорий новостей
-            limit: Количество новостей (по умолчанию из настроек)
-            language: Язык поиска (опционально)
-            published_after: Дата начала поиска (опционально)
-            published_before: Дата окончания поиска (опционально)
-            **kwargs: Дополнительные параметры для fetcher'а
+            config_requests: Список запросов в формате [{"provider": "name", "url": "...", "config": {...}}]
             
         Returns:
             PipelineResult с детальными результатами выполнения
         """
         start_time = time.time()
         
-        # Параметры pipeline
-        limit = limit or self.pipeline_settings.DEFAULT_LIMIT
-        categories_str = ",".join(categories)
-        
-        self.logger.info(f"Starting pipeline: query='{query}', categories={categories}, limit={limit}, language={language}")
+        self.logger.info(f"Starting pipeline for {len(config_requests)} requests")
         
         # Инициализируем результат
         results = {
@@ -170,9 +141,9 @@ class NewsPipelineOrchestrator:
         completed_stages = 0
         
         try:
-            # ЭТАП 1: Получение новостей
-            self.logger.info("Stage 1: Fetching news")
-            stage_result = self._run_fetch_stage(query, categories_str, limit, language, published_after, published_before, **kwargs)
+            # ЭТАП 1: Получение новостей от всех провайдеров
+            self.logger.info("Stage 1: Fetching news from all providers")
+            stage_result = self._run_fetch_stage(config_requests)
             results["fetcher"] = stage_result
             
             if not stage_result.success:
@@ -206,134 +177,181 @@ class NewsPipelineOrchestrator:
                 results["export"] = stage_result
                 
                 if not stage_result.success:
-                    errors.append(f"Export stage failed: {stage_result.error_message}")
+                    if not self.pipeline_settings.ENABLE_PARTIAL_RESULTS:
+                        return self._create_pipeline_result(False, 3, completed_stages, results, errors, start_time)
+                    else:
+                        errors.append(f"Export stage failed: {stage_result.error_message}")
                 else:
                     completed_stages += 1
         
         except Exception as e:
-            self.logger.error(f"Unexpected error in pipeline: {str(e)}")
-            errors.append(f"Unexpected pipeline error: {str(e)}")
+            errors.append(f"Pipeline exception: {str(e)}")
+            self.logger.error(f"Pipeline failed with exception: {str(e)}")
         
-        # Определяем общий успех
-        overall_success = completed_stages == 3 and len(errors) == 0
+        # Определяем успешность выполнения
+        success = completed_stages >= 3 and len(errors) == 0
         
-        return self._create_pipeline_result(overall_success, 3, completed_stages, results, errors, start_time)
+        return self._create_pipeline_result(success, 3, completed_stages, results, errors, start_time)
     
-    def _run_fetch_stage(self, query: str, categories: str, limit: int, language: Optional[str], 
-                        published_after: Optional[str] = None, published_before: Optional[str] = None, **kwargs) -> StageResult:
-        """Выполняет этап получения новостей"""
+    def _run_fetch_stage(self, config_requests: List[Dict[str, Any]]) -> StageResult:
+        """Выполняет этап получения новостей для всех провайдеров"""
         start_time = time.time()
         
-        try:
-            # Получаем новости через fetcher
-            response = self.fetcher.fetch_news(
-                query=query,
-                categories=categories,
-                limit=limit,
-                language=language,
-                published_after=published_after,
-                published_before=published_before,
-                **kwargs
-            )
+        all_articles = []
+        successful_requests = 0
+        failed_requests = 0
+        warnings = []
+        
+        for i, req in enumerate(config_requests):
+            provider_name = req.get("provider")
+            provider_url = req.get("url")
+            provider_config = req.get("config", {})
             
-            execution_time = time.time() - start_time
+            if not provider_name:
+                error_msg = "Provider name not specified in config_requests"
+                self.logger.error(error_msg)
+                failed_requests += 1
+                warnings.append(f"Request {i+1}: {error_msg}")
+                continue
             
-            # Проверяем на наличие ошибки
-            if "error" in response:
-                error_msg = str(response.get("error", "Unknown fetch error"))
-                self.logger.error(f"Fetch stage failed: {error_msg}")
-                return StageResult(
-                    success=False,
-                    execution_time=execution_time,
-                    error_message=error_msg
-                )
+            if not provider_url:
+                error_msg = f"Provider URL not specified for {provider_name}"
+                self.logger.error(error_msg)
+                failed_requests += 1
+                warnings.append(f"Request {i+1}: {error_msg}")
+                continue
             
-            # Получаем статьи
-            articles = response.get("articles", [])
+            self.logger.info(f"Processing request {i+1}/{len(config_requests)} for provider {provider_name}")
+            self.logger.info(f"URL: {provider_url}")
+            self.logger.info(f"Config: {provider_config}")
             
-            if not articles:
-                error_msg = "No articles found"
-                self.logger.warning(f"Fetch stage warning: {error_msg}")
-                return StageResult(
-                    success=False,
-                    execution_time=execution_time,
-                    error_message=error_msg
-                )
-            
-            # Преобразуем в NewsItem объекты
-            news_items = []
-            for article in articles:
-                try:
-                    # Парсим дату публикации
-                    published_at_raw = article.get("published_at", "")
-                    if published_at_raw:
-                        # Проверяем тип данных
-                        if isinstance(published_at_raw, datetime):
-                            # Уже datetime объект
-                            published_at = published_at_raw
-                        elif isinstance(published_at_raw, str):
-                            # Строка - парсим
-                            if published_at_raw.endswith("Z"):
-                                published_at = datetime.fromisoformat(published_at_raw.replace("Z", "+00:00"))
-                            elif "+" in published_at_raw or published_at_raw.endswith("00:00"):
-                                published_at = datetime.fromisoformat(published_at_raw)
-                            else:
-                                # Пытаемся парсить как ISO без таймзоны
-                                published_at = datetime.fromisoformat(published_at_raw + "+00:00")
-                        else:
-                            # Неизвестный тип - используем текущее время
-                            published_at = datetime.now()
-                    else:
-                        # Если даты нет, используем текущее время
-                        published_at = datetime.now()
-                    
-                    # Извлекаем source как строку
-                    source_data = article.get("source", "")
-                    if isinstance(source_data, dict):
-                        # Если source - это dict, извлекаем name
-                        source_name = source_data.get("name", "") or source_data.get("id", "") or ""
-                    else:
-                        # Если source уже строка
-                        source_name = str(source_data) if source_data else ""
-                    
-                    news_item = NewsItem(
-                        title=article.get("title", ""),
-                        description=article.get("description", ""),
-                        url=article.get("url", ""),
-                        published_at=published_at,
-                        source=source_name,
-                        category=article.get("category"),
-                        language=article.get("language", language),
-                        image_url=article.get("image_url"),
-                        uuid=article.get("uuid"),
-                        keywords=article.get("keywords"),
-                        snippet=article.get("snippet")
-                    )
-                    news_items.append(news_item)
-                except Exception as e:
-                    self.logger.warning(f"Failed to parse article: {str(e)}")
+            try:
+                fetcher = create_news_fetcher_from_config(provider_name)
+                
+                # Получаем новости через fetcher с новым интерфейсом
+                response = fetcher.fetch_news(url=provider_url, params=provider_config)
+                
+                # Проверяем на наличие ошибки
+                if "error" in response:
+                    error_msg = str(response.get("error", "Unknown fetch error"))
+                    self.logger.warning(f"Request {i+1} failed for provider {provider_name}: {error_msg}")
+                    failed_requests += 1
+                    warnings.append(f"Request {i+1} ({provider_name}): {error_msg}")
                     continue
-            
-            self.logger.info(f"Fetched {len(news_items)} articles in {execution_time:.2f}s")
-            
+                
+                # Получаем статьи
+                articles = response.get("articles", [])
+                
+                if not articles:
+                    warning_msg = f"No articles found for provider {provider_name}"
+                    self.logger.warning(f"Request {i+1}: {warning_msg}")
+                    warnings.append(f"Request {i+1} ({provider_name}): {warning_msg}")
+                    # НЕ считаем это фатальной ошибкой - продолжаем обработку
+                    continue
+                
+                # Преобразуем в NewsItem объекты
+                news_items = []
+                for article in articles:
+                    try:
+                        # Парсим дату публикации
+                        published_at_raw = article.get("published_at", "")
+                        if published_at_raw:
+                            # Проверяем тип данных
+                            if isinstance(published_at_raw, datetime):
+                                # Уже datetime объект
+                                published_at = published_at_raw
+                            elif isinstance(published_at_raw, str):
+                                # Строка - парсим
+                                if published_at_raw.endswith("Z"):
+                                    published_at = datetime.fromisoformat(published_at_raw.replace("Z", "+00:00"))
+                                elif "+" in published_at_raw or published_at_raw.endswith("00:00"):
+                                    published_at = datetime.fromisoformat(published_at_raw)
+                                else:
+                                    # Пытаемся парсить как ISO без таймзоны
+                                    published_at = datetime.fromisoformat(published_at_raw + "+00:00")
+                            else:
+                                # Неизвестный тип - используем текущее время
+                                published_at = datetime.now()
+                        else:
+                            # Если даты нет, используем текущее время
+                            published_at = datetime.now()
+                        
+                        # Извлекаем source как строку
+                        source_data = article.get("source", "")
+                        if isinstance(source_data, dict):
+                            # Если source - это dict, извлекаем name
+                            source_name = source_data.get("name", "") or source_data.get("id", "") or ""
+                        else:
+                            # Если source уже строка
+                            source_name = str(source_data) if source_data else ""
+                        
+                        news_item = NewsItem(
+                            title=article.get("title", ""),
+                            description=article.get("description", ""),
+                            url=article.get("url", ""),
+                            published_at=published_at,
+                            source=source_name,
+                            category=article.get("category"),
+                            language=article.get("language"),
+                            image_url=article.get("image_url"),
+                            uuid=article.get("uuid"),
+                            keywords=article.get("keywords"),
+                            snippet=article.get("snippet")
+                        )
+                        news_items.append(news_item)
+                    except Exception as e:
+                        self.logger.warning(f"Failed to parse article for provider {provider_name}: {str(e)}")
+                        continue
+                
+                articles_count = len(news_items)
+                self.logger.info(f"Request {i+1}: Successfully processed {articles_count} articles from {provider_name}")
+                all_articles.extend(news_items)
+                successful_requests += 1
+                
+            except Exception as e:
+                error_msg = f"Fetch stage exception for provider {provider_name}: {str(e)}"
+                self.logger.error(error_msg)
+                failed_requests += 1
+                warnings.append(f"Request {i+1} ({provider_name}): {error_msg}")
+                continue
+        
+        execution_time = time.time() - start_time
+        
+        # Определяем успешность: успешен если хотя бы один запрос прошел ИЛИ есть статьи
+        is_successful = successful_requests > 0 or len(all_articles) > 0
+        
+        self.logger.info(f"Fetch stage summary: {successful_requests} successful, {failed_requests} failed, {len(all_articles)} total articles")
+        if warnings:
+            self.logger.info(f"Warnings: {len(warnings)} issues encountered")
+        
+        if is_successful:
             return StageResult(
                 success=True,
                 execution_time=execution_time,
                 data={
-                    "articles": news_items,
-                    "articles_count": len(news_items),
-                    "raw_response": response
+                    "articles": all_articles,
+                    "articles_count": len(all_articles),
+                    "successful_requests": successful_requests,
+                    "failed_requests": failed_requests,
+                    "warnings": warnings,
+                    "raw_response": {"articles": all_articles}
                 }
             )
-        
-        except Exception as e:
-            execution_time = time.time() - start_time
-            error_msg = f"Fetch stage exception: {str(e)}"
+        else:
+            # Все запросы завершились ошибкой
+            error_msg = f"All {len(config_requests)} requests failed. Warnings: {'; '.join(warnings)}"
             self.logger.error(error_msg)
             return StageResult(
                 success=False,
                 execution_time=execution_time,
-                error_message=error_msg
+                error_message=error_msg,
+                data={
+                    "articles": [],
+                    "articles_count": 0,
+                    "successful_requests": 0,
+                    "failed_requests": failed_requests,
+                    "warnings": warnings
+                }
             )
     
     def _run_deduplication_stage(self, articles: List[NewsItem]) -> StageResult:
@@ -494,10 +512,16 @@ class NewsPipelineOrchestrator:
             try:
                 # Запускаем pipeline для рубрики
                 pipeline_result = self.run_pipeline(
-                    query=query,
-                    categories=[category],
-                    limit=limit,
-                    language=language
+                    config_requests=[{
+                        "provider": "thenewsapi_com", # Assuming a default provider for rubrics
+                        "url": "https://api.thenewsapi.com/v1/news/all", # Default URL for rubrics
+                        "config": {
+                            "query": query,
+                            "categories": category,
+                            "limit": limit,
+                            "language": language
+                        }
+                    }]
                 )
                 
                 # Добавляем информацию о рубрике к результату
@@ -548,7 +572,6 @@ class NewsPipelineOrchestrator:
     def get_pipeline_status(self) -> Dict[str, Any]:
         """Возвращает статус компонентов pipeline"""
         return {
-            "provider": self.provider,
             "worksheet_name": self.worksheet_name,
             "settings": {
                 "default_limit": self.pipeline_settings.DEFAULT_LIMIT,
@@ -558,7 +581,6 @@ class NewsPipelineOrchestrator:
                 "max_news_items_for_processing": self.faiss_settings.MAX_NEWS_ITEMS_FOR_PROCESSING
             },
             "components": {
-                "fetcher_initialized": self._fetcher is not None,
                 "news_chain_initialized": self._news_chain is not None,
                 "exporter_initialized": self._exporter is not None
             }
@@ -580,7 +602,6 @@ def create_news_pipeline_orchestrator(provider: str = "thenewsapi",
         Экземпляр NewsPipelineOrchestrator
     """
     return NewsPipelineOrchestrator(
-        provider=provider,
         worksheet_name=worksheet_name,
         ranking_criteria=ranking_criteria
     ) 

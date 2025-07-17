@@ -410,115 +410,49 @@ class GNewsIOFetcher(BaseFetcher):
         self.logger.warning("GNews API does not provide a sources endpoint")
         return {"sources": []}
     
-    def search_news(self, 
-                    query: str,
-                    language: Optional[str] = None,
-                    limit: int = 50,
-                    **kwargs) -> List[Dict[str, Any]]:
-        """
-        Поиск новостей по запросу
-        
-        Args:
-            query: Поисковый запрос
-            language: Язык новостей (опционально)
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры
-            
-        Returns:
-            List[Dict[str, Any]]: Список новостей в стандартизованном формате
-        """
-        result = self.fetch_all_news(
-            query=query,
-            language=language,
-            limit=limit,
-            **kwargs
-        )
-        
-        if "error" in result:
-            return []
-        
-        # Стандартизируем формат каждой статьи
-        articles = []
-        for article in result.get("articles", []):
-            standardized_article = self._standardize_article(article, language)
-            articles.append(standardized_article)
-        
-        return articles
+
     
-    def fetch_news(self, 
-                   query: Optional[str] = None,
-                   category: Optional[str] = None,
-                   language: Optional[str] = None,
-                   limit: int = 50,
-                   **kwargs) -> Dict[str, Any]:
+    def fetch_news(self, url: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Универсальный метод для получения новостей
-        Адаптер между NewsProcessor и специфичными методами GNews
+        Универсальный метод для получения новостей по URL и параметрам
         
         Args:
-            query: Поисковый запрос
-            category: Категория новостей
-            language: Язык новостей (опционально)
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры для GNews API
+            url: Полный URL эндпоинта API
+            params: Параметры запроса из config
             
         Returns:
             Dict в стандартном формате с полем 'articles'
         """
         try:
-            # Если есть поисковый запрос, используем search
-            if query:
-                self.logger.debug(f"Using search endpoint for query: {query}")
-                result = self.fetch_all_news(
-                    query=query,
-                    language=language,
-                    limit=limit,
-                    **kwargs
-                )
-            # Иначе используем top-headlines с категорией
-            else:
-                self.logger.debug(f"Using top-headlines endpoint for category: {category}")
-                result = self.fetch_headlines(
-                    category=category,
-                    language=language,
-                    limit=limit,
-                    **kwargs
-                )
+            # Извлекаем endpoint из URL (убираем base_url)
+            endpoint = url.replace(self.base_url + "/", "")
+            
+            self.logger.debug(f"Making request to endpoint: {endpoint} with params: {params}")
+            
+            # Вызываем _make_request который добавит token
+            result = self._make_request(endpoint, params)
             
             # Если есть ошибка, возвращаем как есть
             if "error" in result:
                 return result
             
-            # Преобразуем формат ответа в стандартный
-            raw_articles = result.get("articles", [])
-            
             # Стандартизируем формат каждой статьи
             articles = []
-            for article in raw_articles:
-                standardized_article = self._standardize_article(article, language, category)
+            for article in result.get("articles", []):
+                standardized_article = self._standardize_article(article)
                 articles.append(standardized_article)
             
             self.logger.info(f"Successfully standardized {len(articles)} articles")
             
-            meta = {
-                "total": result.get("totalArticles", len(articles)),
-                "limit": limit
-            }
-            if language:
-                meta["language"] = language
-            if category:
-                meta["category"] = category
-            
             return {
                 "articles": articles,
-                "meta": meta
+                "meta": {"total": result.get("totalArticles", len(articles))}
             }
             
         except Exception as e:
             error_msg = f"Failed to fetch news: {str(e)}"
             self.logger.error(error_msg)
-            error = NewsAPIError(error_msg, None, 1)
-            return {"error": error}
+            return {"error": NewsAPIError(error_msg, None, 1)}
     
     def _standardize_article(self, article: Dict[str, Any], language: Optional[str] = None, category: Optional[str] = None) -> Dict[str, Any]:
         """

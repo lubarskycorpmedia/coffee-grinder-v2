@@ -2,43 +2,33 @@
   "requests": [
     {
       "provider": "thenewsapi_com",
+      "url": "https://api.thenewsapi.com/v1/news/top",
       "config": {
-        "search": "тпсмрпти ",
-        "locale": " ыукп ыукп ыукп ыукп",
+        "search": "Israel Israil",
         "categories": "tech,politics",
-        "domains": "ыкеп ыкеп кп",
-        "language": "ar,bg",
+        "language": "en",
         "published_before": "2025-07-24T23:47",
         "published_after": "2025-07-03T02:51",
-        "limit": "22"
+        "limit": "2"
       }
     },
     {
-      "provider": "newsdata_io",
+      "provider": "gnews_io",
+      "url": "https://gnews.io/api/v4/search",
       "config": {
-        "q": "вкерквер квер кр ",
-        "country": "2",
-        "category": "business,domestic",
-        "language": "sq,ar,af",
-        "domain": " ыукп уыкп",
-        "domainurl": " уыкп уыкп ",
-        "size": "666",
-        "image": " ыукп уыкп",
-        "video": " укп куп п",
-        "full_content": " ыукп укып ",
-        "removeduplicate": " ыкп п",
-        "sentiment": " укп укп",
-        "ai_tag": " уыкп укп",
-        "ai_region": " уыкп укп",
-        "ai_org": " уыкп укп",
-        "ai_person": " уыкп укп"
+        "q": "Zelensky",
+        "lang": "en",
+        "max": "2"
       }
     },
     {
       "provider": "thenewsapi_com",
+      "url": "https://api.thenewsapi.com/v1/news/top",
       "config": {
-        "search": " ыукп ыукп ыукп ",
-        "language": "ar"
+        "search": "Trump",
+        "categories": "general,tech,entertainment,politics,health",
+        "language": "en",
+        "limit": "2"
       }
     }
   ]

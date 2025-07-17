@@ -301,6 +301,7 @@ def validate_api_input(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             continue
             
         provider_name = request.get("provider")
+        provider_url = request.get("url", "")  # Добавляем извлечение URL
         provider_config = request.get("config", {})
         
         if not provider_name:
@@ -311,6 +312,7 @@ def validate_api_input(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             validated_config = security_validator.validate_config_dict(provider_config)
             validated_requests.append({
                 "provider": provider_name,
+                "url": provider_url,  # Добавляем URL в результат
                 "config": validated_config
             })
         else:

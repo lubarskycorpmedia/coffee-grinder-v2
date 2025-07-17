@@ -19,7 +19,6 @@ from src.services.news.runner import (
 from src.services.news.fetcher_fabric import FetcherFactory
 from src.utils.input_validator import validate_api_input
 from src.logger import setup_logger
-from src.services.news.fetcher_fabric import FetcherFactory
 
 
 # Настройки API
@@ -104,6 +103,7 @@ async def update_config(
         normalized_requests = []
         for i, request in enumerate(requests_list):
             provider_name = request.get("provider", "")
+            provider_url = request.get("url", "")  # Добавляем извлечение URL
             provider_config = request.get("config", {})
             
             # Нормализуем конфигурацию провайдера
@@ -121,6 +121,7 @@ async def update_config(
             
             normalized_requests.append({
                 "provider": provider_name,
+                "url": provider_url,  # Добавляем URL в структуру
                 "config": normalized_config
             })
             
@@ -141,9 +142,11 @@ async def update_config(
         final_requests = []
         for i, request in enumerate(validated_data):
             provider_name = request["provider"]
+            provider_url = request.get("url", "")  # Добавляем извлечение URL
             provider_config = request["config"]
             
             logger.info(f"🔧 Обрабатываем запрос {i+1} для {provider_name}: {provider_config}")
+            logger.info(f"🔗 URL для запроса {i+1} ({provider_name}): {provider_url}")
             
             # Фильтруем только пустые поля
             filtered_config = {}
@@ -162,6 +165,7 @@ async def update_config(
             # Сохраняем запрос даже если конфигурация пустая (по требованию)
             final_requests.append({
                 "provider": provider_name,
+                "url": provider_url,  # Добавляем URL в финальную структуру
                 "config": ordered_config
             })
         
@@ -374,7 +378,7 @@ async def clear_progress(api_key: str = Depends(get_api_key)) -> Dict[str, Any]:
 
 
 @router.get("/available_parameter_values")
-async def get_available_parameter_values() -> Dict[str, Any]:
+async def get_available_parameter_values(api_key: str = Depends(get_api_key)) -> Dict[str, Any]:
     """
     Получить параметры (категории и языки) для всех включенных провайдеров
     """
@@ -423,7 +427,7 @@ async def get_available_parameter_values() -> Dict[str, Any]:
 
 
 @router.get("/provider_parameters")
-async def get_provider_parameters() -> Dict[str, Any]:
+async def get_provider_parameters(api_key: str = Depends(get_api_key)) -> Dict[str, Any]:
     """
     Получить параметры форм для всех включенных провайдеров из их JSON файлов
     

@@ -466,110 +466,27 @@ class TheNewsAPIFetcher(BaseFetcher):
             
         return self._make_request("news/sources", params)
     
-    def search_news(self, 
-                    query: str,
-                    language: Optional[str] = None,
-                    limit: int = 50,
-                    **kwargs) -> List[Dict[str, Any]]:
-        """
-        Поиск новостей по запросу
-        
-        Args:
-            query: Поисковый запрос
-            language: Язык новостей (опционально)
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры
-            
-        Returns:
-            List[Dict[str, Any]]: Список новостей в стандартизованном формате
-        """
-        params = {
-            "search": query,
-            "limit": min(limit, 100),
-            "sort": "relevance_score",
-            "sort_order": "desc"
-        }
-        
-        # Добавляем язык только если он указан
-        if language:
-            params["language"] = language
-        
-        # Добавляем дополнительные параметры
-        params.update(kwargs)
-        
-        result = self.fetch_all_news(**params)
-        
-        if "error" in result:
-            return []
-        
-        # Стандартизируем формат каждой статьи
-        articles = []
-        for article in result.get("data", []):
-            standardized_article = {
-                "title": article.get("title", ""),
-                "description": article.get("description", ""),
-                "url": article.get("url", ""),
-                "published_at": article.get("published_at", ""),
-                "source": article.get("source", ""),
-                "category": article.get("categories", [None])[0] if article.get("categories") else None,
-                "language": article.get("language", language),
-                "uuid": article.get("uuid", ""),
-                "image_url": article.get("image_url", ""),
-                "keywords": article.get("keywords", ""),
-                "snippet": article.get("snippet", ""),
-                "relevance_score": article.get("relevance_score")
-            }
-            articles.append(standardized_article)
-        
-        return articles
+
     
-    def fetch_news(self, 
-                   query: Optional[str] = None,
-                   category: Optional[str] = None,
-                   language: Optional[str] = None,
-                   limit: int = 50,
-                   **kwargs) -> Dict[str, Any]:
+    def fetch_news(self, url: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Универсальный метод для получения новостей
-        Адаптер между NewsProcessor и fetch_all_news
+        Универсальный метод для получения новостей по URL и параметрам
         
         Args:
-            query: Поисковый запрос
-            category: Категория новостей (будет преобразована в categories)
-            language: Язык новостей (опционально)
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры для fetch_all_news
+            url: Полный URL эндпоинта API
+            params: Параметры запроса из config
             
         Returns:
             Dict в стандартном формате с полем 'articles'
         """
         try:
-            # Подготавливаем параметры для fetch_all_news
-            params = {
-                "limit": min(limit, 100),
-                "sort": "relevance_score",
-                "sort_order": "desc"
-            }
+            # Извлекаем endpoint из URL (убираем base_url)
+            endpoint = url.replace(self.base_url + "/", "")
             
-            # Добавляем язык только если он явно указан
-            if language:
-                params["language"] = language
+            self.logger.debug(f"Making request to endpoint: {endpoint} with params: {params}")
             
-            # Добавляем поисковый запрос если есть
-            if query:
-                params["search"] = query
-            
-            # Добавляем категорию если есть
-            if category:
-                params["categories"] = category
-            
-            # Добавляем дополнительные параметры из kwargs
-            params.update(kwargs)
-            
-            self.logger.debug(f"Calling fetch_all_news with params: {params}")
-            
-            # Вызываем fetch_all_news
-            result = self.fetch_all_news(**params)
+            # Вызываем _make_request который добавит api_token
+            result = self._make_request(endpoint, params)
             
             # Если есть ошибка, возвращаем как есть
             if "error" in result:
@@ -587,8 +504,8 @@ class TheNewsAPIFetcher(BaseFetcher):
                     "url": article.get("url", ""),
                     "published_at": article.get("published_at", ""),
                     "source": article.get("source", ""),
-                    "category": self._extract_category(article, category),
-                    "language": article.get("language", language),
+                    "category": article.get("categories", [None])[0] if article.get("categories") else None,
+                    "language": article.get("language", ""),
                     # Дополнительные поля из API
                     "uuid": article.get("uuid", ""),
                     "image_url": article.get("image_url", ""),
@@ -601,23 +518,15 @@ class TheNewsAPIFetcher(BaseFetcher):
             
             self.logger.info(f"Successfully standardized {len(articles)} articles")
             
-            meta = {
-                "total": len(articles),
-                "limit": limit
-            }
-            if language:
-                meta["language"] = language
-            
             return {
                 "articles": articles,
-                "meta": result.get("meta", meta)
+                "meta": result.get("meta", {"total": len(articles)})
             }
             
         except Exception as e:
             error_msg = f"Failed to fetch news: {str(e)}"
             self.logger.error(error_msg)
-            error = NewsAPIError(error_msg, None, 1)
-            return {"error": error}
+            return {"error": NewsAPIError(error_msg, None, 1)}
     
     def _extract_category(self, article: Dict[str, Any], requested_category: Optional[str]) -> Optional[str]:
         """

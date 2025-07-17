@@ -229,100 +229,73 @@ def run_news_parsing_from_config(
                 start_time_override=start_time
             )
             
-            total_requests = len(config_requests)
-            processed_requests = []
-            all_results = {}
-            
-            for i, request in enumerate(config_requests):
-                provider_name = request["provider"]
-                provider_config = request["config"]
-                
-                current_percent = int((i / total_requests) * 100)
-                request_id = f"{provider_name}_{i+1}"
-                
-                progress_tracker.update_progress(
-                    "running",
-                    current_percent,
-                    current_provider=provider_name,
-                    processed_providers=processed_requests,
-                    message=f"Обработка запроса {i+1}/{total_requests} для {provider_name}..."
-                )
-                
-                if progress_callback:
-                    progress_callback(current_percent, f"{provider_name} (запрос {i+1})")
-                
-                # МАРКЕР НАЧАЛА ОБРАБОТКИ ПРОВАЙДЕРА
-                logger.info(f"▶️ Starting - Начинается обработка провайдера: {provider_name}")
-                
-                try:
-                    # Создаем оркестратор для конкретного провайдера
-                    orchestrator = NewsPipelineOrchestrator(provider=provider_name)
-                    
-                    # Получаем параметры конфигурации
-                    config_dict = provider_config
-                    query = config_dict.get("query", "")
-                    category = config_dict.get("category", "")
-                    limit = config_dict.get("limit", 50)
-                    language = config_dict.get("language", "en")
-                    published_after = config_dict.get("published_after")
-                    published_before = config_dict.get("published_before")
-                    
-                    # Запускаем pipeline (NOTE: test_without_export не поддерживается в текущей версии)
-                    result = orchestrator.run_pipeline(
-                        query=query,
-                        categories=[category] if category else [],
-                        limit=limit,
-                        language=language,
-                        published_after=published_after,
-                        published_before=published_before
-                    )
-                    all_results[request_id] = {"success": result.success, "result": result}
-                    
-                    if result.success:
-                        logger.info(f"✅ Запрос {request_id} обработан успешно")
-                        # МАРКЕР УСПЕШНОГО ЗАВЕРШЕНИЯ ПРОВАЙДЕРА
-                        logger.info(f"✅ Completed - Завершена обработка запроса: {request_id}")
-                    else:
-                        logger.error(f"❌ Ошибка обработки запроса {request_id}: {result.errors}")
-                        # МАРКЕР ЗАВЕРШЕНИЯ ПРОВАЙДЕРА С ОШИБКОЙ
-                        logger.error(f"❌ Completed - Завершена обработка запроса с ошибками: {request_id}")
-                    
-                    processed_requests.append(request_id)
-                    
-                except Exception as e:
-                    error_msg = f"Ошибка обработки {request_id}: {str(e)}"
-                    logger.error(error_msg)
-                    all_results[request_id] = {"success": False, "error": error_msg}
-                    # МАРКЕР ЗАВЕРШЕНИЯ ПРОВАЙДЕРА С ИСКЛЮЧЕНИЕМ
-                    logger.error(f"💥 Completed - Завершена обработка запроса с исключением: {request_id}")
-                    processed_requests.append(request_id)
-            
-            # Финальный прогресс
-            total_success = all([r.get("success", False) for r in all_results.values()])
-            final_state = "completed" if total_success else "error"
-            
-            progress_tracker.update_progress(
-                final_state,
-                100,
-                processed_providers=processed_requests,
-                message="Обработка завершена" if total_success else "Обработка завершена с ошибками"
-            )
-            
             if progress_callback:
-                progress_callback(100, None)
+                progress_callback(0, "Инициализация...")
+            
+            # МАРКЕР НАЧАЛА ОБРАБОТКИ ВСЕХ ПРОВАЙДЕРОВ
+            logger.info("▶️ Starting - Начинается обработка всех провайдеров")
+            
+            try:
+                # Создаем оркестратор для обработки всех запросов
+                orchestrator = NewsPipelineOrchestrator()
+                
+                # Запускаем pipeline для всех запросов сразу
+                result = orchestrator.run_pipeline(config_requests)
+                
+                if result.success:
+                    logger.info("✅ Все запросы обработаны успешно")
+                    # МАРКЕР УСПЕШНОГО ЗАВЕРШЕНИЯ
+                    logger.info("✅ Completed - Завершена обработка всех запросов")
+                    
+                    # Финальный прогресс
+                    progress_tracker.update_progress(
+                        "completed",
+                        100,
+                        message="Обработка завершена успешно"
+                    )
+                    
+                    if progress_callback:
+                        progress_callback(100, None)
+                    
+                    return {
+                        "success": True,
+                        "providers_processed": len(config_requests),
+                        "total_providers": len(config_requests),
+                        "results": result
+                    }
+                else:
+                    logger.error(f"❌ Ошибки при обработке запросов: {result.errors}")
+                    # МАРКЕР ЗАВЕРШЕНИЯ С ОШИБКАМИ
+                    logger.error("❌ Completed - Завершена обработка с ошибками")
+                    
+                    # Финальный прогресс с ошибкой
+                    progress_tracker.update_progress(
+                        "error",
+                        100,
+                        message="Обработка завершена с ошибками"
+                    )
+                    
+                    if progress_callback:
+                        progress_callback(100, None)
+                    
+                    return {
+                        "success": False,
+                        "providers_processed": len(config_requests),
+                        "total_providers": len(config_requests),
+                        "results": result,
+                        "error": f"Pipeline errors: {result.errors}"
+                    }
+                
+            except Exception as e:
+                error_msg = f"Ошибка выполнения pipeline: {str(e)}"
+                logger.error(error_msg)
+                progress_tracker.update_progress("error", 0, message=error_msg)
+                # МАРКЕР ЗАВЕРШЕНИЯ С ИСКЛЮЧЕНИЕМ
+                logger.error(f"💥 Completed - Завершена обработка с исключением: {error_msg}")
+                return {"success": False, "error": error_msg}
             
             # МАРКЕР ФИНАЛЬНОГО ЗАВЕРШЕНИЯ
-            if total_success:
-                logger.info("🏁 Pipeline finished - Завершение pipeline: все провайдеры обработаны успешно")
-            else:
-                logger.error("🚩 Pipeline finished - Завершение pipeline: обработка завершена с ошибками")
-            
-            return {
-                "success": total_success,
-                "providers_processed": len(processed_requests),
-                "total_providers": total_requests,
-                "results": all_results
-            }
+            logger.info("🏁 Pipeline finished - Завершение pipeline")
             
     except RuntimeError as e:
         error_msg = str(e)

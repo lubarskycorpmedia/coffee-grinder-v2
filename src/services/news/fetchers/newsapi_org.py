@@ -169,77 +169,7 @@ class NewsAPIFetcher(BaseFetcher):
             from .base import NewsAPIError
             return {"error": NewsAPIError(f"Unexpected error in NewsAPI fetch: {e}")}
     
-    def search_news(self, 
-                    query: str,
-                    language: Optional[str] = None,
-                    from_date: Optional[Union[datetime, str]] = None,
-                    to_date: Optional[Union[datetime, str]] = None,
-                    limit: int = 50,
-                    **kwargs) -> List[Dict[str, Any]]:
-        """
-        Поиск новостей через эндпоинт /v2/everything
-        
-        Args:
-            query: Поисковый запрос (обязательный)
-            language: Язык новостей (опционально)
-            from_date: Дата начала поиска
-            to_date: Дата окончания поиска
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры (sources, domains, etc.)
-            
-        Returns:
-            List[Dict[str, Any]]: Список стандартизированных статей
-        """
-        try:
-            # Подготавливаем параметры для поиска
-            params = {
-                'q': query,
-                'page_size': min(limit, self.page_size),
-                'sort_by': kwargs.get('sort_by', 'publishedAt')
-            }
-            
-            # Добавляем язык только если он указан
-            if language:
-                params['language'] = language
-            
-            # Добавляем даты если указаны
-            if from_date:
-                if isinstance(from_date, str):
-                    params['from_param'] = from_date
-                else:
-                    params['from_param'] = from_date.strftime('%Y-%m-%d')
-            if to_date:
-                if isinstance(to_date, str):
-                    params['to'] = to_date
-                else:
-                    params['to'] = to_date.strftime('%Y-%m-%d')
-                
-            # Добавляем источники если указаны
-            if 'sources' in kwargs:
-                params['sources'] = kwargs['sources']
-            
-            # Добавляем домены если указаны
-            if 'domains' in kwargs:
-                params['domains'] = kwargs['domains']
-            
-            # Логируем запрос
-            self._log_api_request('everything', params)
-            
-            response = self.client.get_everything(**params)
-            
-            if response.get('status') != 'ok':
-                logger.error(f"NewsAPI search error: {response.get('message', 'Unknown error')}")
-                return []
-                
-            articles = response.get('articles', [])
-            return [self._standardize_article(article) for article in articles]
-            
-        except NewsAPIException as e:
-            logger.error(f"NewsAPI search exception: {e}")
-            return []
-        except Exception as e:
-            logger.error(f"Unexpected error in NewsAPI search: {e}")
-            return []
+
     
     def get_sources(self, 
                     language: Optional[str] = None,

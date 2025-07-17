@@ -621,69 +621,25 @@ class MediaStackFetcher(BaseFetcher):
         except Exception as e:
             raise Exception(f"Error reading provider parameters: {str(e)}") from e
         
-    def fetch_news(self,
-                   query: Optional[str] = None,
-                   category: Optional[str] = None,
-                   language: Optional[str] = None,
-                   limit: int = 50,
-                   **kwargs) -> Dict[str, Any]:
+    def fetch_news(self, url: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Универсальный метод для получения новостей (Live News)
+        Универсальный метод для получения новостей по URL и параметрам
         
         Args:
-            query: Поисковый запрос (keywords)
-            category: Категория новостей (categories)
-            language: Язык новостей (languages)
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры для MediaStack API
+            url: Полный URL эндпоинта API
+            params: Параметры запроса из config
             
         Returns:
             Dict в стандартном формате с полем 'articles'
         """
         try:
-            # Подготавливаем параметры для запроса
-            params = {
-                "limit": min(limit, 100),  # MediaStack max limit is 100
-                "sort": kwargs.get("sort", "published_desc")
-            }
+            # Извлекаем endpoint из URL (убираем base_url)
+            endpoint = url.replace(self.base_url + "/", "")
             
-            # Добавляем поисковый запрос если есть
-            if query:
-                params["keywords"] = query
+            self.logger.debug(f"Making request to endpoint: {endpoint} with params: {params}")
             
-            # Добавляем категорию если есть
-            if category:
-                params["categories"] = category
-            
-            # Добавляем язык если есть
-            if language:
-                params["languages"] = language
-            
-            # Добавляем дополнительные параметры из kwargs
-            for key, value in kwargs.items():
-                if key not in ["sort"] and value is not None:
-                    # Маппинг параметров
-                    if key == "sources":
-                        params["sources"] = str(value)
-                    elif key == "domains":
-                        # Конвертируем домены в источники MediaStack
-                        sources = self._convert_domains_to_sources(str(value))
-                        if sources:
-                            params["sources"] = sources
-                        # Не передаем domains в API, так как MediaStack его не поддерживает
-                    elif key == "countries":
-                        params["countries"] = str(value)
-                    elif key == "date":
-                        params["date"] = str(value)
-                    elif key == "offset":
-                        params["offset"] = int(value)
-                    else:
-                        params[key] = value
-            
-            self.logger.debug(f"Calling MediaStack news API with params: {params}")
-            
-            # Вызываем API
-            result = self._make_request("news", params)
+            # Вызываем _make_request который добавит access_key
+            result = self._make_request(endpoint, params)
             
             # Если есть ошибка, возвращаем как есть
             if "error" in result:
@@ -701,8 +657,8 @@ class MediaStackFetcher(BaseFetcher):
                     "url": article.get("url", ""),
                     "published_at": article.get("published_at", ""),
                     "source": article.get("source", ""),
-                    "category": article.get("category", category),
-                    "language": article.get("language", language),
+                    "category": article.get("category", ""),
+                    "language": article.get("language", ""),
                     # Дополнительные поля из API
                     "author": article.get("author", ""),
                     "image_url": article.get("image", ""),
@@ -713,24 +669,15 @@ class MediaStackFetcher(BaseFetcher):
             
             self.logger.info(f"Successfully standardized {len(articles)} articles")
             
-            meta = {
-                "total": result.get("pagination", {}).get("total", len(articles)),
-                "limit": limit,
-                "offset": result.get("pagination", {}).get("offset", 0),
-                "count": result.get("pagination", {}).get("count", len(articles))
-            }
-            
             return {
                 "articles": articles,
-                "meta": meta,
-                "pagination": result.get("pagination", {})
+                "meta": result.get("pagination", {"total": len(articles)})
             }
             
         except Exception as e:
             error_msg = f"Failed to fetch news: {str(e)}"
             self.logger.error(error_msg)
-            error = NewsAPIError(error_msg, None, 1)
-            return {"error": error}
+            return {"error": NewsAPIError(error_msg, None, 1)}
     
     def fetch_headlines(self, **kwargs) -> Dict[str, Any]:
         """
@@ -883,35 +830,7 @@ class MediaStackFetcher(BaseFetcher):
             "pagination": result.get("pagination", {})
         }
     
-    def search_news(self,
-                    query: str,
-                    language: Optional[str] = None,
-                    limit: int = 50,
-                    **kwargs) -> List[Dict[str, Any]]:
-        """
-        Поиск новостей по запросу
-        
-        Args:
-            query: Поисковый запрос
-            language: Язык новостей (опционально)
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры
-            
-        Returns:
-            List[Dict[str, Any]]: Список новостей в стандартизованном формате
-        """
-        # Используем fetch_news для поиска
-        result = self.fetch_news(
-            query=query,
-            language=language,
-            limit=limit,
-            **kwargs
-        )
-        
-        if "error" in result:
-            return []
-        
-        return result.get("articles", [])
+
     
     def get_supported_countries(self) -> List[str]:
         """

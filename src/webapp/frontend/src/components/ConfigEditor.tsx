@@ -11,6 +11,7 @@ interface ProviderConfig {
 // Новый формат: объект с полем requests
 interface RequestData {
   provider: string
+  url: string
   config: ProviderConfig
 }
 
@@ -487,8 +488,12 @@ const ConfigEditor = () => {
           }
         })
         
+        // Получаем URL эндпоинта для провайдера
+        const url = getProviderEndpointUrl(providerName, providerParametersData)
+        
         formattedData.push({
           provider: providerName,
+          url: url,
           config: filteredConfig
         })
       })
@@ -517,8 +522,12 @@ const ConfigEditor = () => {
             return true
           })
         )
+        // Получаем URL эндпоинта для провайдера
+        const url = getProviderEndpointUrl(provider.provider, providerParametersData)
+        
         configObject.requests.push({
           provider: provider.provider,
+          url: url,
           config: cleanConfig
         })
       }
@@ -578,8 +587,13 @@ const ConfigEditor = () => {
         console.log(`📊 Количество полей в финальной конфигурации:`, Object.keys(finalConfig).length)
         console.log(`📊 Исключено полей:`, Object.keys(normalizedConfig).length - Object.keys(finalConfig).length)
         
+        // Получаем URL эндпоинта для провайдера
+        const url = getProviderEndpointUrl(provider.provider, providerParametersData)
+        console.log(`🔗 URL эндпоинта для ${provider.provider}: "${url}"`)
+        
         cleanedRequests.requests.push({
           provider: provider.provider,
+          url: url,
           config: finalConfig
         })
       }
@@ -610,8 +624,12 @@ const ConfigEditor = () => {
       return
     }
     
+    // Получаем URL эндпоинта для нового провайдера
+    const url = getProviderEndpointUrl(selectedProviderToAdd, providerParametersData)
+    
     append({ 
-      provider: selectedProviderToAdd, 
+      provider: selectedProviderToAdd,
+      url: url, 
       config: {} 
     })
     setSelectedProviderToAdd('')

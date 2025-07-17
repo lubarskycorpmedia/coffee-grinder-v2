@@ -336,17 +336,32 @@ class TestInputSecurityValidator:
     
     def test_validate_api_input_function(self):
         """Тестирует глобальную функцию validate_api_input"""
-        test_data = {
-            "language": "en,ru",
-            "category": "business",
-            "limit": "50"
-        }
+        test_data = [
+            {
+                "provider": "thenewsapi_com",
+                "config": {
+                    "language": "en,ru",
+                    "category": "business",
+                    "limit": "50"
+                }
+            },
+            {
+                "provider": "newsdata_io", 
+                "config": {
+                    "q": "test search",
+                    "size": "100"
+                }
+            }
+        ]
         
         result = validate_api_input(test_data)
         
-        assert isinstance(result, dict)
-        assert len(result) == 3
-        assert result["language"] == "en,ru"
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0]["provider"] == "thenewsapi_com"
+        assert result[0]["config"]["language"] == "en,ru"
+        assert result[1]["provider"] == "newsdata_io"
+        assert result[1]["config"]["q"] == "test search"
     
     def test_security_validator_singleton(self):
         """Тестирует что глобальный валидатор является экземпляром правильного класса"""
@@ -356,27 +371,26 @@ class TestInputSecurityValidator:
     
     def test_integration_real_world_config(self, validator):
         """Интеграционный тест с реалистичной конфигурацией"""
-        real_config = {
-            "thenewsapi_com": {
-                "language": "en,ru",
-                "published_after": "2025-01-16T20:02",
-                "limit": "66",
-                "search": "test query",
-                "categories": "general,politics",
-                "domains": "example.com,news.com",
+        real_config = [
+            {
+                "provider": "thenewsapi_com",
+                "config": {
+                    "language": "en,ru",
+                    "published_after": "2025-01-16T20:02",
+                    "limit": "66",
+                    "search": "test query",
+                    "categories": "general,politics",
+                    "domains": "example.com,news.com",
+                }
             }
-        }
+        ]
         
-        # Валидируем каждый провайдер отдельно (как это происходит в реальном коде)
-        validated_config = {}
-        for provider_name, provider_config in real_config.items():
-            validated_provider = validator.validate_config_dict(provider_config)
-            if validated_provider:
-                validated_config[provider_name] = validated_provider
+        # Используем новую функцию validate_api_input
+        validated_config = validate_api_input(real_config)
         
         assert len(validated_config) == 1
-        assert "thenewsapi_com" in validated_config
-        provider_config = validated_config["thenewsapi_com"]
+        assert validated_config[0]["provider"] == "thenewsapi_com"
+        provider_config = validated_config[0]["config"]
         assert provider_config["language"] == "en,ru"
         assert provider_config["limit"] == "66"
     

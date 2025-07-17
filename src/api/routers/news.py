@@ -56,7 +56,7 @@ async def get_config(api_key: str = Depends(get_api_key)) -> Dict[str, Any]:
     try:
         if not os.path.exists(config_path):
             logger.warning(f"Configuration file not found: {config_path}")
-            return {"providers": {}}
+            return {"requests": []}
         
         with open(config_path, 'r', encoding='utf-8') as f:
             config_data = json.load(f)
@@ -80,7 +80,7 @@ async def get_config(api_key: str = Depends(get_api_key)) -> Dict[str, Any]:
 
 @router.post("/config")
 async def update_config(
-    config_data: Dict[str, Dict[str, Any]],
+    config_data: Dict[str, Any],
     api_key: str = Depends(get_api_key)
 ) -> Dict[str, Any]:
     """
@@ -94,13 +94,20 @@ async def update_config(
         
         logger.info(f"🔍 Получены данные от фронтенда: {config_data}")
         logger.info(f"📊 Тип полученных данных: {type(config_data)}")
-        for provider_name, provider_config in config_data.items():
-            logger.info(f"🏢 Провайдер {provider_name}: {len(provider_config)} полей - {list(provider_config.keys())}")
+        
+        # Извлекаем массив requests из обёртки
+        requests_list = config_data.get("requests", [])
+        logger.info(f"📋 Количество запросов: {len(requests_list)}")
+        
+        for i, request in enumerate(requests_list):
+            provider_name = request.get("provider", "unknown")
+            provider_config = request.get("config", {})
+            logger.info(f"🏢 Запрос {i+1} для {provider_name}: {len(provider_config)} полей - {list(provider_config.keys())}")
         
         # Валидируем входящие данные на безопасность
         try:
-            validated_data = validate_api_input(config_data)
-            logger.info(f"✅ Данные прошли валидацию безопасности: {validated_data}")
+            validated_data = validate_api_input(requests_list)
+            logger.info(f"✅ Данные прошли валидацию безопасности: количество валидных запросов {len(validated_data)}")
         except Exception as validation_error:
             logger.error(f"❌ Ошибка валидации безопасности: {str(validation_error)}")
             raise HTTPException(
@@ -108,10 +115,13 @@ async def update_config(
                 detail=f"Security validation failed: {str(validation_error)}"
             )
         
-        # Фильтруем только заполненные поля для каждого провайдера
-        filtered_config_data = {}
-        for provider_name, provider_config in validated_data.items():
-            logger.info(f"🔧 Обрабатываем провайдер {provider_name}: {provider_config}")
+        # Фильтруем только заполненные поля для каждого запроса
+        filtered_requests = []
+        for i, request in enumerate(validated_data):
+            provider_name = request["provider"]
+            provider_config = request["config"]
+            
+            logger.info(f"🔧 Обрабатываем запрос {i+1} для {provider_name}: {provider_config}")
             
             # Фильтруем только заполненные поля (исключаем пустые значения, NaN, undefined)
             filtered_config = {}
@@ -128,25 +138,36 @@ async def update_config(
                 # Сохраняем валидное значение
                 filtered_config[key] = value
             
-            logger.info(f"🧹 Отфильтрованная конфигурация для {provider_name}: {filtered_config}")
+            logger.info(f"🧹 Отфильтрованная конфигурация для запроса {i+1} ({provider_name}): {filtered_config}")
             
             if filtered_config:  # Сохраняем только если есть валидные поля
-                filtered_config_data[provider_name] = filtered_config
+                filtered_requests.append({
+                    "provider": provider_name,
+                    "config": filtered_config
+                })
         
-        logger.info(f"💾 Сохраняем финальную конфигурацию: {filtered_config_data}")
+        logger.info(f"💾 Сохраняем финальную конфигурацию: {len(filtered_requests)} запросов")
         
-        # Сохраняем конфигурацию
+        # Сохраняем конфигурацию в едином формате с обёрткой
+        config_to_save = {"requests": filtered_requests}
         with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(filtered_config_data, f, ensure_ascii=False, indent=2)
+            json.dump(config_to_save, f, ensure_ascii=False, indent=2)
         
         logger.info(f"💾 Configuration saved to {config_path}")
-        logger.info(f"📊 Providers configured: {list(filtered_config_data.keys())}")
+        
+        # Подсчитываем статистику провайдеров
+        provider_counts = {}
+        for request in filtered_requests:
+            provider = request["provider"]
+            provider_counts[provider] = provider_counts.get(provider, 0) + 1
+        
+        logger.info(f"📊 Запросы по провайдерам: {provider_counts}")
         
         return {
             "success": True,
             "message": "Configuration updated successfully",
-            "providers_count": len(filtered_config_data),
-            "providers": list(filtered_config_data.keys()),
+            "requests_count": len(filtered_requests),
+            "provider_counts": provider_counts,
             "saved_at": datetime.now(timezone.utc).isoformat()
         }
         

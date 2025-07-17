@@ -8,16 +8,16 @@ interface ProviderConfig {
   [key: string]: any // Динамическая структура на основе JSON параметров
 }
 
-interface ConfigData {
-  [providerName: string]: ProviderConfig
+// Новый формат: список запросов вместо объекта провайдеров
+interface RequestData {
+  provider: string
+  config: ProviderConfig
 }
 
-interface FormData {
-  providers: Array<{
-    name: string
-    config: ProviderConfig
-  }>
-}
+type ConfigData = RequestData[]
+
+// Упрощённый FormData без обёртки providers
+type FormData = RequestData[]
 
 // Новые интерфейсы для параметров провайдеров
 interface ProviderParameters {
@@ -237,7 +237,7 @@ const DynamicFormField = ({
             {fieldLabel}
           </label>
           <DateTimeInput
-            name={`providers.${providerIndex}.config.${fieldKey}`}
+            name={`requests.${providerIndex}.config.${fieldKey}`}
             register={control.register}
             placeholder={`Выберите ${fieldLabel.toLowerCase()}`}
           />
@@ -252,7 +252,7 @@ const DynamicFormField = ({
           </label>
           <input
             type="number"
-            {...control.register(`providers.${providerIndex}.config.${fieldKey}`, { 
+            {...control.register(`requests.${providerIndex}.config.${fieldKey}`, { 
               valueAsNumber: true 
             })}
             className="input-field"
@@ -271,7 +271,7 @@ const DynamicFormField = ({
           </label>
           {providerName && parametersData?.[providerName] ? (
             <Controller
-              name={`providers.${providerIndex}.config.${fieldKey}`}
+              name={`requests.${providerIndex}.config.${fieldKey}`}
               control={control}
               render={({ field }) => (
                 <MultiSelectCheckbox
@@ -302,7 +302,7 @@ const DynamicFormField = ({
           </label>
           {providerName && parametersData?.[providerName] ? (
             <Controller
-              name={`providers.${providerIndex}.config.${fieldKey}`}
+              name={`requests.${providerIndex}.config.${fieldKey}`}
               control={control}
               render={({ field }) => (
                 <MultiSelectCheckbox
@@ -333,7 +333,7 @@ const DynamicFormField = ({
           </label>
           <input
             type="text"
-            {...control.register(`providers.${providerIndex}.config.${fieldKey}`)}
+            {...control.register(`requests.${providerIndex}.config.${fieldKey}`)}
             className="input-field"
             placeholder={fieldLabel}
           />
@@ -435,16 +435,14 @@ const ConfigEditor = () => {
     }
   )
 
-  // React Hook Form
-  const { control, handleSubmit, reset, watch, setValue } = useForm<FormData>({
-    defaultValues: {
-      providers: []
-    }
+  // React Hook Form - используем единый формат везде
+  const { control, handleSubmit, reset, watch, setValue } = useForm<{requests: FormData}>({
+    defaultValues: { requests: [] }
   })
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'providers'
+    name: 'requests'
   })
 
   // Получаем список доступных провайдеров из providerParametersData
@@ -452,11 +450,13 @@ const ConfigEditor = () => {
 
   // Обновляем форму при загрузке данных
   useEffect(() => {
-    if (configData && providerParametersData) {
-      const formattedData: FormData['providers'] = []
+    if (configData && providerParametersData && Array.isArray(configData)) {
+      const formattedData: FormData = []
       
       // Проходим по всем ключам из JSON конфигурации
-      Object.entries(configData).forEach(([providerName, config]) => {
+      configData.forEach((item: RequestData) => {
+        const providerName = item.provider
+        
         // ИГНОРИРУЕМ провайдеров которых нет в новой системе
         if (!providerParametersData[providerName]) {
           console.log(`Ignoring unknown provider: ${providerName}`)
@@ -469,28 +469,32 @@ const ConfigEditor = () => {
         // Создаем новый конфиг только с совпадающими полями
         const filteredConfig: ProviderConfig = {}
         Object.keys(availableFields).forEach(fieldKey => {
-          if (config[fieldKey] !== undefined) {
-            filteredConfig[fieldKey] = config[fieldKey]
+          if (item.config[fieldKey] !== undefined) {
+            filteredConfig[fieldKey] = item.config[fieldKey]
           }
         })
         
         formattedData.push({
-          name: providerName,
+          provider: providerName,
           config: filteredConfig
         })
       })
       
-      reset({ providers: formattedData })
+      reset({ requests: formattedData })
       setRawJSON(JSON.stringify(configData, null, 2))
     }
   }, [configData, providerParametersData, reset])
 
   // Следим за изменениями формы для обновления JSON
-  const watchedProviders = watch('providers')
+  const watchedData = watch('requests')
   useEffect(() => {
-    const configObject: ConfigData = {}
-    watchedProviders.forEach(provider => {
-      if (provider.name) {
+    const configObject: ConfigData = []
+    // Проверяем, что watchedData является массивом
+    if (!Array.isArray(watchedData)) {
+      return
+    }
+    watchedData.forEach(provider => {
+      if (provider.provider) {
         // Фильтруем пустые значения как в onSubmit
         const cleanConfig = Object.fromEntries(
           Object.entries(provider.config).filter(([_, value]) => {
@@ -500,35 +504,38 @@ const ConfigEditor = () => {
             return true
           })
         )
-        configObject[provider.name] = cleanConfig
+        configObject.push({
+          provider: provider.provider,
+          config: cleanConfig
+        })
       }
     })
     setRawJSON(JSON.stringify(configObject, null, 2))
-  }, [watchedProviders])
+  }, [watchedData])
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = (data: {requests: FormData}) => {
     console.log('=== ОТЛАДКА СОХРАНЕНИЯ ===')
     console.log('Полные данные формы:', JSON.stringify(data, null, 2))
-    data.providers.forEach((provider, i) => {
-      console.log(`Provider ${i}:`, provider.name)
-      console.log(`Config ${i}:`, provider.config)
-      console.log(`Config keys ${i}:`, Object.keys(provider.config || {}))
-    })
     
-    const configObject: ConfigData = {}
-    data.providers.forEach(provider => {
-      if (provider.name) {
-        console.log(`🔍 Исходная конфигурация для ${provider.name}:`, provider.config)
+    // Отправляем данные в едином формате как есть
+    console.log('Данные в едином формате:', data)
+    
+    // Получаем массив запросов из формы
+    const requestsArray = data.requests || []
+    
+    const cleanedRequests: ConfigData = []
+    requestsArray.forEach(provider => {
+      if (provider.provider) {
+        console.log(`🔍 Исходная конфигурация для ${provider.provider}:`, provider.config)
         
-        // Очищаем пустые значения (исключаем undefined, null, пустые строки и NaN)
+        // Очищаем пустые значения (исключаем undefined, null и NaN числа)
         const cleanConfig = Object.fromEntries(
           Object.entries(provider.config).filter(([key, value]) => {
+            // Исключаем только undefined, null и NaN числа
             const shouldKeep = !(
               value === undefined || 
-              value === null || 
-              value === '' ||
-              (typeof value === 'number' && isNaN(value)) ||
-              (typeof value === 'string' && value.trim() === '')
+              value === null ||
+              (typeof value === 'number' && isNaN(value))
             )
             
             if (!shouldKeep) {
@@ -538,13 +545,18 @@ const ConfigEditor = () => {
             return shouldKeep
           })
         )
-        console.log(`✅ Очищенная конфигурация для ${provider.name}:`, cleanConfig)
-        configObject[provider.name] = cleanConfig
+        console.log(`✅ Очищенная конфигурация для ${provider.provider}:`, cleanConfig)
+        cleanedRequests.push({
+          provider: provider.provider,
+          config: cleanConfig
+        })
       }
     })
     
-    console.log('Итоговый объект:', configObject)
-    saveMutation.mutate(configObject)
+    // Отправляем в едином формате
+    const configToSend = { requests: cleanedRequests }
+    console.log('Итоговый объект в едином формате:', configToSend)
+    saveMutation.mutate(configToSend)
   }
 
   const onSaveRawJSON = () => {
@@ -564,7 +576,7 @@ const ConfigEditor = () => {
     }
     
     append({ 
-      name: selectedProviderToAdd, 
+      provider: selectedProviderToAdd, 
       config: {} 
     })
     setSelectedProviderToAdd('')
@@ -632,7 +644,7 @@ const ConfigEditor = () => {
         /* Form Editor */
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {fields.map((field, index) => {
-            const providerName = watchedProviders[index]?.name
+            const providerName = watchedData[index]?.provider
             const formFields = getProviderFormFields(providerName, providerParametersData)
             const endpointUrl = getProviderEndpointUrl(providerName, providerParametersData)
 
@@ -665,7 +677,7 @@ const ConfigEditor = () => {
                       Провайдер *
                     </label>
                     <select
-                      {...control.register(`providers.${index}.name`)}
+                      {...control.register(`requests.${index}.provider` as const)}
                       className="input-field"
                     >
                       <option value="">Выберите провайдера</option>

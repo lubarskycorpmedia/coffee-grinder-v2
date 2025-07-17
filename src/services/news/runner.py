@@ -5,7 +5,7 @@ import fcntl
 import time
 import os
 import asyncio
-from typing import Dict, Any, Optional, Callable, Union
+from typing import Dict, Any, Optional, Callable, Union, List
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from pathlib import Path
@@ -18,7 +18,7 @@ from src.logger import setup_logger
 from src.services.news.pipeline import NewsPipelineOrchestrator
 
 
-def load_config_from_file(file_path: str) -> Dict[str, Dict[str, Any]]:
+def load_config_from_file(file_path: str) -> List[Dict[str, Any]]:
     """
     Загрузить конфигурацию из JSON файла с валидацией безопасности
     
@@ -26,39 +26,35 @@ def load_config_from_file(file_path: str) -> Dict[str, Dict[str, Any]]:
         file_path: Путь к файлу конфигурации
         
     Returns:
-        Словарь с конфигурацией провайдеров
+        Список запросов в формате [{"provider": "name", "config": {...}}]
         
     Raises:
         FileNotFoundError: Если файл не найден
         json.JSONDecodeError: Если JSON невалидный
         ValueError: Если данные не прошли валидацию безопасности
     """
+    logger = setup_logger(__name__)
+    
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Configuration file not found: {file_path}")
     
     with open(file_path, 'r', encoding='utf-8') as f:
         config_data = json.load(f)
     
+    # ТОЛЬКО единый формат {requests: [...]}
+    if not isinstance(config_data, dict) or "requests" not in config_data:
+        raise ValueError(f"Конфигурация должна быть в формате {{requests: [...]}}, получен: {type(config_data)}")
+    
+    logger.info("✅ Единый формат конфигурации {requests: [...]}")
+    requests_list = config_data["requests"]
+    
+    if not isinstance(requests_list, list):
+        raise ValueError(f"Поле 'requests' должно быть массивом, получен: {type(requests_list)}")
+    
     # Валидируем данные на безопасность
-    # Конвертируем формат {provider: config} в формат [{name: provider, config: config}]
-    provider_list = []
-    for provider_name, provider_config in config_data.items():
-        provider_list.append({
-            "name": provider_name,
-            "config": provider_config
-        })
+    validated_list = validate_api_input(requests_list)
     
-    # Валидируем через InputSecurityValidator
-    validated_list = validate_api_input(provider_list)
-    
-    # Конвертируем обратно в формат {provider: config}
-    validated_config = {}
-    for provider in validated_list:
-        provider_name = provider["name"]
-        provider_config = provider["config"]
-        validated_config[provider_name] = provider_config
-    
-    return validated_config
+    return validated_list
 
 
 class ProgressTracker:
@@ -214,9 +210,11 @@ def run_news_parsing_from_config(
             
             # Загружаем конфигурацию
             try:
-                config_providers = load_config_from_file(config_path)
+                config_requests = load_config_from_file(config_path)
                 logger.info(f"📝 Загружена конфигурация из {config_path}")
-                logger.info(f"📊 Найдено провайдеров: {list(config_providers.keys())}")
+                logger.info(f"📊 Найдено запросов: {len(config_requests)}")
+                provider_names = [req["provider"] for req in config_requests]
+                logger.info(f"📋 Провайдеры в запросах: {provider_names}")
             except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
                 error_msg = f"Ошибка загрузки конфигурации: {str(e)}"
                 logger.error(error_msg)
@@ -232,22 +230,27 @@ def run_news_parsing_from_config(
                 start_time_override=start_time
             )
             
-            total_providers = len(config_providers)
-            processed_providers = []
+            total_requests = len(config_requests)
+            processed_requests = []
             all_results = {}
             
-            for i, (provider_name, provider_config) in enumerate(config_providers.items()):
-                current_percent = int((i / total_providers) * 100)
+            for i, request in enumerate(config_requests):
+                provider_name = request["provider"]
+                provider_config = request["config"]
+                
+                current_percent = int((i / total_requests) * 100)
+                request_id = f"{provider_name}_{i+1}"
+                
                 progress_tracker.update_progress(
                     "running",
                     current_percent,
                     current_provider=provider_name,
-                    processed_providers=processed_providers,
-                    message=f"Обработка провайдера {provider_name}..."
+                    processed_providers=processed_requests,
+                    message=f"Обработка запроса {i+1}/{total_requests} для {provider_name}..."
                 )
                 
                 if progress_callback:
-                    progress_callback(current_percent, provider_name)
+                    progress_callback(current_percent, f"{provider_name} (запрос {i+1})")
                 
                 # МАРКЕР НАЧАЛА ОБРАБОТКИ ПРОВАЙДЕРА
                 logger.info(f"▶️ Starting - Начинается обработка провайдера: {provider_name}")
@@ -274,26 +277,26 @@ def run_news_parsing_from_config(
                         published_after=published_after,
                         published_before=published_before
                     )
-                    all_results[provider_name] = {"success": result.success, "result": result}
+                    all_results[request_id] = {"success": result.success, "result": result}
                     
                     if result.success:
-                        logger.info(f"✅ Провайдер {provider_name} обработан успешно")
+                        logger.info(f"✅ Запрос {request_id} обработан успешно")
                         # МАРКЕР УСПЕШНОГО ЗАВЕРШЕНИЯ ПРОВАЙДЕРА
-                        logger.info(f"✅ Completed - Завершена обработка провайдера: {provider_name}")
+                        logger.info(f"✅ Completed - Завершена обработка запроса: {request_id}")
                     else:
-                        logger.error(f"❌ Ошибка обработки провайдера {provider_name}: {result.errors}")
+                        logger.error(f"❌ Ошибка обработки запроса {request_id}: {result.errors}")
                         # МАРКЕР ЗАВЕРШЕНИЯ ПРОВАЙДЕРА С ОШИБКОЙ
-                        logger.error(f"❌ Completed - Завершена обработка провайдера с ошибками: {provider_name}")
+                        logger.error(f"❌ Completed - Завершена обработка запроса с ошибками: {request_id}")
                     
-                    processed_providers.append(provider_name)
+                    processed_requests.append(request_id)
                     
                 except Exception as e:
-                    error_msg = f"Ошибка обработки {provider_name}: {str(e)}"
+                    error_msg = f"Ошибка обработки {request_id}: {str(e)}"
                     logger.error(error_msg)
-                    all_results[provider_name] = {"success": False, "error": error_msg}
+                    all_results[request_id] = {"success": False, "error": error_msg}
                     # МАРКЕР ЗАВЕРШЕНИЯ ПРОВАЙДЕРА С ИСКЛЮЧЕНИЕМ
-                    logger.error(f"💥 Completed - Завершена обработка провайдера с исключением: {provider_name}")
-                    processed_providers.append(provider_name)
+                    logger.error(f"💥 Completed - Завершена обработка запроса с исключением: {request_id}")
+                    processed_requests.append(request_id)
             
             # Финальный прогресс
             total_success = all([r.get("success", False) for r in all_results.values()])
@@ -302,7 +305,7 @@ def run_news_parsing_from_config(
             progress_tracker.update_progress(
                 final_state,
                 100,
-                processed_providers=processed_providers,
+                processed_providers=processed_requests,
                 message="Обработка завершена" if total_success else "Обработка завершена с ошибками"
             )
             
@@ -317,8 +320,8 @@ def run_news_parsing_from_config(
             
             return {
                 "success": total_success,
-                "providers_processed": len(processed_providers),
-                "total_providers": total_providers,
+                "providers_processed": len(processed_requests),
+                "total_providers": total_requests,
                 "results": all_results
             }
             

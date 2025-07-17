@@ -292,23 +292,37 @@ class InputSecurityValidator:
 security_validator = InputSecurityValidator()
 
 
-def validate_api_input(data: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def validate_api_input(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Удобная функция для валидации входящих данных API
     
     Args:
-        data: Данные для валидации в формате {provider_name: {config}}
+        data: Список запросов в формате [{"provider": "name", "config": {...}}]
         
     Returns:
-        Валидированные данные в том же формате
+        Валидированный список запросов в том же формате
     """
-    validated_providers = {}
+    validated_requests = []
     
-    for provider_name, provider_config in data.items():
+    for i, request in enumerate(data):
+        if not isinstance(request, dict):
+            security_validator.logger.warning(f"Invalid request format at index {i}: {request}")
+            continue
+            
+        provider_name = request.get("provider")
+        provider_config = request.get("config", {})
+        
+        if not provider_name:
+            security_validator.logger.warning(f"Missing provider name in request at index {i}: {request}")
+            continue
+            
         if isinstance(provider_config, dict):
             validated_config = security_validator.validate_config_dict(provider_config)
-            validated_providers[provider_name] = validated_config
+            validated_requests.append({
+                "provider": provider_name,
+                "config": validated_config
+            })
         else:
-            security_validator.logger.warning(f"Invalid config for provider {provider_name}: {provider_config}")
+            security_validator.logger.warning(f"Invalid config for provider {provider_name} at index {i}: {provider_config}")
     
-    return validated_providers 
+    return validated_requests 

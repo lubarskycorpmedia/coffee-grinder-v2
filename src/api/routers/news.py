@@ -4,7 +4,7 @@ import json
 import os
 import asyncio
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,11 +14,10 @@ from pydantic import BaseModel, ValidationError
 
 from src.services.news.runner import (
     run_news_parsing_from_config, 
-    ProgressTracker, 
-    ProcessingConfig, 
-    NewsProviderConfig
+    ProgressTracker
 )
 from src.services.news.fetcher_fabric import FetcherFactory
+from src.utils.input_validator import validate_api_input
 from src.logger import setup_logger
 
 
@@ -39,11 +38,6 @@ def get_api_key(api_key: str = Security(api_key_header)):
             detail="Invalid API key"
         )
     return api_key
-
-
-class ConfigUpdateRequest(BaseModel):
-    """Модель для обновления конфигурации"""
-    providers: Dict[str, NewsProviderConfig]
 
 
 class TriggerRequest(BaseModel):
@@ -86,7 +80,7 @@ async def get_config(api_key: str = Depends(get_api_key)) -> Dict[str, Any]:
 
 @router.post("/config")
 async def update_config(
-    config_request: ConfigUpdateRequest,
+    config_data: Dict[str, Dict[str, Any]],
     api_key: str = Depends(get_api_key)
 ) -> Dict[str, Any]:
     """
@@ -98,26 +92,61 @@ async def update_config(
         # Создаем директорию если не существует
         os.makedirs(os.path.dirname(config_path), exist_ok=True)
         
-        # Конвертируем Pydantic модели в словари
-        config_data = {}
-        for provider_name, provider_config in config_request.providers.items():
-            config_data[provider_name] = provider_config.model_dump(exclude_none=True)
+        logger.info(f"🔍 Получены данные от фронтенда: {config_data}")
+        logger.info(f"📊 Тип полученных данных: {type(config_data)}")
+        for provider_name, provider_config in config_data.items():
+            logger.info(f"🏢 Провайдер {provider_name}: {len(provider_config)} полей - {list(provider_config.keys())}")
         
-        # Валидируем через ProcessingConfig
-        ProcessingConfig(providers=config_request.providers)
+        # Валидируем входящие данные на безопасность
+        try:
+            validated_data = validate_api_input(config_data)
+            logger.info(f"✅ Данные прошли валидацию безопасности: {validated_data}")
+        except Exception as validation_error:
+            logger.error(f"❌ Ошибка валидации безопасности: {str(validation_error)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Security validation failed: {str(validation_error)}"
+            )
+        
+        # Фильтруем только заполненные поля для каждого провайдера
+        filtered_config_data = {}
+        for provider_name, provider_config in validated_data.items():
+            logger.info(f"🔧 Обрабатываем провайдер {provider_name}: {provider_config}")
+            
+            # Фильтруем только заполненные поля (исключаем пустые значения, NaN, undefined)
+            filtered_config = {}
+            for key, value in provider_config.items():
+                # Пропускаем None и пустые строки
+                if value is None or value == "":
+                    continue
+                # Пропускаем строки содержащие только пробелы
+                if isinstance(value, str) and value.strip() == "":
+                    continue
+                # Пропускаем NaN значения
+                if isinstance(value, float) and str(value).lower() in ("nan", "none"):
+                    continue
+                # Сохраняем валидное значение
+                filtered_config[key] = value
+            
+            logger.info(f"🧹 Отфильтрованная конфигурация для {provider_name}: {filtered_config}")
+            
+            if filtered_config:  # Сохраняем только если есть валидные поля
+                filtered_config_data[provider_name] = filtered_config
+        
+        logger.info(f"💾 Сохраняем финальную конфигурацию: {filtered_config_data}")
         
         # Сохраняем конфигурацию
         with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(config_data, f, ensure_ascii=False, indent=2)
+            json.dump(filtered_config_data, f, ensure_ascii=False, indent=2)
         
         logger.info(f"💾 Configuration saved to {config_path}")
-        logger.info(f"📊 Providers configured: {list(config_data.keys())}")
+        logger.info(f"📊 Providers configured: {list(filtered_config_data.keys())}")
         
         return {
             "success": True,
             "message": "Configuration updated successfully",
-            "providers_count": len(config_data),
-            "providers": list(config_data.keys()),
+            "providers_count": len(filtered_config_data),
+            "providers": list(filtered_config_data.keys()),
             "saved_at": datetime.now(timezone.utc).isoformat()
         }
         
@@ -409,3 +438,29 @@ async def get_provider_parameters() -> Dict[str, Any]:
             status_code=500,
             detail=f"Error loading provider parameters: {str(e)}"
         ) 
+
+
+@router.post("/test-validator")
+async def test_validator(
+    data: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Тестовый эндпоинт для проверки валидатора
+    """
+    try:
+        logger.info(f"🔍 Тест валидатора - входные данные: {data}")
+        validated = validate_api_input(data)
+        logger.info(f"✅ Тест валидатора - валидированные данные: {validated}")
+        
+        return {
+            "success": True,
+            "original": data,
+            "validated": validated
+        }
+    except Exception as e:
+        logger.error(f"❌ Тест валидатора - ошибка: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "original": data
+        } 

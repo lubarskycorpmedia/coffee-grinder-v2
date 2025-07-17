@@ -5,15 +5,7 @@ import toast from 'react-hot-toast'
 import { PlusIcon, TrashIcon, DocumentIcon, CalendarDaysIcon } from '@heroicons/react/24/outline'
 
 interface ProviderConfig {
-  query?: string
-  category?: string
-  published_at?: string
-  published_after?: string
-  published_before?: string
-  language?: string
-  limit?: number
-  country?: string
-  timeframe?: string
+  [key: string]: any // Динамическая структура на основе JSON параметров
 }
 
 interface ConfigData {
@@ -37,8 +29,18 @@ interface ParametersData {
   [providerName: string]: ProviderParameters
 }
 
-// Компонент для красивого date input
-const DateInput = ({ name, register, placeholder }: { 
+// Интерфейс для данных форм провайдеров
+interface ProviderFormData {
+  url: string
+  fields: Record<string, string>
+}
+
+interface ProviderParametersData {
+  [providerName: string]: ProviderFormData
+}
+
+// Компонент для красивого datetime input
+const DateTimeInput = ({ name, register, placeholder }: { 
   name: string, 
   register: any, 
   placeholder?: string 
@@ -46,7 +48,7 @@ const DateInput = ({ name, register, placeholder }: {
   return (
     <div className="relative group">
       <input
-        type="date"
+        type="datetime-local"
         {...register(name)}
         className="input-field pr-10 cursor-pointer hover:border-coffee-cream/50 focus:border-coffee-cream transition-colors"
         placeholder={placeholder}
@@ -180,21 +182,171 @@ const MultiSelectCheckbox = ({
 }
 
 // Функция для получения полей формы из данных бекенда
-const getProviderFormFields = (providerName: string, providerParametersData: Record<string, {url: string, fields: Record<string, string>}> | undefined): Record<string, string> => {
+const getProviderFormFields = (providerName: string, providerParametersData: ProviderParametersData | undefined): Record<string, string> => {
   if (!providerParametersData) return {}
   return providerParametersData[providerName]?.fields || {}
 }
 
 // Функция для получения URL эндпоинта провайдера
-const getProviderEndpointUrl = (providerName: string, providerParametersData: Record<string, {url: string, fields: Record<string, string>}> | undefined): string => {
+const getProviderEndpointUrl = (providerName: string, providerParametersData: ProviderParametersData | undefined): string => {
   if (!providerParametersData) return ''
   return providerParametersData[providerName]?.url || ''
+}
+
+// Компонент для отображения одного поля формы
+const DynamicFormField = ({ 
+  fieldKey, 
+  fieldLabel, 
+  providerIndex,
+  control,
+  parametersData, 
+  providerName 
+}: {
+  fieldKey: string
+  fieldLabel: string
+  providerIndex: number
+  control: any
+  parametersData: ParametersData | undefined
+  providerName: string
+}) => {
+  // Определяем тип поля на основе названия
+  const getFieldType = (key: string) => {
+    const lowerKey = key.toLowerCase()
+    if (lowerKey.includes('date') || lowerKey.includes('published')) {
+      return 'date'
+    }
+    if (lowerKey.includes('limit') || lowerKey.includes('count') || lowerKey.includes('size')) {
+      return 'number'
+    }
+    if (lowerKey.includes('category') || lowerKey.includes('categories')) {
+      return 'multiselect-categories'
+    }
+    if (lowerKey.includes('language') || lowerKey.includes('lang')) {
+      return 'multiselect-languages'
+    }
+    return 'text'
+  }
+
+  const fieldType = getFieldType(fieldKey)
+
+  switch (fieldType) {
+    case 'date':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-coffee-cream mb-1">
+            {fieldLabel}
+          </label>
+          <DateTimeInput
+            name={`providers.${providerIndex}.config.${fieldKey}`}
+            register={control.register}
+            placeholder={`Выберите ${fieldLabel.toLowerCase()}`}
+          />
+        </div>
+      )
+
+    case 'number':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-coffee-cream mb-1">
+            {fieldLabel}
+          </label>
+          <input
+            type="number"
+            {...control.register(`providers.${providerIndex}.config.${fieldKey}`, { 
+              valueAsNumber: true 
+            })}
+            className="input-field"
+            placeholder={fieldLabel}
+            min={1}
+            max={1000}
+          />
+        </div>
+      )
+
+    case 'multiselect-categories':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-coffee-cream mb-1">
+            {fieldLabel}
+          </label>
+          {providerName && parametersData?.[providerName] ? (
+            <Controller
+              name={`providers.${providerIndex}.config.${fieldKey}`}
+              control={control}
+              render={({ field }) => (
+                <MultiSelectCheckbox
+                  options={parametersData[providerName].categories || []}
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  placeholder="Нет доступных категорий"
+                  anyLabel="Любая категория"
+                />
+              )}
+            />
+          ) : (
+            <div className="input-field text-coffee-cream/60">
+              {!providerName 
+                ? "Сначала выберите провайдера" 
+                : "Загрузка категорий..."
+              }
+            </div>
+          )}
+        </div>
+      )
+
+    case 'multiselect-languages':
+      return (
+        <div>
+          <label className="block text-sm font-medium text-coffee-cream mb-1">
+            {fieldLabel}
+          </label>
+          {providerName && parametersData?.[providerName] ? (
+            <Controller
+              name={`providers.${providerIndex}.config.${fieldKey}`}
+              control={control}
+              render={({ field }) => (
+                <MultiSelectCheckbox
+                  options={parametersData[providerName].languages || []}
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  placeholder="Нет доступных языков"
+                  anyLabel="Любой язык"
+                />
+              )}
+            />
+          ) : (
+            <div className="input-field text-coffee-cream/60">
+              {!providerName 
+                ? "Сначала выберите провайдера" 
+                : "Загрузка языков..."
+              }
+            </div>
+          )}
+        </div>
+      )
+
+    default:
+      return (
+        <div>
+          <label className="block text-sm font-medium text-coffee-cream mb-1">
+            {fieldLabel}
+          </label>
+          <input
+            type="text"
+            {...control.register(`providers.${providerIndex}.config.${fieldKey}`)}
+            className="input-field"
+            placeholder={fieldLabel}
+          />
+        </div>
+      )
+  }
 }
 
 const ConfigEditor = () => {
   const queryClient = useQueryClient()
   const [showRawJSON, setShowRawJSON] = useState(false)
   const [rawJSON, setRawJSON] = useState('')
+  const [selectedProviderToAdd, setSelectedProviderToAdd] = useState('')
 
   // Получение текущей конфигурации
   const { data: configData, isLoading } = useQuery<ConfigData>(
@@ -233,7 +385,7 @@ const ConfigEditor = () => {
   )
 
   // Получение параметров форм провайдеров
-  const { data: providerParametersData, isLoading: isLoadingProviderParameters } = useQuery<Record<string, {url: string, fields: Record<string, string>}>>(
+  const { data: providerParametersData, isLoading: isLoadingProviderParameters } = useQuery<ProviderParametersData>(
     'provider-form-parameters',
     async () => {
       const response = await fetch('/news/api/provider_parameters', {
@@ -261,7 +413,7 @@ const ConfigEditor = () => {
           'Content-Type': 'application/json',
           'X-API-Key': 'development_key'
         },
-        body: JSON.stringify({ providers: data })
+        body: JSON.stringify(data)
       })
       
       if (!response.ok) {
@@ -284,9 +436,9 @@ const ConfigEditor = () => {
   )
 
   // React Hook Form
-  const { control, handleSubmit, reset, watch } = useForm<FormData>({
+  const { control, handleSubmit, reset, watch, setValue } = useForm<FormData>({
     defaultValues: {
-      providers: [{ name: '', config: {} }]
+      providers: []
     }
   })
 
@@ -295,22 +447,43 @@ const ConfigEditor = () => {
     name: 'providers'
   })
 
+  // Получаем список доступных провайдеров из providerParametersData
+  const availableProviders = providerParametersData ? Object.keys(providerParametersData) : []
+
   // Обновляем форму при загрузке данных
   useEffect(() => {
-    if (configData) {
-      const formattedData = Object.entries(configData).map(([name, config]) => ({
-        name,
-        config
-      }))
+    if (configData && providerParametersData) {
+      const formattedData: FormData['providers'] = []
       
-      if (formattedData.length === 0) {
-        formattedData.push({ name: '', config: {} })
-      }
+      // Проходим по всем ключам из JSON конфигурации
+      Object.entries(configData).forEach(([providerName, config]) => {
+        // ИГНОРИРУЕМ провайдеров которых нет в новой системе
+        if (!providerParametersData[providerName]) {
+          console.log(`Ignoring unknown provider: ${providerName}`)
+          return
+        }
+        
+        // Получаем доступные поля для этого провайдера из get_provider_parameters
+        const availableFields = getProviderFormFields(providerName, providerParametersData)
+        
+        // Создаем новый конфиг только с совпадающими полями
+        const filteredConfig: ProviderConfig = {}
+        Object.keys(availableFields).forEach(fieldKey => {
+          if (config[fieldKey] !== undefined) {
+            filteredConfig[fieldKey] = config[fieldKey]
+          }
+        })
+        
+        formattedData.push({
+          name: providerName,
+          config: filteredConfig
+        })
+      })
       
       reset({ providers: formattedData })
       setRawJSON(JSON.stringify(configData, null, 2))
     }
-  }, [configData, reset])
+  }, [configData, providerParametersData, reset])
 
   // Следим за изменениями формы для обновления JSON
   const watchedProviders = watch('providers')
@@ -318,26 +491,59 @@ const ConfigEditor = () => {
     const configObject: ConfigData = {}
     watchedProviders.forEach(provider => {
       if (provider.name) {
-        configObject[provider.name] = provider.config
+        // Фильтруем пустые значения как в onSubmit
+        const cleanConfig = Object.fromEntries(
+          Object.entries(provider.config).filter(([_, value]) => {
+            if (value === undefined || value === null || value === '') return false
+            if (typeof value === 'number' && isNaN(value)) return false
+            if (typeof value === 'string' && value.trim() === '') return false
+            return true
+          })
+        )
+        configObject[provider.name] = cleanConfig
       }
     })
     setRawJSON(JSON.stringify(configObject, null, 2))
   }, [watchedProviders])
 
   const onSubmit = (data: FormData) => {
+    console.log('=== ОТЛАДКА СОХРАНЕНИЯ ===')
+    console.log('Полные данные формы:', JSON.stringify(data, null, 2))
+    data.providers.forEach((provider, i) => {
+      console.log(`Provider ${i}:`, provider.name)
+      console.log(`Config ${i}:`, provider.config)
+      console.log(`Config keys ${i}:`, Object.keys(provider.config || {}))
+    })
+    
     const configObject: ConfigData = {}
     data.providers.forEach(provider => {
       if (provider.name) {
-        // Очищаем пустые значения
+        console.log(`🔍 Исходная конфигурация для ${provider.name}:`, provider.config)
+        
+        // Очищаем пустые значения (исключаем undefined, null, пустые строки и NaN)
         const cleanConfig = Object.fromEntries(
-          Object.entries(provider.config).filter(([_, value]) => 
-            value !== undefined && value !== null && value !== ''
-          )
+          Object.entries(provider.config).filter(([key, value]) => {
+            const shouldKeep = !(
+              value === undefined || 
+              value === null || 
+              value === '' ||
+              (typeof value === 'number' && isNaN(value)) ||
+              (typeof value === 'string' && value.trim() === '')
+            )
+            
+            if (!shouldKeep) {
+              console.log(`🚫 Исключаем поле ${key}:`, value, typeof value)
+            }
+            
+            return shouldKeep
+          })
         )
+        console.log(`✅ Очищенная конфигурация для ${provider.name}:`, cleanConfig)
         configObject[provider.name] = cleanConfig
       }
     })
     
+    console.log('Итоговый объект:', configObject)
     saveMutation.mutate(configObject)
   }
 
@@ -350,39 +556,21 @@ const ConfigEditor = () => {
     }
   }
 
-  const addProvider = () => {
-    append({ name: '', config: {} })
-  }
-
-  const availableProviders = [
-    'thenewsapi_com', 'newsapi_org', 'newsdata_io', 'mediastack_com', 'gnews_io'
-  ]
-
-  const getProviderPlaceholder = (providerName: string, field: string) => {
-    const examples: Record<string, Record<string, string>> = {
-      thenewsapi: {
-        query: 'artificial intelligence',
-        category: 'tech',
-        published_at: 'last_24_hours',
-        limit: '50'
-      },
-      newsapi: {
-        query: 'AI technology',
-        category: 'technology',
-        published_after: '2024-01-01',
-        language: 'en',
-        limit: '100'
-      },
-      newsdata: {
-        query: 'machine learning',
-        category: 'technology',
-        timeframe: '24',
-        language: 'en'
-      }
+  // Добавление нового провайдера
+  const handleAddProvider = () => {
+    if (!selectedProviderToAdd) {
+      toast.error('Выберите провайдера для добавления')
+      return
     }
     
-    return examples[providerName]?.[field] || ''
+    append({ 
+      name: selectedProviderToAdd, 
+      config: {} 
+    })
+    setSelectedProviderToAdd('')
   }
+
+
 
   if (isLoading) {
     return (
@@ -443,13 +631,24 @@ const ConfigEditor = () => {
       ) : (
         /* Form Editor */
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {fields.map((field, index) => (
-            <div key={field.id} className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-coffee-cream">
-                  Запрос #{index + 1}
-                </h3>
-                {fields.length > 1 && (
+          {fields.map((field, index) => {
+            const providerName = watchedProviders[index]?.name
+            const formFields = getProviderFormFields(providerName, providerParametersData)
+            const endpointUrl = getProviderEndpointUrl(providerName, providerParametersData)
+
+            return (
+              <div key={field.id} className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-coffee-cream">
+                      Запрос #{index + 1}
+                    </h3>
+                    {endpointUrl && (
+                      <p className="text-sm text-coffee-cream/70 mt-1">
+                        Эндпоинт: {endpointUrl}
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => remove(index)}
@@ -457,197 +656,142 @@ const ConfigEditor = () => {
                   >
                     <TrashIcon className="h-5 w-5" />
                   </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Provider Name */}
-                <div>
-                  <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Провайдер *
-                  </label>
-                  <select
-                    {...control.register(`providers.${index}.name`)}
-                    className="input-field"
-                  >
-                    <option value="">Выберите провайдера</option>
-                    {availableProviders.map(provider => (
-                      <option key={provider} value={provider}>
-                        {provider}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
-                {/* Query */}
-                <div>
-                  <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Ключевые слова
-                  </label>
-                  <input
-                    type="text"
-                    {...control.register(`providers.${index}.config.query`)}
-                    className="input-field"
-                    placeholder={getProviderPlaceholder(watchedProviders[index]?.name, 'query')}
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Provider Name */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-coffee-cream mb-1">
+                      Провайдер *
+                    </label>
+                    <select
+                      {...control.register(`providers.${index}.name`)}
+                      className="input-field"
+                    >
+                      <option value="">Выберите провайдера</option>
+                      {availableProviders.map(provider => (
+                        <option key={provider} value={provider}>
+                          {provider}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Category */}
-                <div>
-                  <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Категория
-                  </label>
-                  {watchedProviders[index]?.name && parametersData ? (
-                    <Controller
-                      name={`providers.${index}.config.category`}
+                  {/* Динамические поля на основе get_provider_parameters */}
+                  {providerName && Object.entries(formFields).map(([fieldKey, fieldLabel]) => (
+                    <DynamicFormField
+                      key={fieldKey}
+                      fieldKey={fieldKey}
+                      fieldLabel={fieldLabel}
+                      providerIndex={index}
                       control={control}
-                      render={({ field }) => (
-                        <MultiSelectCheckbox
-                          options={parametersData?.[watchedProviders[index].name]?.categories || []}
-                          value={field.value || ''}
-                          onChange={field.onChange}
-                          placeholder="Нет доступных категорий"
-                          anyLabel="Любая категория"
-                        />
-                      )}
+                      parametersData={parametersData}
+                      providerName={providerName}
                     />
-                  ) : (
-                    <div className="input-field text-coffee-cream/60">
-                      {!watchedProviders[index]?.name 
-                        ? "Сначала выберите провайдера" 
-                        : isLoadingParameters 
-                          ? "Загрузка..." 
-                          : "Ошибка загрузки категорий"
-                      }
+                  ))}
+
+                  {/* Сообщение если провайдер не выбран */}
+                  {!providerName && (
+                    <div className="md:col-span-2 p-4 bg-coffee-cream/10 rounded-md">
+                      <p className="text-coffee-cream/70 text-center">
+                        Выберите провайдера для отображения доступных полей
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Сообщение если нет доступных полей */}
+                  {providerName && Object.keys(formFields).length === 0 && (
+                    <div className="md:col-span-2 p-4 bg-orange-500/10 rounded-md">
+                      <p className="text-orange-400 text-center">
+                        {isLoadingProviderParameters 
+                          ? "Загрузка полей формы..." 
+                          : "Нет доступных полей для этого провайдера"
+                        }
+                      </p>
                     </div>
                   )}
                 </div>
-
-                {/* Language */}
-                <div>
-                  <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Язык
-                  </label>
-                  {watchedProviders[index]?.name && parametersData ? (
-                    <Controller
-                      name={`providers.${index}.config.language`}
-                      control={control}
-                      render={({ field }) => (
-                        <MultiSelectCheckbox
-                          options={parametersData?.[watchedProviders[index].name]?.languages || []}
-                          value={field.value || ''}
-                          onChange={field.onChange}
-                          placeholder="Нет доступных языков"
-                          anyLabel="Любой язык"
-                        />
-                      )}
-                    />
-                  ) : (
-                    <div className="input-field text-coffee-cream/60">
-                      {!watchedProviders[index]?.name 
-                        ? "Сначала выберите провайдера" 
-                        : isLoadingParameters 
-                          ? "Загрузка..." 
-                          : "Ошибка загрузки языков"
-                      }
-                    </div>
-                  )}
-                </div>
-
-                {/* Limit */}
-                <div>
-                  <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Лимит статей
-                  </label>
-                  <input
-                    type="number"
-                    {...control.register(`providers.${index}.config.limit`, { 
-                      valueAsNumber: true,
-                      min: 1,
-                      max: 1000 
-                    })}
-                    className="input-field"
-                    placeholder="50"
-                  />
-                </div>
-
-                {/* Published At / Timeframe */}
-                <div>
-                  <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Период публикации
-                  </label>
-                  <input
-                    type="text"
-                    {...control.register(`providers.${index}.config.published_at`)}
-                    className="input-field"
-                    placeholder="last_24_hours, last_7_days"
-                  />
-                </div>
-
-                {/* From Date */}
-                <div>
-                  <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Дата от
-                  </label>
-                  <DateInput
-                    name={`providers.${index}.config.published_after`}
-                    register={control.register}
-                    placeholder="Выберите дату начала"
-                  />
-                </div>
-
-                {/* To Date */}
-                <div>
-                  <label className="block text-sm font-medium text-coffee-cream mb-1">
-                    Дата до
-                  </label>
-                  <DateInput
-                    name={`providers.${index}.config.published_before`}
-                    register={control.register}
-                    placeholder="Выберите дату окончания"
-                  />
-                </div>
               </div>
+            )
+          })}
+
+          {/* Add Provider Section */}
+          <div className="card">
+            <h3 className="text-lg font-medium text-coffee-cream mb-4">
+              Добавить провайдера
+            </h3>
+            <div className="flex items-center space-x-4">
+              <div className="flex-1">
+                <select
+                  value={selectedProviderToAdd}
+                  onChange={(e) => setSelectedProviderToAdd(e.target.value)}
+                  className="input-field"
+                  disabled={isLoadingProviderParameters}
+                >
+                  <option value="">
+                    {isLoadingProviderParameters 
+                      ? "Загрузка провайдеров..." 
+                      : "Выберите провайдера для добавления"
+                    }
+                  </option>
+                  {availableProviders.map(provider => (
+                    <option key={provider} value={provider}>
+                      {provider}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddProvider}
+                disabled={!selectedProviderToAdd || isLoadingProviderParameters}
+                className="btn-secondary flex items-center space-x-2"
+              >
+                <PlusIcon className="h-4 w-4" />
+                <span>Добавить</span>
+              </button>
             </div>
-          ))}
-
-          {/* Add Provider Button */}
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={addProvider}
-              className="btn-secondary flex items-center space-x-2 mx-auto"
-            >
-              <PlusIcon className="h-4 w-4" />
-              <span>Добавить запрос</span>
-            </button>
+            
+            {/* Пустое состояние */}
+            {fields.length === 0 && (
+              <div className="mt-4 p-6 bg-coffee-cream/5 rounded-lg border-2 border-dashed border-coffee-cream/20">
+                <div className="text-center">
+                  <p className="text-coffee-cream/70 mb-2">
+                    Нет настроенных провайдеров
+                  </p>
+                  <p className="text-sm text-coffee-cream/50">
+                    Выберите провайдера выше для создания первой конфигурации
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Save Button */}
-          <div className="card">
-            <button
-              type="submit"
-              disabled={saveMutation.isLoading}
-              className="btn-primary w-full"
-            >
-              {saveMutation.isLoading ? 'Сохранение...' : 'Сохранить конфигурацию'}
-            </button>
-          </div>
+          {fields.length > 0 && (
+            <div className="card">
+              <button
+                type="submit"
+                disabled={saveMutation.isLoading}
+                className="btn-primary w-full"
+              >
+                {saveMutation.isLoading ? 'Сохранение...' : 'Сохранить конфигурацию'}
+              </button>
+            </div>
+          )}
         </form>
       )}
 
       {/* Help */}
       <div className="card bg-coffee-cream/30">
         <h3 className="text-lg font-medium text-coffee-cream mb-2">
-          Справка по параметрам
+          О динамических формах
         </h3>
         <div className="text-sm text-coffee-cream space-y-2">
-          <p><strong>query:</strong> Ключевые слова для поиска новостей</p>
-          <p><strong>category:</strong> Категория новостей (tech, business, sports, etc.)</p>
-          <p><strong>published_at:</strong> Период публикации (last_24_hours, last_7_days)</p>
-          <p><strong>published_after/published_before:</strong> Конкретные даты в формате YYYY-MM-DD</p>
-          <p><strong>language:</strong> Код языка (en, ru, es, fr, de)</p>
-          <p><strong>limit:</strong> Максимальное количество статей для загрузки</p>
+          <p><strong>Автоматическая генерация:</strong> Поля форм создаются автоматически на основе JSON файлов параметров каждого провайдера</p>
+          <p><strong>Умная загрузка:</strong> При загрузке конфигурации заполняются только те поля, которые совпадают с доступными параметрами</p>
+          <p><strong>Множественные запросы:</strong> Можно добавить несколько конфигураций для одного провайдера</p>
+          <p><strong>Полная перезапись:</strong> При сохранении файл конфигурации полностью перезаписывается новыми данными</p>
         </div>
       </div>
     </div>

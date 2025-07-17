@@ -11,45 +11,54 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import redis
-from pydantic import BaseModel, ValidationError
 
 from src.config import get_news_providers_settings, get_ai_settings, get_google_settings
+from src.utils.input_validator import validate_api_input
 from src.logger import setup_logger
 from src.services.news.pipeline import NewsPipelineOrchestrator
 
 
-class NewsProviderConfig(BaseModel):
-    """Схема конфигурации для провайдера новостей"""
-    query: Optional[str] = None
-    category: Optional[str] = None
-    published_at: Optional[str] = None
-    published_after: Optional[str] = None
-    published_before: Optional[str] = None
-    language: Optional[str] = "en"
-    limit: Optional[int] = 50
-    country: Optional[str] = None
-    timeframe: Optional[str] = None
-
-
-class ProcessingConfig(BaseModel):
-    """Полная конфигурация обработки новостей"""
-    providers: Dict[str, NewsProviderConfig]
+def load_config_from_file(file_path: str) -> Dict[str, Dict[str, Any]]:
+    """
+    Загрузить конфигурацию из JSON файла с валидацией безопасности
     
-    @classmethod
-    def from_json_file(cls, file_path: str) -> "ProcessingConfig":
-        """Загрузить конфигурацию из JSON файла"""
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Configuration file not found: {file_path}")
+    Args:
+        file_path: Путь к файлу конфигурации
         
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+    Returns:
+        Словарь с конфигурацией провайдеров
         
-        # Конвертируем корневые ключи в providers
-        providers = {}
-        for provider_name, config_data in data.items():
-            providers[provider_name] = NewsProviderConfig(**config_data)
-        
-        return cls(providers=providers)
+    Raises:
+        FileNotFoundError: Если файл не найден
+        json.JSONDecodeError: Если JSON невалидный
+        ValueError: Если данные не прошли валидацию безопасности
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Configuration file not found: {file_path}")
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        config_data = json.load(f)
+    
+    # Валидируем данные на безопасность
+    # Конвертируем формат {provider: config} в формат [{name: provider, config: config}]
+    provider_list = []
+    for provider_name, provider_config in config_data.items():
+        provider_list.append({
+            "name": provider_name,
+            "config": provider_config
+        })
+    
+    # Валидируем через InputSecurityValidator
+    validated_list = validate_api_input(provider_list)
+    
+    # Конвертируем обратно в формат {provider: config}
+    validated_config = {}
+    for provider in validated_list:
+        provider_name = provider["name"]
+        provider_config = provider["config"]
+        validated_config[provider_name] = provider_config
+    
+    return validated_config
 
 
 class ProgressTracker:
@@ -205,10 +214,10 @@ def run_news_parsing_from_config(
             
             # Загружаем конфигурацию
             try:
-                config = ProcessingConfig.from_json_file(config_path)
+                config_providers = load_config_from_file(config_path)
                 logger.info(f"📝 Загружена конфигурация из {config_path}")
-                logger.info(f"📊 Найдено провайдеров: {list(config.providers.keys())}")
-            except (FileNotFoundError, ValidationError, json.JSONDecodeError) as e:
+                logger.info(f"📊 Найдено провайдеров: {list(config_providers.keys())}")
+            except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
                 error_msg = f"Ошибка загрузки конфигурации: {str(e)}"
                 logger.error(error_msg)
                 progress_tracker.update_progress("error", 0, message=error_msg)
@@ -223,11 +232,11 @@ def run_news_parsing_from_config(
                 start_time_override=start_time
             )
             
-            total_providers = len(config.providers)
+            total_providers = len(config_providers)
             processed_providers = []
             all_results = {}
             
-            for i, (provider_name, provider_config) in enumerate(config.providers.items()):
+            for i, (provider_name, provider_config) in enumerate(config_providers.items()):
                 current_percent = int((i / total_providers) * 100)
                 progress_tracker.update_progress(
                     "running",
@@ -248,7 +257,7 @@ def run_news_parsing_from_config(
                     orchestrator = NewsPipelineOrchestrator(provider=provider_name)
                     
                     # Получаем параметры конфигурации
-                    config_dict = provider_config.model_dump(exclude_none=True)
+                    config_dict = provider_config
                     query = config_dict.get("query", "")
                     category = config_dict.get("category", "")
                     limit = config_dict.get("limit", 50)

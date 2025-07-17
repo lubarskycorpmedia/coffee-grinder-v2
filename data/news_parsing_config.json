@@ -1,8 +1,22 @@
 {
-  "newsapi": {
-    "query": "Mask",
-    "published_after": "2025-07-14",
-    "language": "en",
-    "limit": 10
+  "thenewsapi_com": {
+    "search": "srev dfvfdvadsvasdv",
+    "locale": "advasdvadsvasdv",
+    "categories": "general,tech",
+    "domains": "avadsv",
+    "language": "ar",
+    "published_before": "2025-07-18T22:40",
+    "published_after": "2025-07-08T22:40",
+    "limit": "555"
+  },
+  "newsdata_io": {
+    "q": "v asdrv adfbaerbsbad vadvadffvdv ad",
+    "category": "business,politics",
+    "language": "sq,am,ar,af,et",
+    "domainurl": "xxx.com",
+    "size": "222",
+    "full_content": "zv zx z fzx",
+    "removeduplicate": "zc xzxc zxc",
+    "ai_tag": "x zx"
   }
 }

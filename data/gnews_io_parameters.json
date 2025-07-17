@@ -1,0 +1,43 @@
+{
+    "endpoints": {
+      "search": {
+        "use": "true",
+        "label": "Поиск новостей",
+        "method": "GET",
+        "url": "https://gnews.io/api/v4/search",
+        "parameters": {
+          "apikey": {"use": "false", "label": "API ключ"},
+          "q": {"use": "true", "label": "Поисковый запрос"},
+          "lang": {"use": "true", "label": "Язык"},
+          "country": {"use": "true", "label": "Страна"},
+          "max": {"use": "true", "label": "Максимум результатов"},
+          "in": {"use": "false", "label": "Где искать (title, description, content)"},
+          "nullable": {"use": "false", "label": "Разрешить пустые поля"},
+          "from": {"use": "true", "label": "Дата начала"},
+          "to": {"use": "true", "label": "Дата окончания"},
+          "sortby": {"use": "false", "label": "Сортировка"},
+          "page": {"use": "false", "label": "Номер страницы"},
+          "expand": {"use": "true", "label": "Расширенный контент"}
+        }
+      },
+      "top-headlines": {
+        "use": "false",
+        "label": "Топ заголовки",
+        "method": "GET",
+        "url": "https://gnews.io/api/v4/top-headlines",
+        "parameters": {
+          "apikey": {"use": "false", "label": "API ключ"},
+          "category": {"use": "false", "label": "Категория"},
+          "lang": {"use": "false", "label": "Язык"},
+          "country": {"use": "false", "label": "Страна"},
+          "max": {"use": "false", "label": "Максимум результатов"},
+          "nullable": {"use": "false", "label": "Разрешить пустые поля"},
+          "from": {"use": "false", "label": "Дата начала"},
+          "to": {"use": "false", "label": "Дата окончания"},
+          "q": {"use": "false", "label": "Поисковый запрос"},
+          "page": {"use": "false", "label": "Номер страницы"},
+          "expand": {"use": "false", "label": "Расширенный контент"}
+        }
+      }
+    }
+  }

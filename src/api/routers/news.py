@@ -304,8 +304,8 @@ async def clear_progress(api_key: str = Depends(get_api_key)) -> Dict[str, Any]:
         )
 
 
-@router.get("/parameters")
-async def get_parameters() -> Dict[str, Any]:
+@router.get("/available_parameter_values")
+async def get_available_parameter_values() -> Dict[str, Any]:
     """
     Получить параметры (категории и языки) для всех включенных провайдеров
     """
@@ -350,4 +350,62 @@ async def get_parameters() -> Dict[str, Any]:
         raise HTTPException(
             status_code=500,
             detail=f"Error loading parameters: {str(e)}"
+        )
+
+
+@router.get("/provider_parameters")
+async def get_provider_parameters() -> Dict[str, Any]:
+    """
+    Получить параметры форм для всех включенных провайдеров из их JSON файлов
+    
+    Returns:
+        Словарь в формате:
+        {
+            "thenewsapi_com": {
+                "url": "https://api.thenewsapi.com/v1/news/top",
+                "fields": {
+                    "search": "Поисковый запрос",
+                    "categories": "Категории"
+                }
+            }
+        }
+    """
+    try:
+        # Получаем список включенных провайдеров
+        enabled_providers = FetcherFactory.get_enabled_providers()
+        
+        parameters = {}
+        
+        for provider_name in enabled_providers:
+            try:
+                # Создаем экземпляр fetcher'а для провайдера
+                fetcher = FetcherFactory.create_fetcher_from_config(provider_name)
+                
+                # Получаем параметры из JSON файла (теперь это Dict с url и fields)
+                provider_parameters = fetcher.get_provider_parameters()
+                
+                parameters[provider_name] = provider_parameters
+                
+                fields_count = len(provider_parameters.get('fields', {}))
+                logger.debug(f"✅ Provider parameters loaded for: {provider_name} ({fields_count} fields, URL: {provider_parameters.get('url', 'N/A')})")
+                
+            except Exception as provider_error:
+                error_message = f"Failed to load provider parameters for {provider_name}: {str(provider_error)}"
+                logger.warning(error_message)
+                
+                # Устанавливаем пустую структуру для провайдера с ошибкой
+                parameters[provider_name] = {
+                    "url": "",
+                    "fields": {}
+                }
+        
+        logger.info(f"📋 Provider parameters loaded for {len(enabled_providers)} providers")
+        
+        return parameters
+        
+    except Exception as e:
+        logger.error(f"Error loading provider parameters: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error loading provider parameters: {str(e)}"
         ) 

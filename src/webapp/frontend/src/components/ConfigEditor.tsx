@@ -8,8 +8,8 @@ interface ProviderConfig {
   query?: string
   category?: string
   published_at?: string
-  from_date?: string
-  to_date?: string
+  published_after?: string
+  published_before?: string
   language?: string
   limit?: number
   country?: string
@@ -179,6 +179,18 @@ const MultiSelectCheckbox = ({
   )
 }
 
+// Функция для получения полей формы из данных бекенда
+const getProviderFormFields = (providerName: string, providerParametersData: Record<string, {url: string, fields: Record<string, string>}> | undefined): Record<string, string> => {
+  if (!providerParametersData) return {}
+  return providerParametersData[providerName]?.fields || {}
+}
+
+// Функция для получения URL эндпоинта провайдера
+const getProviderEndpointUrl = (providerName: string, providerParametersData: Record<string, {url: string, fields: Record<string, string>}> | undefined): string => {
+  if (!providerParametersData) return ''
+  return providerParametersData[providerName]?.url || ''
+}
+
 const ConfigEditor = () => {
   const queryClient = useQueryClient()
   const [showRawJSON, setShowRawJSON] = useState(false)
@@ -204,13 +216,33 @@ const ConfigEditor = () => {
   const { data: parametersData, isLoading: isLoadingParameters } = useQuery<ParametersData>(
     'provider-parameters',
     async () => {
-      const response = await fetch('/news/api/parameters', {
+      const response = await fetch('/news/api/available_parameter_values', {
         headers: {
           'X-API-Key': 'development_key'
         }
       })
       if (!response.ok) {
         throw new Error('Failed to fetch provider parameters')
+      }
+      return response.json()
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 минут кеша
+      cacheTime: 10 * 60 * 1000, // 10 минут в памяти
+    }
+  )
+
+  // Получение параметров форм провайдеров
+  const { data: providerParametersData, isLoading: isLoadingProviderParameters } = useQuery<Record<string, {url: string, fields: Record<string, string>}>>(
+    'provider-form-parameters',
+    async () => {
+      const response = await fetch('/news/api/provider_parameters', {
+        headers: {
+          'X-API-Key': 'development_key'
+        }
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch provider form parameters')
       }
       return response.json()
     },
@@ -323,7 +355,7 @@ const ConfigEditor = () => {
   }
 
   const availableProviders = [
-    'thenewsapi', 'newsapi', 'newsdata', 'mediastack', 'gnews'
+    'thenewsapi_com', 'newsapi_org', 'newsdata_io', 'mediastack_com', 'gnews_io'
   ]
 
   const getProviderPlaceholder = (providerName: string, field: string) => {
@@ -337,7 +369,7 @@ const ConfigEditor = () => {
       newsapi: {
         query: 'AI technology',
         category: 'technology',
-        from_date: '2024-01-01',
+        published_after: '2024-01-01',
         language: 'en',
         limit: '100'
       },
@@ -558,7 +590,7 @@ const ConfigEditor = () => {
                     Дата от
                   </label>
                   <DateInput
-                    name={`providers.${index}.config.from_date`}
+                    name={`providers.${index}.config.published_after`}
                     register={control.register}
                     placeholder="Выберите дату начала"
                   />
@@ -570,7 +602,7 @@ const ConfigEditor = () => {
                     Дата до
                   </label>
                   <DateInput
-                    name={`providers.${index}.config.to_date`}
+                    name={`providers.${index}.config.published_before`}
                     register={control.register}
                     placeholder="Выберите дату окончания"
                   />
@@ -613,7 +645,7 @@ const ConfigEditor = () => {
           <p><strong>query:</strong> Ключевые слова для поиска новостей</p>
           <p><strong>category:</strong> Категория новостей (tech, business, sports, etc.)</p>
           <p><strong>published_at:</strong> Период публикации (last_24_hours, last_7_days)</p>
-          <p><strong>from_date/to_date:</strong> Конкретные даты в формате YYYY-MM-DD</p>
+          <p><strong>published_after/published_before:</strong> Конкретные даты в формате YYYY-MM-DD</p>
           <p><strong>language:</strong> Код языка (en, ru, es, fr, de)</p>
           <p><strong>limit:</strong> Максимальное количество статей для загрузки</p>
         </div>

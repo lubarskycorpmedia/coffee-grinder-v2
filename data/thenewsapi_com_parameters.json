@@ -1,0 +1,113 @@
+{
+    "endpoints": {
+      "headlines": {
+        "use": "false",
+        "label": "Заголовки новостей",
+        "method": "GET",
+        "url": "https://api.thenewsapi.com/v1/news/headlines",
+        "parameters": {
+          "api_token": {"use": "false", "label": "API токен"},
+          "locale": {"use": "false", "label": "Локализация (страна)"},
+          "domains": {"use": "false", "label": "Домены источников"},
+          "exclude_domains": {"use": "false", "label": "Исключить домены"},
+          "source_ids": {"use": "false", "label": "ID источников"},
+          "exclude_source_ids": {"use": "false", "label": "Исключить ID источников"},
+          "language": {"use": "false", "label": "Язык"},
+          "published_on": {"use": "false", "label": "Дата публикации"},
+          "headlines_per_category": {"use": "false", "label": "Количество заголовков на категорию"},
+          "include_similar": {"use": "false", "label": "Включить похожие статьи"}
+        }
+      },
+      "top": {
+        "use": "true",
+        "label": "Топ новости",
+        "method": "GET", 
+        "url": "https://api.thenewsapi.com/v1/news/top",
+        "parameters": {
+          "api_token": {"use": "false", "label": "API токен"},
+          "search": {"use": "true", "label": "Поисковый запрос"},
+          "search_fields": {"use": "false", "label": "Где искать (заголовок, описание, текст)"},
+          "locale": {"use": "true", "label": "Локализация (страна)"},
+          "categories": {"use": "true", "label": "Категории"},
+          "exclude_categories": {"use": "false", "label": "Исключить категории"},
+          "domains": {"use": "true", "label": "Домены источников"},
+          "exclude_domains": {"use": "false", "label": "Исключить домены"},
+          "source_ids": {"use": "false", "label": "ID источников"},
+          "exclude_source_ids": {"use": "false", "label": "Исключить ID источников"},
+          "language": {"use": "true", "label": "Язык"},
+          "published_before": {"use": "true", "label": "Опубликовано до"},
+          "published_after": {"use": "true", "label": "Опубликовано после"},
+          "published_on": {"use": "false", "label": "Дата публикации"},
+          "sort": {"use": "false", "label": "Сортировка"},
+          "limit": {"use": "true", "label": "Лимит результатов"},
+          "page": {"use": "false", "label": "Номер страницы"}
+        }
+      },
+      "all": {
+        "use": "false",
+        "label": "Все новости",
+        "method": "GET",
+        "url": "https://api.thenewsapi.com/v1/news/all",
+        "parameters": {
+          "api_token": {"use": "false", "label": "API токен"},
+          "search": {"use": "false", "label": "Поисковый запрос"},
+          "search_fields": {"use": "false", "label": "Где искать (заголовок, описание, текст)"},
+          "categories": {"use": "false", "label": "Категории"},
+          "exclude_categories": {"use": "false", "label": "Исключить категории"},
+          "domains": {"use": "false", "label": "Домены источников"},
+          "exclude_domains": {"use": "false", "label": "Исключить домены"},
+          "source_ids": {"use": "false", "label": "ID источников"},
+          "exclude_source_ids": {"use": "false", "label": "Исключить ID источников"},
+          "language": {"use": "false", "label": "Язык"},
+          "published_before": {"use": "false", "label": "Опубликовано до"},
+          "published_after": {"use": "false", "label": "Опубликовано после"},
+          "published_on": {"use": "false", "label": "Дата публикации"},
+          "sort": {"use": "false", "label": "Сортировка"},
+          "limit": {"use": "false", "label": "Лимит результатов"},
+          "page": {"use": "false", "label": "Номер страницы"}
+        }
+      },
+      "similar": {
+        "use": "false",
+        "label": "Похожие новости",
+        "method": "GET",
+        "url": "https://api.thenewsapi.com/v1/news/similar/{uuid}",
+        "parameters": {
+          "api_token": {"use": "false", "label": "API токен"},
+          "categories": {"use": "false", "label": "Категории"},
+          "exclude_categories": {"use": "false", "label": "Исключить категории"},
+          "domains": {"use": "false", "label": "Домены источников"},
+          "exclude_domains": {"use": "false", "label": "Исключить домены"},
+          "source_ids": {"use": "false", "label": "ID источников"},
+          "exclude_source_ids": {"use": "false", "label": "Исключить ID источников"},
+          "language": {"use": "false", "label": "Язык"},
+          "published_before": {"use": "false", "label": "Опубликовано до"},
+          "published_after": {"use": "false", "label": "Опубликовано после"},
+          "published_on": {"use": "false", "label": "Дата публикации"},
+          "limit": {"use": "false", "label": "Лимит результатов"},
+          "page": {"use": "false", "label": "Номер страницы"}
+        }
+      },
+      "uuid": {
+        "use": "false",
+        "label": "Новость по ID",
+        "method": "GET",
+        "url": "https://api.thenewsapi.com/v1/news/uuid/{uuid}",
+        "parameters": {
+          "api_token": {"use": "false", "label": "API токен"}
+        }
+      },
+      "sources": {
+        "use": "false",
+        "label": "Источники новостей",
+        "method": "GET",
+        "url": "https://api.thenewsapi.com/v1/news/sources",
+        "parameters": {
+          "categories": {"use": "false", "label": "Категории"},
+          "exclude_categories": {"use": "false", "label": "Исключить категории"},
+          "language": {"use": "false", "label": "Язык"},
+          "page": {"use": "false", "label": "Номер страницы"}
+        }
+      }
+    }
+  }

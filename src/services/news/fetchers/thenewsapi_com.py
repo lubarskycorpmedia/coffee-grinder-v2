@@ -15,7 +15,7 @@ from src.logger import setup_logger
 class TheNewsAPIFetcher(BaseFetcher):
     """Fetcher для thenewsapi.com с поддержкой всех эндпоинтов"""
     
-    PROVIDER_NAME = "thenewsapi"
+    PROVIDER_NAME = "thenewsapi_com"
     
     def __init__(self, provider_settings):
         """
@@ -178,6 +178,74 @@ class TheNewsAPIFetcher(BaseFetcher):
         with open(languages_path, 'r') as f:
             languages = json.load(f)
         return languages
+
+    def get_provider_parameters(self) -> Dict[str, Any]:
+        """
+        Получить параметры провайдера из JSON файла
+        
+        Returns:
+            Dict[str, Any]: Словарь с URL эндпоинта и полями формы
+                {
+                    "url": "https://api.thenewsapi.com/v1/news/top",
+                    "fields": {
+                        "search": "Поисковый запрос",
+                        "categories": "Категории"
+                    }
+                }
+            
+        Raises:
+            Exception: При ошибке чтения или парсинга JSON файла
+        """
+        import os
+        import json
+        
+        try:
+            # Путь к JSON файлу параметров
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+            parameters_path = os.path.join(project_root, 'data', 'thenewsapi_com_parameters.json')
+            
+            # Читаем JSON файл
+            with open(parameters_path, 'r', encoding='utf-8') as f:
+                parameters_data = json.load(f)
+            
+            # Ищем первый эндпоинт с "use": "true"
+            endpoints = parameters_data.get('endpoints', {})
+            first_active_endpoint = None
+            
+            for endpoint_name, endpoint_data in endpoints.items():
+                if endpoint_data.get('use') == 'true':
+                    first_active_endpoint = endpoint_data
+                    break
+            
+            if not first_active_endpoint:
+                raise Exception("No active endpoint found with 'use': 'true'")
+            
+            # Получаем URL эндпоинта
+            endpoint_url = first_active_endpoint.get('url', '')
+            
+            # Извлекаем параметры с "use": "true"
+            parameters = first_active_endpoint.get('parameters', {})
+            active_fields = {}
+            
+            for param_name, param_data in parameters.items():
+                if param_data.get('use') == 'true':
+                    # Используем label, если пустое - то ключ параметра
+                    label = param_data.get('label', '').strip()
+                    if not label:
+                        label = param_name
+                    active_fields[param_name] = label
+            
+            return {
+                "url": endpoint_url,
+                "fields": active_fields
+            }
+            
+        except FileNotFoundError as e:
+            raise Exception(f"Parameters file not found: {parameters_path}") from e
+        except json.JSONDecodeError as e:
+            raise Exception(f"Invalid JSON in parameters file: {str(e)}") from e
+        except Exception as e:
+            raise Exception(f"Error reading provider parameters: {str(e)}") from e
         
     def fetch_headlines(self, 
                        locale: Optional[str] = None,

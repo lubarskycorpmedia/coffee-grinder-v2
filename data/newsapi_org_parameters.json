@@ -1,0 +1,51 @@
+{
+    "endpoints": {
+      "everything": {
+        "use": "true",
+        "label": "Все новости",
+        "method": "GET",
+        "url": "https://newsapi.org/v2/everything",
+        "parameters": {
+          "apiKey": {"use": "false", "label": "API ключ"},
+          "q": {"use": "true", "label": "Поисковый запрос"},
+          "searchIn": {"use": "false", "label": "Где искать (title, description, content)"},
+          "sources": {"use": "false", "label": "Источники"},
+          "domains": {"use": "true", "label": "Домены"},
+          "excludeDomains": {"use": "false", "label": "Исключить домены"},
+          "from": {"use": "true", "label": "Дата начала"},
+          "to": {"use": "true", "label": "Дата окончания"},
+          "language": {"use": "true", "label": "Язык"},
+          "sortBy": {"use": "false", "label": "Сортировка"},
+          "pageSize": {"use": "true", "label": "Размер страницы"},
+          "page": {"use": "false", "label": "Номер страницы"}
+        }
+      },
+      "top-headlines": {
+        "use": "false",
+        "label": "Топ заголовки",
+        "method": "GET",
+        "url": "https://newsapi.org/v2/top-headlines", 
+        "parameters": {
+          "apiKey": {"use": "false", "label": "API ключ"},
+          "country": {"use": "false", "label": "Страна"},
+          "category": {"use": "false", "label": "Категория"},
+          "sources": {"use": "false", "label": "Источники"},
+          "q": {"use": "false", "label": "Поисковый запрос"},
+          "pageSize": {"use": "false", "label": "Размер страницы"},
+          "page": {"use": "false", "label": "Номер страницы"}
+        }
+      },
+      "sources": {
+        "use": "false",
+        "label": "Источники",
+        "method": "GET",
+        "url": "https://newsapi.org/v2/top-headlines/sources",
+        "parameters": {
+          "apiKey": {"use": "false", "label": "API ключ"},
+          "category": {"use": "false", "label": "Категория"},
+          "language": {"use": "false", "label": "Язык"},
+          "country": {"use": "false", "label": "Страна"}
+        }
+      }
+    }
+  }

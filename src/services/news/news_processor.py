@@ -41,7 +41,7 @@ class NewsProcessor:
     """
     
     def __init__(self, 
-                 news_provider: str = "thenewsapi",
+                 news_provider: str = "thenewsapi_com",
                  fail_on_errors: bool = False,
                  enable_deduplication: bool = True,
                  max_items_per_request: int = 100):

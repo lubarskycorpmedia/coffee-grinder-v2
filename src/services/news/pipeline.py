@@ -46,14 +46,14 @@ class NewsPipelineOrchestrator:
     """
     
     def __init__(self, 
-                 provider: str = "thenewsapi",
+                 provider: str = "thenewsapi_com",
                  worksheet_name: str = "News",
                  ranking_criteria: Optional[str] = None):
         """
         Инициализация оркестратора
         
         Args:
-            provider: Провайдер новостей (по умолчанию "thenewsapi")
+            provider: Провайдер новостей (по умолчанию "thenewsapi_com")
             worksheet_name: Имя листа в Google Sheets
             ranking_criteria: Критерии ранжирования для LLM
         """
@@ -134,8 +134,8 @@ class NewsPipelineOrchestrator:
                     categories: List[str],
                     limit: Optional[int] = None,
                     language: Optional[str] = None,
-                    from_date: Optional[str] = None,
-                    to_date: Optional[str] = None,
+                    published_after: Optional[str] = None,
+                    published_before: Optional[str] = None,
                     **kwargs) -> PipelineResult:
         """
         Запускает полный pipeline обработки новостей
@@ -145,8 +145,8 @@ class NewsPipelineOrchestrator:
             categories: Список категорий новостей
             limit: Количество новостей (по умолчанию из настроек)
             language: Язык поиска (опционально)
-            from_date: Дата начала поиска (опционально)
-            to_date: Дата окончания поиска (опционально)
+            published_after: Дата начала поиска (опционально)
+            published_before: Дата окончания поиска (опционально)
             **kwargs: Дополнительные параметры для fetcher'а
             
         Returns:
@@ -172,7 +172,7 @@ class NewsPipelineOrchestrator:
         try:
             # ЭТАП 1: Получение новостей
             self.logger.info("Stage 1: Fetching news")
-            stage_result = self._run_fetch_stage(query, categories_str, limit, language, from_date, to_date, **kwargs)
+            stage_result = self._run_fetch_stage(query, categories_str, limit, language, published_after, published_before, **kwargs)
             results["fetcher"] = stage_result
             
             if not stage_result.success:
@@ -220,7 +220,7 @@ class NewsPipelineOrchestrator:
         return self._create_pipeline_result(overall_success, 3, completed_stages, results, errors, start_time)
     
     def _run_fetch_stage(self, query: str, categories: str, limit: int, language: Optional[str], 
-                        from_date: Optional[str] = None, to_date: Optional[str] = None, **kwargs) -> StageResult:
+                        published_after: Optional[str] = None, published_before: Optional[str] = None, **kwargs) -> StageResult:
         """Выполняет этап получения новостей"""
         start_time = time.time()
         
@@ -231,8 +231,8 @@ class NewsPipelineOrchestrator:
                 categories=categories,
                 limit=limit,
                 language=language,
-                from_date=from_date,
-                to_date=to_date,
+                published_after=published_after,
+                published_before=published_before,
                 **kwargs
             )
             

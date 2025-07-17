@@ -1,0 +1,37 @@
+{
+    "endpoints": {
+      "news": {
+        "use": "true",
+        "label": "Новости",
+        "method": "GET",
+        "url": "https://api.mediastack.com/v1/news",
+        "parameters": {
+          "access_key": {"use": "false", "label": "Ключ доступа"},
+          "sources": {"use": "true", "label": "Источники"},
+          "categories": {"use": "true", "label": "Категории"},
+          "countries": {"use": "false", "label": "Страны"},
+          "languages": {"use": "true", "label": "Языки"},
+          "keywords": {"use": "true", "label": "Ключевые слова"},
+          "date": {"use": "true", "label": "Дата"},
+          "sort": {"use": "false", "label": "Сортировка"},
+          "limit": {"use": "true", "label": "Лимит результатов"},
+          "offset": {"use": "false", "label": "Смещение"}
+        }
+      },
+      "sources": {
+        "use": "false",
+        "label": "Источники новостей",
+        "method": "GET", 
+        "url": "https://api.mediastack.com/v1/sources",
+        "parameters": {
+          "access_key": {"use": "false", "label": "Ключ доступа"},
+          "search": {"use": "false", "label": "Поиск"},
+          "countries": {"use": "false", "label": "Страны"},
+          "languages": {"use": "false", "label": "Языки"},
+          "categories": {"use": "false", "label": "Категории"},
+          "limit": {"use": "false", "label": "Лимит результатов"},
+          "offset": {"use": "false", "label": "Смещение"}
+        }
+      }
+    }
+  }

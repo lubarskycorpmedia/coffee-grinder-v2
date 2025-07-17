@@ -829,9 +829,9 @@ const StatusDashboard = () => {
                               </span>
                               
                               {/* Method */}
-                              <span className="text-cyan-400 shrink-0 w-48 truncate text-xs" title={log.method}>
+                              {/* <span className="text-cyan-400 shrink-0 w-48 truncate text-xs" title={log.method}>
                                 {log.method}
-                              </span>
+                              </span> */}
                               
                               {/* Message */}
                               <span className="text-white flex-1 text-xs leading-relaxed">

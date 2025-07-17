@@ -23,8 +23,8 @@ class NewsProviderConfig(BaseModel):
     query: Optional[str] = None
     category: Optional[str] = None
     published_at: Optional[str] = None
-    from_date: Optional[str] = None
-    to_date: Optional[str] = None
+    published_after: Optional[str] = None
+    published_before: Optional[str] = None
     language: Optional[str] = "en"
     limit: Optional[int] = 50
     country: Optional[str] = None
@@ -253,8 +253,8 @@ def run_news_parsing_from_config(
                     category = config_dict.get("category", "")
                     limit = config_dict.get("limit", 50)
                     language = config_dict.get("language", "en")
-                    from_date = config_dict.get("from_date")
-                    to_date = config_dict.get("to_date")
+                    published_after = config_dict.get("published_after")
+                    published_before = config_dict.get("published_before")
                     
                     # Запускаем pipeline (NOTE: test_without_export не поддерживается в текущей версии)
                     result = orchestrator.run_pipeline(
@@ -262,8 +262,8 @@ def run_news_parsing_from_config(
                         categories=[category] if category else [],
                         limit=limit,
                         language=language,
-                        from_date=from_date,
-                        to_date=to_date
+                        published_after=published_after,
+                        published_before=published_before
                     )
                     all_results[provider_name] = {"success": result.success, "result": result}
                     

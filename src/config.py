@@ -60,7 +60,7 @@ class NewsProvidersSettings(BaseModel):
         description="Словарь провайдеров новостей"
     )
     default_provider: str = Field(
-        default="thenewsapi",
+        default="thenewsapi_com",
         description="Провайдер по умолчанию"
     )
     fallback_providers: List[str] = Field(
@@ -191,7 +191,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         # TheNewsAPI провайдер
         if settings.THENEWSAPI_API_TOKEN:
-            providers["thenewsapi"] = TheNewsAPISettings(
+            providers["thenewsapi_com"] = TheNewsAPISettings(
                 api_token=settings.THENEWSAPI_API_TOKEN,
                 priority=1,
                 enabled=True
@@ -199,7 +199,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         # NewsAPI провайдер
         if settings.NEWSAPI_API_KEY:
-            providers["newsapi"] = NewsAPISettings(
+            providers["newsapi_org"] = NewsAPISettings(
                 api_key=settings.NEWSAPI_API_KEY,
                 priority=2,
                 enabled=True
@@ -207,7 +207,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         # NewsData.io провайдер
         if settings.NEWSDATA_API_KEY:
-            providers["newsdata"] = NewsDataIOSettings(
+            providers["newsdata_io"] = NewsDataIOSettings(
                 api_key=settings.NEWSDATA_API_KEY,
                 priority=3,
                 enabled=True
@@ -215,7 +215,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         # MediaStack провайдер
         if settings.MEDIASTACK_API_KEY:
-            providers["mediastack"] = MediaStackSettings(
+            providers["mediastack_com"] = MediaStackSettings(
                 access_key=settings.MEDIASTACK_API_KEY,
                 priority=4,
                 enabled=True
@@ -223,7 +223,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         # GNews провайдер
         if settings.GNEWS_API_KEY:
-            providers["gnews"] = GNewsIOSettings(
+            providers["gnews_io"] = GNewsIOSettings(
                 api_key=settings.GNEWS_API_KEY,
                 priority=5,
                 enabled=True
@@ -231,11 +231,11 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         return NewsProvidersSettings(
             providers=providers,
-            default_provider="thenewsapi" if "thenewsapi" in providers else (
-                "newsapi" if "newsapi" in providers else (
-                    "newsdata" if "newsdata" in providers else (
-                        "mediastack" if "mediastack" in providers else (
-                            "gnews" if "gnews" in providers else "thenewsapi"
+            default_provider="thenewsapi_com" if "thenewsapi_com" in providers else (
+                "newsapi_org" if "newsapi_org" in providers else (
+                    "newsdata_io" if "newsdata_io" in providers else (
+                        "mediastack_com" if "mediastack_com" in providers else (
+                            "gnews_io" if "gnews_io" in providers else "thenewsapi_com"
                         )
                     )
                 )
@@ -248,7 +248,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         thenewsapi_token = os.getenv("THENEWSAPI_API_TOKEN")
         if thenewsapi_token:
-            fallback_providers["thenewsapi"] = TheNewsAPISettings(
+            fallback_providers["thenewsapi_com"] = TheNewsAPISettings(
                 api_token=thenewsapi_token,
                 priority=1,
                 enabled=True
@@ -256,7 +256,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         newsapi_key = os.getenv("NEWSAPI_API_KEY")
         if newsapi_key:
-            fallback_providers["newsapi"] = NewsAPISettings(
+            fallback_providers["newsapi_org"] = NewsAPISettings(
                 api_key=newsapi_key,
                 priority=2,
                 enabled=True
@@ -264,7 +264,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         newsdata_key = os.getenv("NEWSDATA_API_KEY")
         if newsdata_key:
-            fallback_providers["newsdata"] = NewsDataIOSettings(
+            fallback_providers["newsdata_io"] = NewsDataIOSettings(
                 api_key=newsdata_key,
                 priority=3,
                 enabled=True
@@ -272,7 +272,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         mediastack_key = os.getenv("MEDIASTACK_API_KEY")
         if mediastack_key:
-            fallback_providers["mediastack"] = MediaStackSettings(
+            fallback_providers["mediastack_com"] = MediaStackSettings(
                 access_key=mediastack_key,
                 priority=4,
                 enabled=True
@@ -280,7 +280,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         gnews_key = os.getenv("GNEWS_API_KEY")
         if gnews_key:
-            fallback_providers["gnews"] = GNewsIOSettings(
+            fallback_providers["gnews_io"] = GNewsIOSettings(
                 api_key=gnews_key,
                 priority=5,
                 enabled=True
@@ -288,7 +288,7 @@ def get_news_providers_settings() -> NewsProvidersSettings:
         
         return NewsProvidersSettings(
             providers=fallback_providers,
-            default_provider="thenewsapi" if "thenewsapi" in fallback_providers else "newsapi",
+            default_provider="thenewsapi_com" if "thenewsapi_com" in fallback_providers else "newsapi_org",
             fallback_providers=list(fallback_providers.keys())
         )
 

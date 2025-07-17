@@ -16,12 +16,11 @@ class ThreatType(Enum):
     PATH_TRAVERSAL = "PATH_TRAVERSAL"
     FIELD_LENGTH_EXCEEDED = "FIELD_LENGTH_EXCEEDED"
     VALUE_LENGTH_EXCEEDED = "VALUE_LENGTH_EXCEEDED"
-    INVALID_CHARACTERS = "INVALID_CHARACTERS"
 
 
 class InputSecurityValidator:
     """
-    Универсальный валидатор безопасности для входящих данных
+    Валидатор безопасности для входящих данных
     
     Защищает от:
     - SQL инъекций
@@ -30,7 +29,7 @@ class InputSecurityValidator:
     - Path traversal
     - Превышения лимитов длины
     
-    Поведение: Очищает опасные символы и логирует угрозы
+    Поведение: Очищает опасные символы и обрезает по длине
     """
     
     # Максимальные длины
@@ -83,9 +82,8 @@ class InputSecurityValidator:
         r"/var/log",                 # Лог файлы
     ]
     
-    # Разрешенные символы
-    ALLOWED_FIELD_CHARS = re.compile(r'^[a-zA-Z0-9_]+$')
-    ALLOWED_VALUE_CHARS = re.compile(r'^[a-zA-Z0-9_\-.,@/:?&=\s]*$')
+    # Опасные управляющие символы (исключаем только их)
+    DANGEROUS_CONTROL_CHARS = re.compile(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]')
     
     def __init__(self):
         """Инициализация валидатора"""
@@ -99,8 +97,11 @@ class InputSecurityValidator:
             value: Строка для проверки
             
         Returns:
-            Тип угрозы или None если угроза не обнаружена
+            Тип угрозы или None если угроз не найдено
         """
+        if not isinstance(value, str):
+            return None
+        
         value_lower = value.lower()
         
         # Проверка SQL инъекций
@@ -113,35 +114,31 @@ class InputSecurityValidator:
             if re.search(pattern, value_lower, re.IGNORECASE | re.DOTALL):
                 return ThreatType.XSS
         
-        # Проверка Command Injection
+        # Проверка Command injection
         for pattern in self.COMMAND_INJECTION_PATTERNS:
-            if re.search(pattern, value_lower, re.IGNORECASE):
+            if re.search(pattern, value, re.IGNORECASE):
                 return ThreatType.COMMAND_INJECTION
         
-        # Проверка Path Traversal
+        # Проверка Path traversal
         for pattern in self.PATH_TRAVERSAL_PATTERNS:
             if re.search(pattern, value_lower, re.IGNORECASE):
                 return ThreatType.PATH_TRAVERSAL
         
         return None
     
-    def _clean_dangerous_chars(self, value: str, is_field_name: bool = False) -> str:
+    def _clean_dangerous_chars(self, value: str) -> str:
         """
-        Удаляет опасные символы из строки
+        Удаляет только опасные управляющие символы из строки
+        Оставляет все алфавиты включая кириллицу, цифры и безопасные символы
         
         Args:
             value: Строка для очистки
-            is_field_name: True если это название поля, False если значение
             
         Returns:
             Очищенная строка
         """
-        if is_field_name:
-            # Для названий полей - только буквы, цифры и подчеркивания
-            return re.sub(r'[^a-zA-Z0-9_]', '', value)
-        else:
-            # Для значений - расширенный набор символов
-            return re.sub(r'[^a-zA-Z0-9_\-.,@/:?&=\s]', '', value)
+        # Убираем только опасные управляющие символы
+        return self.DANGEROUS_CONTROL_CHARS.sub('', value)
     
     def sanitize_field_name(self, field_name: str) -> str:
         """
@@ -169,21 +166,20 @@ class InputSecurityValidator:
         # Проверка угроз
         threat_type = self._detect_threat_type(field_name)
         if threat_type:
-            cleaned_value = self._clean_dangerous_chars(field_name, is_field_name=True)
+            cleaned_value = self._clean_dangerous_chars(field_name)
             self.logger.warning(
                 f"Security threat detected in field name: {threat_type.value} - "
                 f"Original: '{original_value}' -> Cleaned: '{cleaned_value}'"
             )
             field_name = cleaned_value
         
-        # Проверка разрешенных символов
-        if not self.ALLOWED_FIELD_CHARS.match(field_name):
-            cleaned_value = self._clean_dangerous_chars(field_name, is_field_name=True)
-            if cleaned_value != field_name:
-                self.logger.warning(
-                    f"Security threat detected in field name: {ThreatType.INVALID_CHARACTERS.value} - "
-                    f"Original: '{original_value}' -> Cleaned: '{cleaned_value}'"
-                )
+        # Очистка опасных управляющих символов
+        cleaned_value = self._clean_dangerous_chars(field_name)
+        if cleaned_value != field_name:
+            self.logger.warning(
+                f"Dangerous control characters removed from field name: "
+                f"Original: '{original_value}' -> Cleaned: '{cleaned_value}'"
+            )
             field_name = cleaned_value
         
         return field_name
@@ -217,37 +213,34 @@ class InputSecurityValidator:
         # Проверка угроз
         threat_type = self._detect_threat_type(field_value)
         if threat_type:
-            cleaned_value = self._clean_dangerous_chars(field_value, is_field_name=False)
+            cleaned_value = self._clean_dangerous_chars(field_value)
             self.logger.warning(
                 f"Security threat detected in field value: {threat_type.value} - "
                 f"Original: '{original_value}' -> Cleaned: '{cleaned_value}'"
             )
             field_value = cleaned_value
         
-        # Проверка разрешенных символов
-        if not self.ALLOWED_VALUE_CHARS.match(field_value):
-            cleaned_value = self._clean_dangerous_chars(field_value, is_field_name=False)
-            if cleaned_value != field_value:
-                self.logger.warning(
-                    f"Security threat detected in field value: {ThreatType.INVALID_CHARACTERS.value} - "
-                    f"Original: '{original_value}' -> Cleaned: '{cleaned_value}'"
-                )
+        # Очистка опасных управляющих символов
+        cleaned_value = self._clean_dangerous_chars(field_value)
+        if cleaned_value != field_value:
+            self.logger.warning(
+                f"Dangerous control characters removed from field value: "
+                f"Original: '{original_value}' -> Cleaned: '{cleaned_value}'"
+            )
             field_value = cleaned_value
         
-        return field_value.strip()
+        return field_value
     
     def validate_config_dict(self, config_dict: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Валидирует весь конфигурационный словарь
+        Валидирует конфигурационный словарь
+        УБРАНА фильтрация пустых полей - это делается на последнем этапе
         
         Args:
             config_dict: Словарь конфигурации для валидации
             
         Returns:
             Очищенный и валидированный словарь
-            
-        Raises:
-            ValueError: Если количество полей превышает лимит
         """
         if not isinstance(config_dict, dict):
             self.logger.error(f"Config must be a dictionary, got: {type(config_dict)}")
@@ -276,11 +269,8 @@ class InputSecurityValidator:
             # Валидируем значение поля
             clean_field_value = self.sanitize_field_value(field_value)
             
-            # Исключаем пустые значения (как требовалось в задаче)
-            if clean_field_value:
-                validated_config[clean_field_name] = clean_field_value
-            else:
-                self.logger.debug(f"Excluding empty value for field: '{clean_field_name}'")
+            # СОХРАНЯЕМ ВСЕ ПОЛЯ включая пустые - фильтрацию делаем на последнем этапе
+            validated_config[clean_field_name] = clean_field_value
         
         self.logger.info(f"Config validation completed. Original fields: {len(config_dict)}, "
                         f"validated fields: {len(validated_config)}")
@@ -294,7 +284,8 @@ security_validator = InputSecurityValidator()
 
 def validate_api_input(data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Удобная функция для валидации входящих данных API
+    Функция для валидации входящих данных API
+    УБРАНА фильтрация пустых полей - это делается на последнем этапе
     
     Args:
         data: Список запросов в формате [{"provider": "name", "config": {...}}]

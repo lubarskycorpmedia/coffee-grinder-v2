@@ -99,14 +99,35 @@ async def update_config(
         requests_list = config_data.get("requests", [])
         logger.info(f"📋 Количество запросов: {len(requests_list)}")
         
+        # Нормализуем данные: undefined, null, NaN -> ""
+        normalized_requests = []
         for i, request in enumerate(requests_list):
-            provider_name = request.get("provider", "unknown")
+            provider_name = request.get("provider", "")
             provider_config = request.get("config", {})
-            logger.info(f"🏢 Запрос {i+1} для {provider_name}: {len(provider_config)} полей - {list(provider_config.keys())}")
+            
+            # Нормализуем конфигурацию провайдера
+            normalized_config = {}
+            for key, value in provider_config.items():
+                # Приводим undefined, null, NaN к пустой строке
+                if value is None:
+                    normalized_value = ""
+                elif isinstance(value, float) and (str(value).lower() in ("nan", "none") or value != value):  # NaN check
+                    normalized_value = ""
+                else:
+                    normalized_value = str(value) if value is not None else ""
+                
+                normalized_config[key] = normalized_value
+            
+            normalized_requests.append({
+                "provider": provider_name,
+                "config": normalized_config
+            })
+            
+            logger.info(f"🏢 Запрос {i+1} для {provider_name}: {len(normalized_config)} полей - {list(normalized_config.keys())}")
         
-        # Валидируем входящие данные на безопасность
+        # Валидируем входящие данные на безопасность (БЕЗ фильтрации пустых полей)
         try:
-            validated_data = validate_api_input(requests_list)
+            validated_data = validate_api_input(normalized_requests)
             logger.info(f"✅ Данные прошли валидацию безопасности: количество валидных запросов {len(validated_data)}")
         except Exception as validation_error:
             logger.error(f"❌ Ошибка валидации безопасности: {str(validation_error)}")
@@ -115,41 +136,34 @@ async def update_config(
                 detail=f"Security validation failed: {str(validation_error)}"
             )
         
-        # Фильтруем только заполненные поля для каждого запроса
-        filtered_requests = []
+        # ФИЛЬТРАЦИЯ ПУСТЫХ ПОЛЕЙ - ТОЛЬКО ЗДЕСЬ, ПЕРЕД ЗАПИСЬЮ В ФАЙЛ
+        final_requests = []
         for i, request in enumerate(validated_data):
             provider_name = request["provider"]
             provider_config = request["config"]
             
             logger.info(f"🔧 Обрабатываем запрос {i+1} для {provider_name}: {provider_config}")
             
-            # Фильтруем только заполненные поля (исключаем пустые значения, NaN, undefined)
+            # Фильтруем только пустые поля
             filtered_config = {}
             for key, value in provider_config.items():
-                # Пропускаем None и пустые строки
-                if value is None or value == "":
-                    continue
-                # Пропускаем строки содержащие только пробелы
+                # Исключаем только пустые строки
                 if isinstance(value, str) and value.strip() == "":
                     continue
-                # Пропускаем NaN значения
-                if isinstance(value, float) and str(value).lower() in ("nan", "none"):
-                    continue
-                # Сохраняем валидное значение
                 filtered_config[key] = value
             
             logger.info(f"🧹 Отфильтрованная конфигурация для запроса {i+1} ({provider_name}): {filtered_config}")
             
-            if filtered_config:  # Сохраняем только если есть валидные поля
-                filtered_requests.append({
-                    "provider": provider_name,
-                    "config": filtered_config
-                })
+            # Сохраняем запрос даже если конфигурация пустая (по требованию)
+            final_requests.append({
+                "provider": provider_name,
+                "config": filtered_config
+            })
         
-        logger.info(f"💾 Сохраняем финальную конфигурацию: {len(filtered_requests)} запросов")
+        logger.info(f"💾 Сохраняем финальную конфигурацию: {len(final_requests)} запросов")
         
         # Сохраняем конфигурацию в едином формате с обёрткой
-        config_to_save = {"requests": filtered_requests}
+        config_to_save = {"requests": final_requests}
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(config_to_save, f, ensure_ascii=False, indent=2)
         
@@ -157,7 +171,7 @@ async def update_config(
         
         # Подсчитываем статистику провайдеров
         provider_counts = {}
-        for request in filtered_requests:
+        for request in final_requests:
             provider = request["provider"]
             provider_counts[provider] = provider_counts.get(provider, 0) + 1
         
@@ -166,7 +180,7 @@ async def update_config(
         return {
             "success": True,
             "message": "Configuration updated successfully",
-            "requests_count": len(filtered_requests),
+            "requests_count": len(final_requests),
             "provider_counts": provider_counts,
             "saved_at": datetime.now(timezone.utc).isoformat()
         }

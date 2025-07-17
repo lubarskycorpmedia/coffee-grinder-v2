@@ -16,7 +16,25 @@
         "country": "2",
         "category": "business,domestic",
         "language": "sq,ar,af",
-        "size": "666"
+        "size": "666",
+        "q": "вкерквер квер кр ",
+        "domain": " ыукп уыкп",
+        "domainurl": " уыкп уыкп ",
+        "image": " ыукп уыкп",
+        "video": " укп куп п",
+        "full_content": " ыукп укып ",
+        "removeduplicate": " ыкп п",
+        "sentiment": " укп укп",
+        "ai_tag": " уыкп укп",
+        "ai_region": " уыкп укп",
+        "ai_org": " уыкп укп",
+        "ai_person": " уыкп укп"
+      }
+    },
+    {
+      "provider": "thenewsapi_com",
+      "config": {
+        "search": " ыукп ыукп ыукп "
       }
     }
   ]

@@ -8,13 +8,15 @@ interface ProviderConfig {
   [key: string]: any // Динамическая структура на основе JSON параметров
 }
 
-// Новый формат: список запросов вместо объекта провайдеров
+// Новый формат: объект с полем requests
 interface RequestData {
   provider: string
   config: ProviderConfig
 }
 
-type ConfigData = RequestData[]
+type ConfigData = {
+  requests: RequestData[]
+}
 
 // Упрощённый FormData без обёртки providers
 type FormData = RequestData[]
@@ -407,6 +409,9 @@ const ConfigEditor = () => {
   // Мутация для сохранения конфигурации
   const saveMutation = useMutation(
     async (data: ConfigData) => {
+      console.log('🚀 Отправляем на сервер:', data)
+      console.log('🚀 Размер данных:', JSON.stringify(data).length, 'символов')
+      
       const response = await fetch('/news/api/config', {
         method: 'POST',
         headers: {
@@ -416,20 +421,28 @@ const ConfigEditor = () => {
         body: JSON.stringify(data)
       })
       
+      console.log('📡 Ответ сервера status:', response.status)
+      console.log('📡 Ответ сервера headers:', Object.fromEntries(response.headers.entries()))
+      
       if (!response.ok) {
         const error = await response.json()
+        console.error('❌ Ошибка сервера:', error)
         throw new Error(error.detail || 'Failed to save config')
       }
       
-      return response.json()
+      const result = await response.json()
+      console.log('✅ Успешный ответ сервера:', result)
+      return result
     },
     {
-      onSuccess: () => {
+      onSuccess: (result) => {
+        console.log('🎉 Мутация успешна:', result)
         toast.success('Конфигурация сохранена!')
         queryClient.invalidateQueries('news-config')
         queryClient.invalidateQueries('processing-status')
       },
       onError: (error: Error) => {
+        console.error('💥 Ошибка мутации:', error)
         toast.error(`Ошибка сохранения: ${error.message}`)
       }
     }
@@ -450,11 +463,11 @@ const ConfigEditor = () => {
 
   // Обновляем форму при загрузке данных
   useEffect(() => {
-    if (configData && providerParametersData && Array.isArray(configData)) {
+    if (configData && providerParametersData && Array.isArray(configData.requests)) {
       const formattedData: FormData = []
       
       // Проходим по всем ключам из JSON конфигурации
-      configData.forEach((item: RequestData) => {
+      configData.requests.forEach((item: RequestData) => {
         const providerName = item.provider
         
         // ИГНОРИРУЕМ провайдеров которых нет в новой системе
@@ -488,7 +501,7 @@ const ConfigEditor = () => {
   // Следим за изменениями формы для обновления JSON
   const watchedData = watch('requests')
   useEffect(() => {
-    const configObject: ConfigData = []
+    const configObject: ConfigData = { requests: [] }
     // Проверяем, что watchedData является массивом
     if (!Array.isArray(watchedData)) {
       return
@@ -504,7 +517,7 @@ const ConfigEditor = () => {
             return true
           })
         )
-        configObject.push({
+        configObject.requests.push({
           provider: provider.provider,
           config: cleanConfig
         })
@@ -517,45 +530,67 @@ const ConfigEditor = () => {
     console.log('=== ОТЛАДКА СОХРАНЕНИЯ ===')
     console.log('Полные данные формы:', JSON.stringify(data, null, 2))
     
-    // Отправляем данные в едином формате как есть
-    console.log('Данные в едином формате:', data)
-    
     // Получаем массив запросов из формы
     const requestsArray = data.requests || []
     
-    const cleanedRequests: ConfigData = []
-    requestsArray.forEach(provider => {
+    const cleanedRequests: ConfigData = { requests: [] }
+    requestsArray.forEach((provider, index) => {
       if (provider.provider) {
-        console.log(`🔍 Исходная конфигурация для ${provider.provider}:`, provider.config)
+        console.log(`🔍 Обработка запроса ${index + 1} для ${provider.provider}:`)
+        console.log(`📊 Исходная конфигурация:`, provider.config)
+        console.log(`📊 Количество полей в исходной конфигурации:`, Object.keys(provider.config).length)
         
-        // Очищаем пустые значения (исключаем undefined, null и NaN числа)
-        const cleanConfig = Object.fromEntries(
-          Object.entries(provider.config).filter(([key, value]) => {
-            // Исключаем только undefined, null и NaN числа
-            const shouldKeep = !(
-              value === undefined || 
-              value === null ||
-              (typeof value === 'number' && isNaN(value))
-            )
-            
-            if (!shouldKeep) {
-              console.log(`🚫 Исключаем поле ${key}:`, value, typeof value)
-            }
-            
-            return shouldKeep
-          })
-        )
-        console.log(`✅ Очищенная конфигурация для ${provider.provider}:`, cleanConfig)
-        cleanedRequests.push({
+        // Нормализуем данные: undefined, null, NaN -> ""
+        const normalizedConfig: ProviderConfig = {}
+        Object.entries(provider.config).forEach(([key, value]) => {
+          let normalizedValue: string
+          
+          if (value === undefined || value === null) {
+            normalizedValue = ""
+            console.log(`🔄 Нормализация поля ${key}: ${value} -> ""`)
+          } else if (typeof value === 'number' && isNaN(value)) {
+            normalizedValue = ""
+            console.log(`🔄 Нормализация поля ${key}: NaN -> ""`)
+          } else {
+            normalizedValue = String(value)
+            console.log(`✅ Сохранение поля ${key}: ${value} (${typeof value}) -> "${normalizedValue}"`)
+          }
+          
+          normalizedConfig[key] = normalizedValue
+        })
+        
+        console.log(`📊 Нормализованная конфигурация:`, normalizedConfig)
+        console.log(`📊 Количество полей после нормализации:`, Object.keys(normalizedConfig).length)
+        
+        // ФИЛЬТРАЦИЯ ПУСТЫХ СТРОК - только на последнем этапе
+        const finalConfig: ProviderConfig = {}
+        Object.entries(normalizedConfig).forEach(([key, value]) => {
+          // Исключаем только пустые строки (после trim)
+          if (typeof value === 'string' && value.trim() === '') {
+            console.log(`🚫 Исключаем пустое поле ${key}: "${value}"`)
+          } else {
+            finalConfig[key] = value
+            console.log(`✅ Сохраняем поле ${key}: "${value}"`)
+          }
+        })
+        
+        console.log(`📊 Финальная конфигурация:`, finalConfig)
+        console.log(`📊 Количество полей в финальной конфигурации:`, Object.keys(finalConfig).length)
+        console.log(`📊 Исключено полей:`, Object.keys(normalizedConfig).length - Object.keys(finalConfig).length)
+        
+        cleanedRequests.requests.push({
           provider: provider.provider,
-          config: cleanConfig
+          config: finalConfig
         })
       }
     })
     
     // Отправляем в едином формате
-    const configToSend = { requests: cleanedRequests }
-    console.log('Итоговый объект в едином формате:', configToSend)
+    const configToSend = { requests: cleanedRequests.requests }
+    console.log('📤 Итоговый объект для отправки:', configToSend)
+    console.log('📤 Количество запросов для отправки:', cleanedRequests.requests.length)
+    console.log('📤 JSON для отправки:', JSON.stringify(configToSend, null, 2))
+    
     saveMutation.mutate(configToSend)
   }
 

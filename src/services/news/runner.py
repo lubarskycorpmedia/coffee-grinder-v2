@@ -20,7 +20,7 @@ from src.services.news.pipeline import NewsPipelineOrchestrator
 
 def load_config_from_file(file_path: str) -> List[Dict[str, Any]]:
     """
-    Загрузить конфигурацию из JSON файла с валидацией безопасности
+    Загрузить конфигурацию из JSON файла
     
     Args:
         file_path: Путь к файлу конфигурации
@@ -31,7 +31,6 @@ def load_config_from_file(file_path: str) -> List[Dict[str, Any]]:
     Raises:
         FileNotFoundError: Если файл не найден
         json.JSONDecodeError: Если JSON невалидный
-        ValueError: Если данные не прошли валидацию безопасности
     """
     logger = setup_logger(__name__)
     
@@ -41,20 +40,20 @@ def load_config_from_file(file_path: str) -> List[Dict[str, Any]]:
     with open(file_path, 'r', encoding='utf-8') as f:
         config_data = json.load(f)
     
-    # ТОЛЬКО единый формат {requests: [...]}
-    if not isinstance(config_data, dict) or "requests" not in config_data:
-        raise ValueError(f"Конфигурация должна быть в формате {{requests: [...]}}, получен: {type(config_data)}")
-    
-    logger.info("✅ Единый формат конфигурации {requests: [...]}")
-    requests_list = config_data["requests"]
-    
-    if not isinstance(requests_list, list):
-        raise ValueError(f"Поле 'requests' должно быть массивом, получен: {type(requests_list)}")
-    
-    # Валидируем данные на безопасность
-    validated_list = validate_api_input(requests_list)
-    
-    return validated_list
+    # Проверяем формат {requests: [...]}
+    if isinstance(config_data, dict) and "requests" in config_data:
+        logger.info("✅ Единый формат конфигурации {requests: [...]}")
+        requests_list = config_data["requests"]
+        
+        if isinstance(requests_list, list):
+            logger.info(f"📋 Загружено запросов: {len(requests_list)}")
+            return requests_list
+        else:
+            logger.warning(f"Поле 'requests' не является массивом: {type(requests_list)}, игнорируем")
+            return []
+    else:
+        logger.warning(f"Неподдерживаемый формат конфигурации: {type(config_data)}, игнорируем")
+        return []
 
 
 class ProgressTracker:

@@ -313,13 +313,32 @@ class GoogleSheetsExporter:
         return rows_data
     
     def _append_rows(self, worksheet: gspread.Worksheet, rows_data: List[List[str]]):
-        """Добавляет строки к существующим данным"""
+        """Добавляет строки к существующим данным, всегда начиная с колонки A"""
         def _append():
             self.logger.info(f"Attempting to append {len(rows_data)} rows to worksheet")
             self.logger.info(f"First row data: {rows_data[0][:3] if rows_data else 'No data'}")
             self.logger.info(f"Last row data: {rows_data[-1][:3] if rows_data else 'No data'}")
             
-            result = worksheet.append_rows(rows_data)
+            # Определяем следующую пустую строку в колонке A
+            # Получаем все значения в колонке A чтобы найти последнюю заполненную строку
+            try:
+                column_a_values = worksheet.col_values(1)  # Колонка A (индекс 1)
+                next_row = len(column_a_values) + 1
+                self.logger.info(f"Found {len(column_a_values)} rows in column A, inserting from row {next_row}")
+            except Exception as e:
+                # Если не удалось получить данные колонки A, используем общий row_count
+                next_row = worksheet.row_count + 1
+                self.logger.warning(f"Could not get column A values ({e}), using row_count+1: {next_row}")
+            
+            # Формируем диапазон для вставки (начиная с колонки A)
+            num_cols = len(rows_data[0]) if rows_data else 17  # Наши данные имеют 17 колонок
+            end_col_letter = chr(ord('A') + num_cols - 1)  # A=0, B=1, ..., Q=16
+            range_name = f"A{next_row}:{end_col_letter}{next_row + len(rows_data) - 1}"
+            
+            self.logger.info(f"Inserting data into range: {range_name}")
+            
+            # Используем update вместо append_rows для точного контроля места вставки
+            result = worksheet.update(range_name, rows_data)
             
             self.logger.info(f"Google Sheets API response: {result}")
             return result

@@ -692,19 +692,6 @@ class MediaStackFetcher(BaseFetcher):
         except Exception as e:
             return {"error": NewsAPIError(f"Failed to fetch headlines: {e}")}
     
-    def fetch_all_news(self, **kwargs) -> Dict[str, Any]:
-        """
-        Получает все новости (алиас для fetch_news)
-        
-        Returns:
-            Dict[str, Any]: Результат в формате базового класса
-        """
-        try:
-            result = self.fetch_news(**kwargs)
-            return result
-        except Exception as e:
-            return {"error": NewsAPIError(f"Failed to fetch all news: {e}")}
-    
     def fetch_top_stories(self, **kwargs) -> Dict[str, Any]:
         """
         Получает топ новости (алиас для fetch_news)

@@ -4,31 +4,19 @@
       "provider": "thenewsapi_com",
       "url": "https://api.thenewsapi.com/v1/news/top",
       "config": {
-        "search": "Israel Israil",
+        "search": "Путин",
         "categories": "tech,politics",
-        "language": "en",
-        "published_before": "2025-07-24T23:47",
-        "published_after": "2025-07-03T02:51",
+        "language": "ru",
         "limit": "2"
       }
     },
     {
-      "provider": "gnews_io",
-      "url": "https://gnews.io/api/v4/search",
+      "provider": "newsdata_io",
+      "url": "https://newsdata.io/api/1/latest",
       "config": {
         "q": "Zelensky",
-        "lang": "en",
-        "max": "2"
-      }
-    },
-    {
-      "provider": "thenewsapi_com",
-      "url": "https://api.thenewsapi.com/v1/news/top",
-      "config": {
-        "search": "Trump",
-        "categories": "general,tech,entertainment,politics,health",
         "language": "en",
-        "limit": "2"
+        "size": "2"
       }
     }
   ]

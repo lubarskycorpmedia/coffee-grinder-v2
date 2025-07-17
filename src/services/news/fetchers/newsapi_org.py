@@ -67,20 +67,6 @@ class NewsAPIFetcher(BaseFetcher):
             from .base import NewsAPIError
             return {"error": NewsAPIError(f"Failed to fetch headlines: {e}")}
     
-    def fetch_all_news(self, **kwargs) -> Dict[str, Any]:
-        """
-        Получает все новости (для совместимости с базовым классом)
-        
-        Returns:
-            Dict[str, Any]: Результат в формате базового класса
-        """
-        try:
-            articles = self.search_news(**kwargs)
-            return {"articles": articles}
-        except Exception as e:
-            from .base import NewsAPIError
-            return {"error": NewsAPIError(f"Failed to fetch all news: {e}")}
-    
     def fetch_top_stories(self, **kwargs) -> Dict[str, Any]:
         """
         Получает топ новости (для совместимости с базовым классом)
@@ -95,79 +81,83 @@ class NewsAPIFetcher(BaseFetcher):
             from .base import NewsAPIError
             return {"error": NewsAPIError(f"Failed to fetch top stories: {e}")}
     
-    def fetch_news(self, 
-                   query: Optional[str] = None,
-                   category: Optional[str] = None,
-                   language: Optional[str] = None,
-                   limit: int = 50,
-                   **kwargs) -> Dict[str, Any]:
+    def fetch_news(self, url: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Универсальный метод для получения новостей
+        Унифицированный метод для получения новостей (новый интерфейс)
         
         Args:
-            query: Поисковый запрос
-            category: Категория новостей
-            language: Язык новостей
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры (domains, sources, etc.)
+            url: URL эндпоинта (используется для определения метода API)
+            params: Параметры запроса в формате NewsAPI
             
         Returns:
-            Dict[str, Any]: Результат в стандартном формате с полем "articles"
+            Dict[str, Any]: Результат в стандартном формате {"articles": [...], "meta": {...}}
         """
         try:
-            # Если есть параметры для поиска (query, domains, from_date), используем search_news (эндпоинт /v2/everything)
-            if query or 'domains' in kwargs or kwargs.get('from_date') or kwargs.get('to_date'):
-                articles = self.search_news(
-                    query=query or "*",  # Используем wildcard если query пустой
-                    language=language,
-                    limit=limit,
-                    **kwargs
-                )
-                return {"articles": articles}
+            self.logger.info(f"NewsAPI fetch_news: {len(params)} параметров")
+            self.logger.debug(f"NewsAPI параметры: {params}")
             
-            # Иначе используем топ заголовки (эндпоинт /v2/top-headlines)
-            # Маппинг category в категорию NewsAPI
-            api_category = self._map_rubric_to_category(category)
-            
-            # Получаем топ заголовки
-            params = {
-                'page_size': min(limit, self.page_size)
-            }
-            
-            # Добавляем категорию только если она указана
-            if api_category:
-                params['category'] = api_category
-            
-            # Добавляем язык только если он указан
-            if language:
-                params['language'] = language
-            
-            # Добавляем страну только если она указана
-            if 'country' in kwargs:
-                params['country'] = kwargs['country']
-            
-            # Логируем запрос
-            self._log_api_request('top-headlines', params)
-            
-            response = self.client.get_top_headlines(**params)
+            # Определяем метод API по URL
+            if "top-headlines" in url:
+                api_method = "get_top_headlines"
+                response = self.client.get_top_headlines(**params)
+            elif "everything" in url:
+                api_method = "get_everything" 
+                response = self.client.get_everything(**params)
+            elif "sources" in url:
+                api_method = "get_sources"
+                response = self.client.get_sources(**params)
+                # Для sources возвращаем sources, а не articles
+                if response.get('status') == 'ok':
+                    sources = response.get('sources', [])
+                    standardized_sources = [self._standardize_source(source) for source in sources]
+                    meta = {
+                        "provider": self.PROVIDER_NAME,
+                        "found": len(standardized_sources),
+                        "url": url,
+                        "params": params,
+                        "method": api_method
+                    }
+                    return {
+                        "sources": standardized_sources,
+                        "meta": meta
+                    }
+            else:
+                # По умолчанию используем everything
+                api_method = "get_everything"
+                response = self.client.get_everything(**params)
             
             if response.get('status') != 'ok':
-                logger.error(f"NewsAPI error: {response.get('message', 'Unknown error')}")
-                from .base import NewsAPIError
-                return {"error": NewsAPIError(f"NewsAPI error: {response.get('message', 'Unknown error')}")}
+                error_msg = f"NewsAPI error: {response.get('message', 'Unknown error')}"
+                self.logger.error(error_msg)
+                return {"error": NewsAPIError(error_msg)}
                 
             articles = response.get('articles', [])
             standardized_articles = [self._standardize_article(article) for article in articles]
-            return {"articles": standardized_articles}
+            
+            # Добавляем метаинформацию
+            meta = {
+                "provider": self.PROVIDER_NAME,
+                "found": len(standardized_articles),
+                "url": url,
+                "params": params,
+                "method": api_method
+            }
+            
+            self.logger.info(f"NewsAPI fetch_news ({api_method}): получено {len(standardized_articles)} статей")
+            
+            return {
+                "articles": standardized_articles,
+                "meta": meta
+            }
             
         except NewsAPIException as e:
-            logger.error(f"NewsAPI fetch exception: {e}")
-            from .base import NewsAPIError
-            return {"error": NewsAPIError(f"NewsAPI fetch exception: {e}")}
+            error_msg = f"NewsAPI fetch exception: {e}"
+            self.logger.error(error_msg)
+            return {"error": NewsAPIError(error_msg)}
         except Exception as e:
-            logger.error(f"Unexpected error in NewsAPI fetch: {e}")
-            from .base import NewsAPIError
-            return {"error": NewsAPIError(f"Unexpected error in NewsAPI fetch: {e}")}
+            error_msg = f"Unexpected error in NewsAPI fetch: {e}"
+            self.logger.error(error_msg)
+            return {"error": NewsAPIError(error_msg)}
     
 
     

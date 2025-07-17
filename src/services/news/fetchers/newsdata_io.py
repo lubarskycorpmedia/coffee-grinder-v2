@@ -1,7 +1,7 @@
 # src/services/news/fetchers/newsdata_io.py
 
 from datetime import datetime
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Dict
 import requests
 from urllib.parse import urlencode
 
@@ -146,33 +146,18 @@ class NewsDataIOFetcher(BaseFetcher):
 
     def _call_with_timeout(self, func, *args, **kwargs):
         """
-        Вызывает функцию с таймаутом используя signal (только для Unix-систем)
+        Вызывает функцию - упрощенная версия без signal
+        Библиотека newsdataapi сама имеет встроенные таймауты
         """
-        import signal
-        import platform
-        
-        # Проверяем, что мы на Unix-системе
-        if platform.system() == 'Windows':
-            # На Windows просто вызываем функцию без таймаута
-            return func(*args, **kwargs)
-        
-        def timeout_handler(signum, frame):
-            raise TimeoutError(f"Request timed out after {self.timeout} seconds")
-        
-        # Устанавливаем обработчик сигнала
-        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(self.timeout)
-        
+        # Убираем signal.SIGALRM так как он не работает в FastAPI/uvicorn потоках
+        # Библиотека newsdataapi сама имеет встроенные таймауты
         try:
-            result = func(*args, **kwargs)
-            signal.alarm(0)  # Отключаем таймаут
-            return result
-        except TimeoutError:
-            signal.alarm(0)  # Отключаем таймаут
+            return func(*args, **kwargs)
+        except Exception as e:
+            # Преобразуем любые таймауты библиотеки в наш TimeoutError
+            if "timeout" in str(e).lower() or "timed out" in str(e).lower():
+                raise TimeoutError(f"Request timed out: {str(e)}")
             raise
-        finally:
-            # Восстанавливаем старый обработчик
-            signal.signal(signal.SIGALRM, old_handler)
 
     def fetch_headlines(self, **kwargs: Any) -> dict[str, Any]:
         """
@@ -189,21 +174,6 @@ class NewsDataIOFetcher(BaseFetcher):
 
             return {"error": NewsAPIError(f"Failed to fetch headlines: {e}")}
 
-    def fetch_all_news(self, **kwargs: Any) -> dict[str, Any]:
-        """
-        Получает все новости (для совместимости с базовым классом)
-
-        Returns:
-            Dict[str, Any]: Результат в формате базового класса
-        """
-        try:
-            articles = self.search_news(**kwargs)
-            return {"articles": articles}
-        except Exception as e:
-            from .base import NewsAPIError
-
-            return {"error": NewsAPIError(f"Failed to fetch all news: {e}")}
-
     def fetch_top_stories(self, **kwargs: Any) -> dict[str, Any]:
         """
         Получает топ новости (для совместимости с базовым классом)
@@ -219,92 +189,123 @@ class NewsDataIOFetcher(BaseFetcher):
 
             return {"error": NewsAPIError(f"Failed to fetch top stories: {e}")}
 
-    def fetch_news(
-        self,
-        query: str | None = None,
-        category: str | None = None,
-        language: str | None = None,
-        limit: int = 50,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
+    def fetch_news(self, url: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Универсальный метод для получения новостей
-
+        Унифицированный метод для получения новостей (новый интерфейс)
+        
         Args:
-            query: Поисковый запрос
-            category: Категория новостей
-            language: Язык новостей
-            limit: Максимальное количество новостей
-            **kwargs: Дополнительные параметры (country, domain, etc.)
-
+            url: URL эндпоинта (игнорируется, используется библиотека-клиент)
+            params: Параметры запроса в формате NewsData.io
+            
         Returns:
-            Dict[str, Any]: Результат в стандартном формате с полем "articles"
+            Dict[str, Any]: Результат в стандартном формате {"articles": [...], "meta": {...}}
         """
         try:
-            # Подготавливаем параметры для запроса
-            params = {"size": min(limit, self.page_size)}
-
-            # Добавляем поисковый запрос если есть
-            if query:
-                params["q"] = query
-
-            # Добавляем категорию если есть
-            if category:
-                params["category"] = category
-
-            # Добавляем язык если есть
-            if language:
-                params["language"] = language
-
-            # Добавляем дополнительные параметры из kwargs
-            if "country" in kwargs and kwargs["country"]:
-                params["country"] = str(kwargs["country"])
+            self.logger.info(f"NewsData.io fetch_news: {len(params)} параметров")
+            self.logger.debug(f"NewsData.io параметры: {params}")
             
-            # Обработка доменов: определяем тип (domain vs domainurl)
-            domain_value = kwargs.get("domain") or kwargs.get("domains")
-            if domain_value:
-                domain_str = str(domain_value)
-                # Если содержит точки, то это URL домены (domainurl)
-                if "." in domain_str:
-                    params["domainurl"] = domain_str
-                else:
-                    # Иначе это имена доменов (domain)
-                    params["domain"] = domain_str
+            # Преобразуем типы параметров для библиотеки NewsData.io
+            converted_params = self._convert_param_types(params)
+            self.logger.debug(f"NewsData.io конвертированные параметры: {converted_params}")
             
-            if "timeframe" in kwargs and kwargs["timeframe"]:
-                params["timeframe"] = str(kwargs["timeframe"])
-
-            # Выполняем запрос через библиотеку с таймаутом
-            response = self._call_with_timeout(self.client.news_api, **params)
+            # Выполняем запрос через библиотеку с таймаутом - распаковываем params напрямую
+            response = self._call_with_timeout(self.client.news_api, **converted_params)
 
             if response.get("status") != "success":
-                logger.error(
-                    f"NewsData.io API error: {response.get('message', 'Unknown error')}"
-                )
+                error_msg = f"NewsData.io API error: {response.get('message', 'Unknown error')}"
+                self.logger.error(error_msg)
                 from .base import NewsAPIError
-
-                return {
-                    "error": NewsAPIError(
-                        f"NewsData.io API error: {response.get('message', 'Unknown error')}"
-                    )
-                }
+                return {"error": NewsAPIError(error_msg)}
 
             articles = response.get("results", [])
             standardized_articles = [
                 self._standardize_article(article) for article in articles
             ]
-            return {"articles": standardized_articles}
+            
+            # Добавляем метаинформацию
+            meta = {
+                "provider": self.PROVIDER_NAME,
+                "found": len(standardized_articles),
+                "url": url,
+                "params": converted_params
+            }
+            
+            self.logger.info(f"NewsData.io fetch_news: получено {len(standardized_articles)} статей")
+            
+            return {
+                "articles": standardized_articles,
+                "meta": meta
+            }
 
         except TimeoutError as e:
-            logger.error(f"NewsData.io fetch timeout: {e}")
+            error_msg = f"NewsData.io fetch timeout: {e}"
+            self.logger.error(error_msg)
             from .base import NewsAPIError
-
-            return {"error": NewsAPIError(f"NewsData.io fetch timeout: {e}")}
+            return {"error": NewsAPIError(error_msg)}
         except Exception as e:
-            logger.error(f"NewsData.io fetch exception: {e}")
+            error_msg = f"NewsData.io fetch exception: {e}"
+            self.logger.error(error_msg)
             from .base import NewsAPIError
+            return {"error": NewsAPIError(error_msg)}
 
-            return {"error": NewsAPIError(f"NewsData.io fetch exception: {e}")}
+    def _convert_param_types(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Преобразует типы параметров для библиотеки NewsData.io
+        
+        Основано на сигнатуре NewsDataApiClient.news_api():
+        - int: size, max_result, timeframe
+        - bool: full_content, image, video, scroll, removeduplicate
+        """
+        converted_params = params.copy()
+        
+        # Параметры, которые должны быть int
+        int_params = {'size', 'max_result'}
+        
+        # Параметры, которые должны быть bool  
+        bool_params = {'full_content', 'image', 'video', 'scroll', 'removeduplicate'}
+        
+        # Специальный параметр timeframe (может быть int или str)
+        timeframe_param = 'timeframe'
+        
+        for param_name, param_value in params.items():
+            try:
+                if param_name in int_params:
+                    # Преобразуем в int
+                    if isinstance(param_value, str) and param_value.isdigit():
+                        converted_params[param_name] = int(param_value)
+                        self.logger.debug(f"Converted {param_name}: '{param_value}' → {converted_params[param_name]} (int)")
+                    elif isinstance(param_value, (int, float)):
+                        converted_params[param_name] = int(param_value)
+                
+                elif param_name in bool_params:
+                    # Преобразуем в bool
+                    if isinstance(param_value, str):
+                        if param_value.lower() in ('true', '1', 'yes', 'on'):
+                            converted_params[param_name] = True
+                        elif param_value.lower() in ('false', '0', 'no', 'off'):
+                            converted_params[param_name] = False
+                        else:
+                            self.logger.warning(f"Cannot convert {param_name}='{param_value}' to bool, keeping original")
+                        self.logger.debug(f"Converted {param_name}: '{param_value}' → {converted_params[param_name]} (bool)")
+                    elif isinstance(param_value, (int, float)):
+                        converted_params[param_name] = bool(param_value)
+                        self.logger.debug(f"Converted {param_name}: {param_value} → {converted_params[param_name]} (bool)")
+                
+                elif param_name == timeframe_param:
+                    # timeframe может быть int или str, пробуем int если возможно
+                    if isinstance(param_value, str) and param_value.isdigit():
+                        converted_params[param_name] = int(param_value)
+                        self.logger.debug(f"Converted {param_name}: '{param_value}' → {converted_params[param_name]} (int)")
+                    # Иначе оставляем как есть (может быть строкой типа "1h", "7d")
+                        
+            except (ValueError, TypeError) as e:
+                self.logger.warning(f"Failed to convert parameter {param_name}='{param_value}': {e}")
+                # Оставляем оригинальное значение при ошибке
+        
+        self.logger.debug(f"Original params: {params}")
+        self.logger.debug(f"Converted params: {converted_params}")
+        
+        return converted_params
 
     def search_news(
         self,

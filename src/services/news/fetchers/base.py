@@ -234,11 +234,6 @@ class BaseFetcher(ABC, metaclass=FetcherMeta):
         ...
     
     @abstractmethod
-    def fetch_all_news(self, **kwargs) -> Dict[str, Any]:
-        """Получает все новости по поиску"""
-        ...
-    
-    @abstractmethod
     def fetch_top_stories(self, **kwargs) -> Dict[str, Any]:
         """Получает топ новости"""
         ...

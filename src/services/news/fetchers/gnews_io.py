@@ -345,45 +345,6 @@ class GNewsIOFetcher(BaseFetcher):
             
         return self._make_request("top-headlines", params)
     
-    def fetch_all_news(self,
-                      query: str,
-                      language: Optional[str] = None,
-                      country: Optional[str] = None,
-                      limit: int = 10,
-                      **kwargs) -> Dict[str, Any]:
-        """
-        Поиск по всем новостям через эндпоинт /search
-        
-        Args:
-            query: Поисковый запрос (обязательный)
-            language: Язык новостей (опционально)
-            country: Страна новостей (опционально)
-            limit: Количество результатов (max 100)
-            **kwargs: Дополнительные параметры
-            
-        Returns:
-            Dict с результатами или ошибкой
-        """
-        params = {
-            "q": query,
-            "max": min(limit, self.page_size)
-        }
-        
-        # Добавляем язык если указан
-        if language:
-            params["lang"] = language
-        
-        # Добавляем страну если указана
-        if country:
-            params["country"] = country
-            
-        # Добавляем дополнительные параметры из kwargs
-        for key, value in kwargs.items():
-            if key not in ["q", "max", "lang", "country"] and value is not None:
-                params[key] = value
-            
-        return self._make_request("search", params)
-    
     def fetch_top_stories(self, **kwargs) -> Dict[str, Any]:
         """
         Получает топ новости (алиас для fetch_headlines)

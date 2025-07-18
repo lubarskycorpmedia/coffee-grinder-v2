@@ -848,7 +848,7 @@ const ConfigEditor = () => {
       )}
 
       {/* Help */}
-      <div className="card bg-coffee-cream/30">
+      <div className="card bg-coffee-cream/0">
         <h3 className="text-lg font-medium text-coffee-cream mb-2">
           О динамических формах
         </h3>

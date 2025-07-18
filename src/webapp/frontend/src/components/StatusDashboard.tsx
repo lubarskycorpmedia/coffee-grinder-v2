@@ -551,7 +551,7 @@ const StatusDashboard = () => {
             )}
 
             {/* Current Status Message */}
-            <div className="bg-coffee-cream/50 rounded-lg p-3">
+            <div className="bg-coffee-cream/30 rounded-lg p-3">
               <p className="text-sm text-coffee-cream">
                 <strong>Сообщение:</strong> {status.message}
                 {(() => {
